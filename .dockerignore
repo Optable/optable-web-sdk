@@ -1,0 +1,4 @@
+# web-sdk npm & webpack
+web-sdk/node_modules/
+web-sdk/lib/dist/
+web-sdk/browser/dist/
