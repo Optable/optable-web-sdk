@@ -1,0 +1,15 @@
+User-agent: *
+
+Disallow: /cpspecial/
+Disallow: /multimedias/top-10-des-noms-de-familles-quebecois/
+Disallow: /multimedias/carte-des-milieux-humides/
+Disallow: /xtra/sante-et-mieux-etre/
+Disallow: /rmon1/
+Disallow: /includes/boite/1/
+Disallow: /includes/boite/2/
+Disallow: /includes/boite/3/
+Disallow: /actualites/politique/politique-canadienne/201304/10/01-4639287-le-canada-accuse-de-tourner-le-dos-aux-refugies.php
+Disallow: /actualites/politique/politique-canadienne/201304/10/01-4639288-une-vision-contradictoire-de-la-situation.php
+
+Sitemap: https://www.lapresse.ca/sitemapindex.xml
+Sitemap: https://www.lapresse.ca/newsSitemap.xml

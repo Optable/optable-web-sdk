@@ -1,0 +1,57 @@
+version: "3.7"
+services:
+  web-sdk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: run
+      cache_from:
+        - gcr.io/optable-platform/optable-web-sdk:build
+    volumes:
+      - ./browser/dist:/usr/share/nginx/html:ro,delegated
+    depends_on:
+      - web-sdk-builder
+    ports:
+      - "8081:80"
+    networks:
+      - sdk
+
+  web-sdk-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+      cache_from:
+        - gcr.io/optable-platform/optable-web-sdk:build
+    command: sh -c "npm install && npm start"
+    volumes:
+      - .:/build:delegated
+
+  web-demo:
+    build:
+      context: demos
+      target: run
+      args:
+        SDK_URI: http://localhost:8081/sdk.js
+        SANDBOX_HOST: localhost
+        SANDBOX_INSECURE: "true"
+    volumes:
+      - ./demos:/usr/share/nginx/html:delegated
+    ports:
+      - "8080:80"
+    networks:
+      - demo
+
+  web-demo-builder:
+    build:
+      context: demos
+      target: build
+      cache_from:
+        - gcr.io/optable-platform/optable-web-sdk:build
+    command: sh -c "set -eux && exec watchexec --exts 'tpl' --restart -s SIGKILL make html"
+    volumes:
+      - ./demos:/build:delegated
+
+networks:
+  sdk:
+  demo:

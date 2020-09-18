@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "baseUrl": ".",
+    "outDir": "./dist/"
+  },
+  "files": ["sdk.ts"],
+  "references": [{ "path": "../lib" }]
+}

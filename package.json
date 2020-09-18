@@ -1,0 +1,35 @@
+{
+  "name": "@optable/web",
+  "main": "./lib/dist/sdk.js",
+  "types": "./lib/dist/sdk.d.ts",
+  "browser": "./browser/dist/sdk.js",
+  "devDependencies": {
+    "@babel/core": "^7.10.1",
+    "@babel/plugin-proposal-class-properties": "^7.10.4",
+    "@babel/plugin-transform-runtime": "^7.10.1",
+    "@babel/preset-env": "^7.10.1",
+    "@babel/preset-typescript": "^7.10.1",
+    "@babel/runtime": "^7.10.1",
+    "@types/micromodal": "^0.3.1",
+    "babel-loader": "^8.1.0",
+    "core-js": "3",
+    "js-sha256": "^0.9.0",
+    "micromodal": "^0.4.6",
+    "regenerator-runtime": "^0.13.5",
+    "typescript": "^4.0.2",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.11"
+  },
+  "files": [
+    "lib/dist/**/*.js",
+    "lib/dist/**/*.d.ts",
+    "browser/dist/**/*.js"
+  ],
+  "scripts": {
+    "build": "npm run build-lib && npm run build-web",
+    "start": "tsc -b browser --watch & webpack --config=./browser/webpack.config.js --mode=development --watch --devtool=source-map",
+    "build-lib": "tsc -b lib",
+    "build-web": "tsc -b browser && webpack --config=./browser/webpack.config.js"
+  },
+  "dependencies": {}
+}
