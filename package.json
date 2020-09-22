@@ -6,7 +6,7 @@
   "repository": "https://github.com/optable/optable-web-sdk",
   "homepage": "https://optable.co",
   "license": "SEE LICENSE IN LICENSE",
-  "version": "v0.1.0-rc2",
+  "version": "0.0.0-REPLACE",
   "devDependencies": {
     "@babel/core": "^7.10.1",
     "@babel/plugin-proposal-class-properties": "^7.10.4",

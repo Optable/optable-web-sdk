@@ -1,11 +1,12 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "resolveJsonModule": true,
     "composite": true,
     "baseUrl": ".",
     "outDir": "./dist/",
     "target": "es6",
     "lib": ["DOM", "DOM.Iterable", "ES6"]
   },
-  "includes": ["."]
+  "include": ["./build.json", "."]
 }

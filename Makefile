@@ -1,5 +1,5 @@
 # BUILD_VERSION is the version of the build.
-BUILD_VERSION ?= $(shell git describe)
+BUILD_VERSION ?= $(shell git describe --tags)
 # BUILD_COMMIT is the commit from which the binary was built.
 BUILD_COMMIT ?= $(shell git rev-parse HEAD)
 # BUILD_DATE is the date at which the binary was built.
