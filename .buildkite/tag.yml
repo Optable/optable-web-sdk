@@ -5,7 +5,7 @@ steps:
     commands:
       - "apk add make git"
       - "cat /etc/service_key/service-account-key.json | docker login -u _json_key --password-stdin https://gcr.io"
-      - "make TAG=$BUILDKITE_TAG docker-build docker-publish"
+      - "make TAG=$BUILDKITE_TAG build publish"
     plugins:
       - docker#v3.5.0:
           image: "docker:latest"
