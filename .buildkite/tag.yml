@@ -1,0 +1,16 @@
+env:
+  DOCKER_BUILDKIT: 1
+steps:
+  - name: publish
+    commands:
+      - "apk add make git"
+      - "cat /etc/service_key/service-account-key.json | docker login -u _json_key --password-stdin https://gcr.io"
+      - "make TAG=$BUILDKITE_TAG docker-build docker-publish"
+    plugins:
+      - docker#v3.5.0:
+          image: "docker:latest"
+          mount-buildkite-agent: false
+          propagate-environment: true
+          volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /etc/service_key:/etc/service_key
