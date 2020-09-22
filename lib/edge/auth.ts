@@ -21,7 +21,9 @@ class Auth {
   }
 
   async ready(): Promise<AuthReadyResponse> {
-    const res = await fetch<AuthReadyResponse>("/authenticated", this.Config, { method: "GET" });
+    const res = await fetch<AuthReadyResponse>("/authenticated", this.Config, {
+      method: "GET",
+    });
     if (res.origin == this.Config.site) {
       this.authenticated = res.authenticated;
     }
@@ -29,7 +31,10 @@ class Auth {
   }
 
   emailAuth(formData: FormData): Promise<AuthEmailResponse> {
-    return fetch<AuthEmailResponse>("/auth/email", this.Config, { method: "POST", body: formData });
+    return fetch<AuthEmailResponse>("/auth/email", this.Config, {
+      method: "POST",
+      body: formData,
+    });
   }
 
   googleAuthURL(): string {

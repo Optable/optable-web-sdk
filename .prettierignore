@@ -1,0 +1,4 @@
+.prettierrc
+browser/dist
+lib/dist
+demos/publishers

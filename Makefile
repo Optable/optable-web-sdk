@@ -1,19 +1,7 @@
-DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-
-# BUILD_VERSION is the version of the build.
-BUILD_VERSION ?= $(shell git describe)
-# BUILD_COMMIT is the commit from which the binary was build.
-BUILD_COMMIT ?= $(shell git rev-parse HEAD)
-# BUILD_DATE is the date at which the binary was build.
-BUILD_DATE ?= $(shell date -u "+%Y-%m-%dT%H:%M:%S+00:00")
-
 TAG ?= latest
 
 define BUILD_ARGS
 --build-arg="BUILDKIT_INLINE_CACHE=1" \
---build-arg="BUILD_VERSION=$(BUILD_VERSION)" \
---build-arg="BUILD_COMMIT=$(BUILD_COMMIT)" \
---build-arg="BUILD_DATE=$(BUILD_DATE)" \
 --build-arg="SANDBOX_HOST=sandbox.optable.co" \
 --build-arg="SANDBOX_INSECURE=false"
 endef
@@ -25,10 +13,13 @@ endef
 .DEFAULT_GOAL := build
 
 .PHONY: all
-all: build-sdk build-demos publish-sdk publish-demos
+all: build publish
 
 .PHONY: build
 build: build-sdk build-demos
+
+.PHONY: publish
+build: publish-sdk publish-demos
 
 #
 # Build web SDK and web demos targets
