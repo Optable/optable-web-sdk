@@ -17,6 +17,7 @@ JavaScript and TypeScript SDK for integrating with optable-sandbox from a websit
 SANDBOX_HOST=host SANDBOX_SITE=site \
   npm run build-web
 ```
+
 ### ES6 library
 
 `npm run build-lib`
@@ -24,7 +25,7 @@ SANDBOX_HOST=host SANDBOX_SITE=site \
 ### Standalone docker container
 
 This will build a [docker](https://www.docker.com/) container which includes [nginx](https://www.nginx.com/) and is capable of serving the standalone bundle version of the SDK:
- 
+
 `make build-sdk`
 
 The nginx configuration file template can be found in conf/nginx.conf.tpl
