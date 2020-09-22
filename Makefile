@@ -19,26 +19,28 @@ all: build publish
 build: build-sdk build-demos
 
 .PHONY: publish
-build: publish-sdk publish-demos
+publish: publish-sdk publish-demos
 
 #
 # Build web SDK and web demos targets
 #
 .PHONY: build-sdk
 build-sdk:
-	docker build . $(BUILD_ARGS) --target run -t gcr.io/optable-platform/optable-web-sdk:$(TAG)
+	docker build . $(BUILD_ARGS) --target run -t optable-web-sdk:$(TAG)
 
 .PHONY: build-demos
 build-demos:
-	docker build ./demos/. $(BUILD_ARGS) $(BUILD_DEMOS_ARGS) --target run -t gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
+	docker build ./demos/. $(BUILD_ARGS) $(BUILD_DEMOS_ARGS) --target run -t optable-web-sdk-demos:$(TAG)
 
 #
 # Publish web SDK and web demos container images
 #
 .PHONY: publish-sdk
 publish-sdk:
+	docker tag optable-web-sdk:$(TAG) gcr.io/optable-platform/optable-web-sdk:$(TAG)
 	docker push gcr.io/optable-platform/optable-web-sdk:$(TAG)
 
 .PHONY: publish-demos
 publish-demos:
+	docker tag optable-web-sdk-demos:$(TAG) gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
 	docker push gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
