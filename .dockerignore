@@ -1,4 +1,4 @@
-# web-sdk npm & webpack
-web-sdk/node_modules/
-web-sdk/lib/dist/
-web-sdk/browser/dist/
+node_modules/
+lib/dist/
+browser/dist/
+.buildkite
