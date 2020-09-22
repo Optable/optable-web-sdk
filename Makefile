@@ -13,10 +13,13 @@ endef
 .DEFAULT_GOAL := build
 
 .PHONY: all
-all: build-sdk build-demos publish-sdk publish-demos
+all: build publish
 
 .PHONY: build
 build: build-sdk build-demos
+
+.PHONY: publish
+build: publish-sdk publish-demos
 
 #
 # Build web SDK and web demos targets
