@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <script type="text/javascript">
       window.optableCommands = window.optableCommands || [];
+
       optableCommands.push(function () {
         window.optable = new optableSDK({
           host: "${SANDBOX_HOST}",

@@ -9,15 +9,14 @@ COPY . .
 # Default to /sdk.js which would be expected to be mounted as volume in development
 # In production this is likely to be set to https://<sandbox>/static/web/sdk.js
 ARG SDK_URI=/sdk.js
+ENV SDK_URI=$SDK_URI
 ARG SANDBOX_HOST
+ENV SANDBOX_HOST=$SANDBOX_HOST
 ARG SANDBOX_INSECURE
+ENV SANDBOX_INSECURE=$SANDBOX_INSECURE
 
 # Build html from .tpl template files:
-RUN \
-  SDK_URI=$SDK_URI \
-  SANDBOX_HOST=$SANDBOX_HOST \
-  SANDBOX_INSECURE=$SANDBOX_INSECURE \
-  make html
+RUN make html
 
 # Delete template files from container:
 RUN find . -name "*.tpl" -delete
