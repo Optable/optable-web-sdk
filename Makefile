@@ -11,9 +11,7 @@ define BUILD_ARGS
 --build-arg="BUILDKIT_INLINE_CACHE=1" \
 --build-arg="BUILD_VERSION=$(BUILD_VERSION)" \
 --build-arg="BUILD_COMMIT=$(BUILD_COMMIT)" \
---build-arg="BUILD_DATE=$(BUILD_DATE)" \
---build-arg="SANDBOX_HOST=sandbox.optable.co" \
---build-arg="SANDBOX_INSECURE=false"
+--build-arg="BUILD_DATE=$(BUILD_DATE)"
 endef
 
 define BUILD_DEMOS_ARGS

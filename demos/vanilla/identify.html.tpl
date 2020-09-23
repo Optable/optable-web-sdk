@@ -3,11 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <script type="text/javascript">
-      window.OPTABLE_SANDBOX = {
-        host: "${SANDBOX_HOST}",
-        site: "web-sdk-demo",
-        insecure: JSON.parse("${SANDBOX_INSECURE}"),
-      };
+      window.optableCommands = window.optableCommands || [];
+      optableCommands.push(function () {
+        window.optable = new optableSDK({
+          host: "${SANDBOX_HOST}",
+          site: "web-sdk-demo",
+          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+        });
+      });
     </script>
     <script async src="${SDK_URI}"></script>
   </head>
@@ -50,12 +53,12 @@
 
         if (emailCb.checked) {
           email = document.getElementById("email").value;
-          result.innerHTML += "Email: " + email + " (" + optable.constructor.eid(email) + ")<br />";
+          result.innerHTML += "Email: " + email + " (" + optableSDK.eid(email) + ")<br />";
         }
 
         if (ppidCb.checked) {
           ppid = document.getElementById("ppid").value;
-          result.innerHTML += "PPID: " + ppid + " (" + optable.constructor.cid(ppid) + ")<br />";
+          result.innerHTML += "PPID: " + ppid + " (" + optableSDK.cid(ppid) + ")<br />";
         }
 
         optable

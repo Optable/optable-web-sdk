@@ -15,20 +15,10 @@ RUN envsubst '$PATH_PREFIX' < ./conf/nginx.conf.tpl > ./conf/nginx.conf
 
 COPY ./ ./
 
-ARG SANDBOX_HOST=""
-ENV SANDBOX_HOST=$SANDBOX_HOST
-
-ARG SANDBOX_SITE=""
-ENV SANDBOX_SITE=$SANDBOX_SITE
-
-ARG SANDBOX_INSECURE=""
-ENV SANDBOX_INSECURE=$SANDBOX_INSECURE
-
-
-ARG BUILD_VERSION
+ARG BUILD_VERSION=0.0.0-experimental
+RUN ./scripts/patch-version.sh $BUILD_VERSION
 
 ARG WEBPACK_MODE=production
-RUN ./scripts/patch-version.sh $BUILD_VERSION
 RUN npm run build-web -- --mode $WEBPACK_MODE
 
 FROM nginx:1.17 AS run

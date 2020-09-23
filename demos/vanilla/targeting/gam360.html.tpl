@@ -5,19 +5,21 @@
 
     <!-- Optable web-sdk loader start -->
     <script type="text/javascript">
-      window.OPTABLE_SANDBOX = {
-        host: "${SANDBOX_HOST}",
-        site: "web-sdk-demo",
-        insecure: JSON.parse("${SANDBOX_INSECURE}"),
-      };
+      window.optableCommands = window.optableCommands || [];
+
+      optableCommands.push(function () {
+        window.optable = new optableSDK({
+          host: "${SANDBOX_HOST}",
+          site: "web-sdk-demo",
+          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+        });
+      });
     </script>
     <script async src="${SDK_URI}"></script>
     <!-- Optable web-sdk loader end -->
 
     <!-- Optable web-sdk inject targeting start -->
     <script>
-      window.optableCommands = window.optableCommands || [];
-
       optableCommands.push(function () {
         optable.targeting().then(function (result) {
           // Sets up page-level targeting in GAM360 GPT:

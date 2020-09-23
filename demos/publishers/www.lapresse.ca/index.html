@@ -7,13 +7,16 @@
 
 <!-- Optable Web SDK script start -->
 <script type="text/javascript">
-  window.OPTABLE_SANDBOX = {
-    host: "",
-    site: "lapresse",
-    insecure: JSON.parse("")
-  };
+  window.optableCommands = window.optableCommands || [];
+  optableCommands.push(function () {
+    window.optable = new optableSDK({
+      host: "localhost",
+      site: "lapresse",
+      insecure: JSON.parse("true")
+    });
+  });
 </script>
-<script async src="" onload="window.optable.authenticator();"></script>
+<script async src="http://localhost:8081/sdk.js" onload="window.optable.authenticator();"></script>
 <!-- Optable Web SDK script end -->
 
 <!-- Optable Authenticator customization markup start -->

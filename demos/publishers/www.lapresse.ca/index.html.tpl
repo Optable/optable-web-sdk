@@ -7,11 +7,14 @@
 
 <!-- Optable Web SDK script start -->
 <script type="text/javascript">
-  window.OPTABLE_SANDBOX = {
-    host: "${SANDBOX_HOST}",
-    site: "lapresse",
-    insecure: JSON.parse("${SANDBOX_INSECURE}")
-  };
+  window.optableCommands = window.optableCommands || [];
+  optableCommands.push(function () {
+    window.optable = new optableSDK({
+      host: "${SANDBOX_HOST}",
+      site: "lapresse",
+      insecure: JSON.parse("${SANDBOX_INSECURE}")
+    });
+  });
 </script>
 <script async src="${SDK_URI}" onload="window.optable.authenticator();"></script>
 <!-- Optable Web SDK script end -->
