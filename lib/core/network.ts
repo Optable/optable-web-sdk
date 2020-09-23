@@ -1,5 +1,6 @@
 import type { SandboxConfig } from "../config";
 import { getConfig } from "../config";
+import { version } from "../build.json";
 
 function buildRequest(path: string, config: SandboxConfig, init?: RequestInit): Request {
   const { site, host, insecure } = getConfig(config);
@@ -8,6 +9,7 @@ function buildRequest(path: string, config: SandboxConfig, init?: RequestInit): 
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
   url.search = new URLSearchParams({
     cookies: "yes",
+    osdk: `web-${version}`,
   }).toString();
 
   const requestInit: RequestInit = { ...init };

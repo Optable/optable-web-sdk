@@ -24,13 +24,13 @@ steps:
     <<: *dind
     if: "!build.pull_request.draft"
     commands:
-      - "apk add make"
+      - "apk add make git"
       - "cat /etc/service_key/service-account-key.json | docker login -u _json_key --password-stdin https://gcr.io"
       - "make build-sdk"
   - name: docker-build-demos
     <<: *dind
     if: "!build.pull_request.draft"
     commands:
-      - "apk add make"
+      - "apk add make git"
       - "cat /etc/service_key/service-account-key.json | docker login -u _json_key --password-stdin https://gcr.io"
       - "make build-demos"

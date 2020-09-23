@@ -1,6 +1,6 @@
 FROM node:14.5.0-alpine3.10 AS build
 
-RUN apk --update add --no-cache gettext
+RUN apk --update add --no-cache gettext bash
 RUN npm install -g npm@6.14.5
 
 WORKDIR /build
@@ -24,7 +24,11 @@ ENV SANDBOX_SITE=$SANDBOX_SITE
 ARG SANDBOX_INSECURE=""
 ENV SANDBOX_INSECURE=$SANDBOX_INSECURE
 
+
+ARG BUILD_VERSION
+
 ARG WEBPACK_MODE=production
+RUN ./scripts/patch-version.sh $BUILD_VERSION
 RUN npm run build-web -- --mode $WEBPACK_MODE
 
 FROM nginx:1.17 AS run
