@@ -9,7 +9,7 @@ function buildRequest(path: string, config: SandboxConfig, init?: RequestInit): 
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
   url.search = new URLSearchParams({
     cookies: "yes",
-    osdk: version,
+    osdk: `web-${version}`,
   }).toString();
 
   const requestInit: RequestInit = { ...init };
