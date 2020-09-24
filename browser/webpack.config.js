@@ -1,5 +1,4 @@
 const path = require("path");
-const webpack = require("webpack");
 
 module.exports = {
   mode: "production",
@@ -46,13 +45,4 @@ module.exports = {
   resolve: {
     extensions: [".ts", ".tsx", ".js", ".jsx", ".json"],
   },
-  plugins: [
-    new webpack.DefinePlugin({
-      OPTABLE_SANDBOX: JSON.stringify({
-        host: process.env.SANDBOX_HOST,
-        site: process.env.SANDBOX_SITE,
-        insecure: process.env.SANDBOX_INSECURE === "true",
-      }),
-    }),
-  ],
 };

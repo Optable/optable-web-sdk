@@ -2,14 +2,20 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <!-- Optable web-sdk loader start -->
     <script type="text/javascript">
-      window.OPTABLE_SANDBOX = {
-        host: "${SANDBOX_HOST}",
-        site: "web-sdk-demo",
-        insecure: JSON.parse("${SANDBOX_INSECURE}"),
-      };
+      window.optable = window.optable || { cmd: [] };
+
+      optable.cmd.push(function () {
+        optable.instance = new optable.SDK({
+          host: "${SANDBOX_HOST}",
+          site: "web-sdk-demo",
+          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+        });
+      });
     </script>
     <script async src="${SDK_URI}"></script>
+    <!-- Optable web-sdk loader end -->
   </head>
   <body>
     <fieldset>
@@ -50,15 +56,15 @@
 
         if (emailCb.checked) {
           email = document.getElementById("email").value;
-          result.innerHTML += "Email: " + email + " (" + optable.constructor.eid(email) + ")<br />";
+          result.innerHTML += "Email: " + email + " (" + optable.SDK.eid(email) + ")<br />";
         }
 
         if (ppidCb.checked) {
           ppid = document.getElementById("ppid").value;
-          result.innerHTML += "PPID: " + ppid + " (" + optable.constructor.cid(ppid) + ")<br />";
+          result.innerHTML += "PPID: " + ppid + " (" + optable.SDK.cid(ppid) + ")<br />";
         }
 
-        optable
+        optable.instance
           .identifyWithEmail(email, ppid)
           .then(function () {
             result.innerHTML += "Sent";

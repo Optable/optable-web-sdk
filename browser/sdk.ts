@@ -1,30 +1,20 @@
-import type { SandboxConfig } from "../lib/config";
 import SDK from "../lib/sdk";
 import Commands from "./commands";
 
-// Macro replaced by webpack at build time
-declare const OPTABLE_SANDBOX: SandboxConfig;
+type OptableGlobal = {
+  cmd: Commands | Function[];
+  SDK: SDK["constructor"];
+};
 
 declare global {
   interface Window {
-    optable: SDK;
-    optableCommands: Commands | Function[];
-    OPTABLE_SANDBOX: SandboxConfig; // allow global var setup at runtime
+    optable?: Partial<OptableGlobal>;
   }
 }
 
 //
-// Load sandbox configuration which tells us the edge to communicate with:
+// Set up optable global on window
 //
-const config = OPTABLE_SANDBOX;
-
-//
-// Set up the SDK API in window.optable:
-//
-window.optable = new SDK({ ...config, ...window.OPTABLE_SANDBOX });
-
-//
-// Set up window.optableCommands and run any pending commands, if any:
-//
-var cmds: Commands | Function[] = window.optableCommands || [];
-window.optableCommands = new Commands(cmds);
+window.optable = window.optable || {};
+window.optable.SDK = SDK;
+window.optable.cmd = new Commands(window.optable.cmd || []);
