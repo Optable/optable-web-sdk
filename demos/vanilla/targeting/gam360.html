@@ -5,10 +5,10 @@
 
     <!-- Optable web-sdk loader start -->
     <script type="text/javascript">
-      window.optableCommands = window.optableCommands || [];
+      window.optable = window.optable || { cmd: [] };
 
-      optableCommands.push(function () {
-        window.optable = new optableSDK({
+      optable.cmd.push(function () {
+        optable.instance = new optable.SDK({
           host: "localhost",
           site: "web-sdk-demo",
           insecure: JSON.parse("true"),
@@ -20,8 +20,8 @@
 
     <!-- Optable web-sdk inject targeting start -->
     <script>
-      optableCommands.push(function () {
-        optable.targeting().then(function (result) {
+      optable.cmd.push(function () {
+        optable.instance.targeting().then(function (result) {
           // Sets up page-level targeting in GAM360 GPT:
           window.googletag = window.googletag || { cmd: [] };
           googletag.cmd.push(function () {

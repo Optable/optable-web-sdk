@@ -7,16 +7,16 @@
 
 <!-- Optable Web SDK script start -->
 <script type="text/javascript">
-  window.optableCommands = window.optableCommands || [];
-  optableCommands.push(function () {
-    window.optable = new optableSDK({
+  window.optable = window.optable || { cmd: [] };
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({
       host: "${SANDBOX_HOST}",
       site: "lapresse",
       insecure: JSON.parse("${SANDBOX_INSECURE}")
     });
   });
 </script>
-<script async src="${SDK_URI}" onload="window.optable.authenticator();"></script>
+<script async src="${SDK_URI}" onload="optable.instance.authenticator();"></script>
 <!-- Optable Web SDK script end -->
 
 <!-- Optable Authenticator customization markup start -->
@@ -8271,7 +8271,7 @@
 
 <!-- Optable Authenticator markup start -->
 <!-- You can customize this part, also have a look at css/optable-login.css -->
-<!-- If you change any IDs in this part of the DOM, you may have to modify your call to window.optable.authenticator() -->
+<!-- If you change any IDs in this part of the DOM, you may have to modify your call to optable.instance.authenticator() -->
 <div class="optable_login_modal optable-login-slide" id="optable-login" aria-hidden="true">
   <div class="optable_login_modal__overlay" tabindex="-1" data-optable-login-close>
     <div class="optable_login_modal__container" role="dialog" aria-modal="true" aria-labelledby="optable-login-title">
