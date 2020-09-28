@@ -1,4 +1,4 @@
-FROM alpine:3.7 AS build
+FROM node:14.11.0-alpine3.12 AS build
 WORKDIR /build
 
 RUN apk --update add --no-cache gettext make \
@@ -18,9 +18,14 @@ ENV SANDBOX_INSECURE=$SANDBOX_INSECURE
 # Build html from .tpl template files:
 RUN make html
 
-# Delete template files from container:
-RUN find . -name "*.tpl" -delete
+# Build react demos:
+RUN npm --prefix react ci
+RUN make react
 
 FROM nginx:1.17 AS run
 WORKDIR /usr/share/nginx/html
-COPY --from=build /build/ ./
+COPY --from=build /build/publishers ./
+COPY --from=build /build/vanilla/targeting/gam360.html ./vanilla/targeting/gam360.html
+COPY --from=build /build/vanilla/identify.html ./vanilla/identify.html
+COPY --from=build /build/react/dist/ ./react/dist/
+COPY --from=build /build/index.html ./index.html
