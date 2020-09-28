@@ -28,6 +28,7 @@
   },
   "files": [
     "lib/dist/**/*.js",
+    "lib/dist/build.json",
     "lib/dist/**/*.d.ts",
     "browser/dist/**/*.js",
     "LICENSE"
