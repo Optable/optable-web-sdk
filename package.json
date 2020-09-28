@@ -2,7 +2,7 @@
   "name": "@optable/web-sdk",
   "main": "./lib/dist/sdk.js",
   "types": "./lib/dist/sdk.d.ts",
-  "browser": "./browser/dist/sdk.js",
+  "browser": "./lib/dist/sdk.js",
   "repository": "https://github.com/optable/optable-web-sdk",
   "homepage": "https://optable.co",
   "license": "SEE LICENSE IN LICENSE",
