@@ -41,5 +41,6 @@ class SDK {
   }
 }
 
-export { SDK, SandboxConfig };
+export { SDK };
+export type { SandboxConfig };
 export default SDK;
