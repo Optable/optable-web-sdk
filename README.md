@@ -101,6 +101,32 @@ sdk
 
 On success, the resulting key values are typically sent as part of a subsequent ad call. Therefore we recommend that you either call targeting() before each ad call, or in parallel periodically, caching the resulting key values which you then provide in ad calls.
 
+### Witness API
+
+To send real-time event data from the user's browser to the sandbox for eventual audience assembly, you can call the witness API as follows:
+
+```js
+const onSuccess = () => console.log("Witness API success!");
+const onFailure = (err) => console.warn("Witness API error: ${err.message}");
+
+const eventProperties = {
+  property_one: "some_value",
+  property_two: "some other value",
+};
+
+sdk.witness("event.type.here", eventProperties).then(onSuccess).catch(onFailure);
+```
+
+The specified event type and properties are associated with the logged event and which can be used for matching during audience assembly.
+
+Note that event properties are string keyvalue pairs and have type `WitnessProperties`:
+
+```typescript
+type WitnessProperties = {
+  [key: string]: string;
+};
+```
+
 ## Usage (script tag)
 
 For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a web site via a `script` tag. As previously mentioned, your sandbox is configured to serve such a released browser bundle via the `https://sandbox.customer.com/static/web/sdk.js` URL by default.
