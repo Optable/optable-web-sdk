@@ -167,9 +167,13 @@ The following shows an example of how to safely initialize the SDK and dispatch 
 <input type="text" id="email" value="some.email@address.com" />
 ```
 
-## Integrating GAM360
+## Integrating with GAM360
 
-Loading the Optable SDK via a `script tag` on a web page which also uses the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started), we can further extend the `targeting` example from the **npm module** section above, to show an integration with a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account:
+The Optable Web SDK can fetch targeting keyvalue data from a sandbox and send it to a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account for real-time targeting. It's also capable of intercepting advertising events from the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started) and logging them to a sandbox via the **witness API**.
+
+### Targeting key values
+
+Loading the Optable SDK via a `script tag` on a web page which also uses the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started), we can further extend the `targeting` example above to show an integration with a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account:
 
 ```html
 <!-- Optable SDK async load: -->
@@ -226,7 +230,21 @@ Loading the Optable SDK via a `script tag` on a web page which also uses the [Go
 </script>
 ```
 
-A working example is available in the demo pages.
+### Witnessing ad events
+
+To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.slotrenderendedevent) and [ImpressionViewableEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.impressionviewableevent) and send log data to your sandbox using the **witness API**, simply install GPT event listeners on the SDK instance as follows:
+
+```html
+<script>
+  optable.cmd.push(function () {
+    optable.instance.installGPTEventListeners();
+  });
+</script>
+```
+
+Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
+
+A working example of both targeting and event witnessing is available in the demo pages.
 
 ## Demo Pages
 
