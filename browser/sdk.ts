@@ -1,4 +1,5 @@
 import SDK from "../lib/sdk";
+import "../lib/gpt/events";
 import Commands from "./commands";
 
 type OptableGlobal = {

@@ -21,6 +21,10 @@
     <!-- Optable web-sdk inject targeting start -->
     <script>
       optable.cmd.push(function () {
+        optable.instance.installGPTEventListeners();
+      });
+
+      optable.cmd.push(function () {
         optable.instance.targeting().then(function (result) {
           // Sets up page-level targeting in GAM360 GPT:
           window.googletag = window.googletag || { cmd: [] };
