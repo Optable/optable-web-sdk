@@ -15,8 +15,8 @@ define BUILD_ARGS
 endef
 
 define BUILD_DEMOS_ARGS
---build-arg="SDK_URI=https://sandbox.optable.co/static/web/sdk.js"
---build-arg="SANDBOX_HOST=sandbox.optable.co"
+--build-arg="SDK_URI=https://sandbox.optable.co/static/web/sdk.js" \
+--build-arg="SANDBOX_HOST=sandbox.optable.co" \
 --build-arg="SANDBOX_INSECURE=false"
 endef
 
