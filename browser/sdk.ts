@@ -1,6 +1,8 @@
-import SDK from "../lib/sdk";
-import "../lib/gpt/events";
 import Commands from "./commands";
+
+import SDK from "../lib/sdk";
+import "../lib/addons/gpt-events";
+import "../lib/addons/try-identify";
 
 type OptableGlobal = {
   cmd: Commands | Function[];
