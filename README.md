@@ -262,12 +262,13 @@ The above example uses various personalization tags as documented in [Braze's us
 
 ### Call tryIdentifyFromParams SDK API
 
-On your website destination page, you can call a helper method provided by the SDK which will attempt to parse and validate any **oeid** parameters passed to the page via query string and, when found, automatically trigger a call to Optable's **identify** API. This is illustrated in the following code snippet:
+On your website destination page, you can call a helper method provided by the SDK which will attempt to parse and validate any **oeid** parameters passed to the page via query string and, when found, automatically trigger a call to Optable's **identify** API. For example:
 
 ```html
 <!-- Optable SDK async load: -->
 <script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
 <script>
+  window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
     optable.instance = new optable.SDK({ host: "sandbox.customer.com", site: "my-site" });
     optable.instance.tryIdentifyFromParams();
