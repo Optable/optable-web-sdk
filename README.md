@@ -246,6 +246,35 @@ Note that you can call `installGPTEventListeners()` as many times as you like on
 
 A working example of both targeting and event witnessing is available in the demo pages.
 
+## Identifying visitors arriving from Email newsletters
+
+If you send Email newsletters that contain links to your website, then you may want to automatically _identify_ visitors that have clicked on any such links via their Email address. Website traffic which is originating from a subscriber click on a link in a newsletter is considered to be implicitly authenticated by the recipient of the Email, therefore serving as an excellent source of linking of online user identities.
+
+### Insert oeid into your Email newsletter template
+
+To enable automatic identification of visitors originating from your Email newsletter, you first need to include an **oeid** parameter in the query string of all links to your website in your Email newsletter template. The value of the **oeid** parameter should be set to the SHA256 hash of the lowercased Email address of the recipient. For example, if you are using [Braze](https://www.braze.com/) to send your newsletters, you can easily encode the SHA256 hash value of the recipient's Email address by setting the **oeid** parameter in the query string of any links to your website as follows:
+
+```
+oeid={{${email_address} | downcase | sha2}}
+```
+
+The above example uses various personalization tags as documented in [Braze's user guide](https://www.braze.com/docs/user_guide/personalization_and_dynamic_content/) to dynamically insert the required data into an **oeid** parameter, all of which should make up a _part_ of the destination URL in your template.
+
+### Call tryIdentifyFromParams SDK API
+
+On your website destination page, you can call a helper method provided by the SDK which will attempt to parse and validate any **oeid** parameters passed to the page via query string and, when found, automatically trigger a call to Optable's **identify** API. This is illustrated in the following code snippet:
+
+```html
+<!-- Optable SDK async load: -->
+<script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
+<script>
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({ host: "sandbox.customer.com", site: "my-site" });
+    optable.instance.tryIdentifyFromParams();
+  });
+</script>
+```
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) sandbox.

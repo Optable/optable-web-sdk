@@ -12,6 +12,8 @@
           site: "web-sdk-demo",
           insecure: JSON.parse("${SANDBOX_INSECURE}"),
         });
+
+        optable.instance.tryIdentifyFromParams();
       });
     </script>
     <script async src="${SDK_URI}"></script>
