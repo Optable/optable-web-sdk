@@ -24,7 +24,7 @@ RUN make react
 
 FROM nginx:1.17 AS run
 WORKDIR /usr/share/nginx/html
-COPY --from=build /build/publishers ./
+COPY --from=build /build/publishers/ ./publishers/
 COPY --from=build /build/vanilla/targeting/gam360.html ./vanilla/targeting/gam360.html
 COPY --from=build /build/vanilla/identify.html ./vanilla/identify.html
 COPY --from=build /build/react/dist/ ./react/dist/

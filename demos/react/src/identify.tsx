@@ -45,7 +45,7 @@ function RequestDetails({ email, ppid, response }: RequestDetailsProps) {
         </>
       )}
       {response &&
-        (response.error ? (
+        (!response.error ? (
           "Sent"
         ) : (
           <>
