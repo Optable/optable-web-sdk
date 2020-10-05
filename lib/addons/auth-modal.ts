@@ -2,6 +2,7 @@ import type { SandboxConfig } from "../config";
 import type { AuthEmailResponse } from "../edge/auth";
 import Auth from "../edge/auth";
 import MicroModal from "micromodal";
+import SDK from "../sdk";
 
 type AuthModalDOMConfig = {
   modalDiv: string;
@@ -213,3 +214,16 @@ class AuthModal {
 
 export { AuthModal, AuthModalDOMConfig, MicroModalConfig };
 export default AuthModal;
+
+declare module "../sdk" {
+  export interface SDK {
+    authenticator: (DOMConfig?: AuthModalDOMConfig, MicroModalConfig?: MicroModalConfig) => AuthModal;
+  }
+}
+
+SDK.prototype.authenticator = function (
+  DOMConfig?: AuthModalDOMConfig,
+  MicroModalConfig?: MicroModalConfig
+): AuthModal {
+  return new AuthModal(this.sandbox, DOMConfig, MicroModalConfig);
+};

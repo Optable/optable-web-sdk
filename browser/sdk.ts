@@ -3,6 +3,7 @@ import Commands from "./commands";
 import SDK from "../lib/sdk";
 import "../lib/addons/gpt-events";
 import "../lib/addons/try-identify";
+import "../lib/addons/auth-modal";
 
 type OptableGlobal = {
   cmd: Commands | Function[];
