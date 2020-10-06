@@ -17,7 +17,7 @@ If you're building a web application or want to bundle the SDK functionality wit
 $ npm install @optable/web-sdk
 ```
 
-And then simply `import` and use the SDK class as shown in the _Usage_ section below.
+And then simply `import` and use the `OptableSDK` class as shown in the _Usage_ section below.
 
 ### script tag
 
@@ -41,20 +41,20 @@ For example, if your website runs at `www.customer.com` or `customer.com`, then 
 
 ## Usage (npm module)
 
-To configure an instance of the SDK integrating with an [Optable](https://optable.co/) sandbox running at hostname `sandbox.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `SDK` class exported by the `@optable/web-sdk` module:
+To configure an instance of `OptableSDK` integrating with an [Optable](https://optable.co/) sandbox running at hostname `sandbox.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `OptableSDK` class exported by the `@optable/web-sdk` module:
 
 ```js
-import SDK from "@optable/web-sdk";
+import OptableSDK from "@optable/web-sdk";
 
-const sdk = new SDK({ host: "sandbox.customer.com", site: "my-site" });
+const sdk = new OptableSDK({ host: "sandbox.customer.com", site: "my-site" });
 ```
 
-You can then call various SDK APIs on the instance as shown in the examples below. It's also possible to configure multiple instances of `SDK` in order to connect to other (e.g., partner) sandboxes and/or reference other configured web site slug IDs.
+You can then call various SDK APIs on the instance as shown in the examples below. It's also possible to configure multiple instances of `OptableSDK` in order to connect to other (e.g., partner) sandboxes and/or reference other configured web site slug IDs.
 
-Note that all SDK communication with Optable sandboxes is done over TLS. The only exception to this is if you instantiate the `SDK` class with the `insecure` optional boolean parameter set to `true`. For example:
+Note that all SDK communication with Optable sandboxes is done over TLS. The only exception to this is if you instantiate the `OptableSDK` class with the `insecure` optional boolean parameter set to `true`. For example:
 
 ```js
-const sdk = new SDK({ host: "sandbox.customer.com", site: "my-site", insecure: true });
+const sdk = new OptableSDK({ host: "sandbox.customer.com", site: "my-site", insecure: true });
 ```
 
 However, since production sandboxes only listen to TLS traffic, the above is really only useful for developers of `optable-sandbox` running the sandbox locally for testing. See [developer docs](https://github.com/Optable/optable-web-sdk/tree/master/docs) for other developer notes.
@@ -77,11 +77,11 @@ const ppid = "some.ppid";
 sdk.identifyWithEmail(email, ppid).then(onSuccess).catch(onFailure);
 ```
 
-The SDK `identifyWithEmail()` method will asynchronously connect to the configured sandbox and send IDs for resolution.
+The `identifyWithEmail()` method will asynchronously connect to the configured sandbox and send IDs for resolution.
 
 > :warning: **Client-Side Email Hashing**: The SDK will compute the SHA-256 hash of the Email address on the client-side and send the hashed value to the sandbox. The Email address is **not** sent by the browser in plain text.
 
-The frequency of invocation of `identifyWithEmail` is up to you, however for optimal identity resolution we recommended to call the `identifyWithEmail()` method on your SDK instance on each page load while the user is authenticated, or periodically such as for example once every 15 to 60 minutes while the user is authenticated and actively using your site.
+The frequency of invocation of `identifyWithEmail` is up to you, however for optimal identity resolution we recommended to call the `identifyWithEmail()` method on your `OptableSDK` instance on each page load while the user is authenticated, or periodically such as for example once every 15 to 60 minutes while the user is authenticated and actively using your site.
 
 ### Targeting API
 
@@ -133,7 +133,7 @@ For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a w
 
 As described in the **Installation** section above, in order to avoid having to block the rendering of the page, the recommended way to load the SDK via `script` tag is asynchronously with the `async` attribute. Therefore, to use the SDK you should take care to `push` your _commands_ onto the `window.optable.cmd` array of functions, which are automatically executed by the SDK browser bundle once it has loaded.
 
-The browser bundle exports the same `SDK` constructor documented in the **npm module** section above in a `optable` window object, as `optable.SDK`
+The browser bundle exports the same `OptableSDK` constructor documented in the **npm module** section above in the `optable` window object, as `optable.SDK`
 
 The following shows an example of how to safely initialize the SDK and dispatch an `identify` API request to a sandbox, from an input element after the document was loaded.
 
@@ -235,7 +235,10 @@ Loading the Optable SDK via a `script tag` on a web page which also uses the [Go
 To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.slotrenderendedevent) and [ImpressionViewableEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.impressionviewableevent) and send log data to your sandbox using the **witness API**, simply install GPT event listeners on the SDK instance as follows:
 
 ```html
+<!-- Optable SDK async load: -->
+<script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
 <script>
+  window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
     optable.instance.installGPTEventListeners();
   });

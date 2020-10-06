@@ -1,11 +1,11 @@
-import type { SandboxConfig } from "../config";
+import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 
 type TargetingKeyValues = {
   [key: string]: string[];
 };
 
-function Targeting(config: SandboxConfig): Promise<TargetingKeyValues> {
+function Targeting(config: OptableConfig): Promise<TargetingKeyValues> {
   return fetch("/targeting", config, {
     method: "GET",
     headers: {

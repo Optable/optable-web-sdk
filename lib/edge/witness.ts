@@ -1,11 +1,11 @@
-import type { SandboxConfig } from "../config";
+import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 
 type WitnessProperties = {
   [key: string]: string;
 };
 
-function Witness(config: SandboxConfig, event: string, properties: WitnessProperties): Promise<void> {
+function Witness(config: OptableConfig, event: string, properties: WitnessProperties): Promise<void> {
   const evt = {
     event: event,
     properties: properties,

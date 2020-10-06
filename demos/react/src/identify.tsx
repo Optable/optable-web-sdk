@@ -1,12 +1,12 @@
 import React, { useContext, createContext, useState } from "react";
 import ReactDOM from "react-dom";
-import OptableSDK, { SandboxConfig } from "@optable/web-sdk";
+import OptableSDK, { OptableConfig } from "@optable/web-sdk";
 
 const OptableContext = createContext<OptableSDK | null>(null);
 
 // Sandbox configuration injected by webpack based on build environment
 declare global {
-  const SANDBOX_CONFIG: SandboxConfig;
+  const SANDBOX_CONFIG: OptableConfig;
 }
 
 // Provide a global SDK instance across the application

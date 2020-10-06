@@ -1,4 +1,4 @@
-import type { SandboxConfig } from "../config";
+import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 
 type AuthReadyResponse = {
@@ -16,7 +16,7 @@ type AuthEmailResponse = {
 class Auth {
   authenticated: boolean;
 
-  constructor(private Config: SandboxConfig) {
+  constructor(private Config: OptableConfig) {
     this.authenticated = false;
   }
 

@@ -1,4 +1,4 @@
-import type { SandboxConfig } from "./config";
+import type { OptableConfig } from "./config";
 import type { TargetingKeyValues } from "./edge/targeting";
 import type { WitnessProperties } from "./edge/witness";
 import Identify from "./edge/identify";
@@ -6,8 +6,8 @@ import Targeting from "./edge/targeting";
 import Witness from "./edge/witness";
 import { sha256 } from "js-sha256";
 
-class SDK {
-  constructor(public sandbox: SandboxConfig) {}
+class OptableSDK {
+  constructor(public sandbox: OptableConfig) {}
 
   identify(ids: string[]): Promise<void> {
     return Identify(this.sandbox, ids);
@@ -16,10 +16,10 @@ class SDK {
   identifyWithEmail(email: string, ppid?: string): Promise<void> {
     var ids: string[] = [];
     if (email) {
-      ids.push(SDK.eid(email));
+      ids.push(OptableSDK.eid(email));
     }
     if (ppid) {
-      ids.push(SDK.cid(ppid));
+      ids.push(OptableSDK.cid(ppid));
     }
     return Identify(this.sandbox, ids);
   }
@@ -41,6 +41,6 @@ class SDK {
   }
 }
 
-export { SDK };
-export type { SandboxConfig };
-export default SDK;
+export { OptableSDK };
+export type { OptableConfig };
+export default OptableSDK;

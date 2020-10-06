@@ -1,13 +1,13 @@
 import Commands from "./commands";
 
-import SDK from "../lib/sdk";
+import OptableSDK from "../lib/sdk";
 import "../lib/addons/gpt-events";
 import "../lib/addons/try-identify";
 import "../lib/addons/auth-modal";
 
 type OptableGlobal = {
   cmd: Commands | Function[];
-  SDK: SDK["constructor"];
+  SDK: OptableSDK["constructor"];
 };
 
 declare global {
@@ -20,5 +20,5 @@ declare global {
 // Set up optable global on window
 //
 window.optable = window.optable || {};
-window.optable.SDK = SDK;
+window.optable.SDK = OptableSDK;
 window.optable.cmd = new Commands(window.optable.cmd || []);
