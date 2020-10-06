@@ -81,7 +81,7 @@ function Form() {
     setRequestDetails(request);
 
     sdk
-      .identifyWithEmail(email, ppidChecked ? ppid : undefined)
+      .identifyWithEmail(emailChecked ? email : "", ppidChecked ? ppid : undefined)
       .then(() => {
         setRequestDetails({ ...request, response: {} });
       })
