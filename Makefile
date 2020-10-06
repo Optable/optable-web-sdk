@@ -40,7 +40,7 @@ build-sdk:
 
 .PHONY: build-demos
 build-demos:
-	docker build ./demos/. $(BUILD_ARGS) $(BUILD_DEMOS_ARGS) --target run -t optable-web-sdk-demos:$(TAG)
+	docker build . $(BUILD_ARGS) $(BUILD_DEMOS_ARGS) --target run_demos -t optable-web-sdk-demos:$(TAG)
 
 #
 # Publish web SDK and web demos container images
