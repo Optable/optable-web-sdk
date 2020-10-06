@@ -1,4 +1,7 @@
-.DEFAULT_GOAL := html
+.DEFAULT_GOAL := all
+
+.PHONY: all
+all: html react
 
 .PHONY: html
 html:
