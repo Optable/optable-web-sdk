@@ -1,8 +1,8 @@
-import type { SandboxConfig } from "../config";
+import type { OptableConfig } from "../config";
 import { getConfig } from "../config";
 import { version } from "../build.json";
 
-function buildRequest(path: string, config: SandboxConfig, init?: RequestInit): Request {
+function buildRequest(path: string, config: OptableConfig, init?: RequestInit): Request {
   const { site, host, insecure } = getConfig(config);
 
   const proto = insecure ? "http" : "https";
@@ -20,7 +20,7 @@ function buildRequest(path: string, config: SandboxConfig, init?: RequestInit): 
   return request;
 }
 
-async function fetch<T>(path: string, config: SandboxConfig, init?: RequestInit): Promise<T> {
+async function fetch<T>(path: string, config: OptableConfig, init?: RequestInit): Promise<T> {
   const response = await window.fetch(buildRequest(path, config, init));
 
   const contentType = response.headers.get("Content-Type");

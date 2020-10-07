@@ -1,7 +1,8 @@
-import type { SandboxConfig } from "../config";
+import type { OptableConfig } from "../config";
 import type { AuthEmailResponse } from "../edge/auth";
 import Auth from "../edge/auth";
 import MicroModal from "micromodal";
+import OptableSDK from "../sdk";
 
 type AuthModalDOMConfig = {
   modalDiv: string;
@@ -30,7 +31,7 @@ class AuthModal {
   auth: Auth;
 
   constructor(
-    private Config: SandboxConfig,
+    private Config: OptableConfig,
     public DOMConfig: AuthModalDOMConfig = {
       modalDiv: "optable-login",
       emailSentModalDiv: "optable-login-email-sent",
@@ -213,3 +214,16 @@ class AuthModal {
 
 export { AuthModal, AuthModalDOMConfig, MicroModalConfig };
 export default AuthModal;
+
+declare module "../sdk" {
+  export interface OptableSDK {
+    authenticator: (DOMConfig?: AuthModalDOMConfig, MicroModalConfig?: MicroModalConfig) => AuthModal;
+  }
+}
+
+OptableSDK.prototype.authenticator = function (
+  DOMConfig?: AuthModalDOMConfig,
+  MicroModalConfig?: MicroModalConfig
+): AuthModal {
+  return new AuthModal(this.sandbox, DOMConfig, MicroModalConfig);
+};

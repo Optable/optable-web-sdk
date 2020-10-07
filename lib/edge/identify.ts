@@ -1,7 +1,7 @@
-import type { SandboxConfig } from "../config";
+import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 
-function Identify(config: SandboxConfig, ids: string[]): Promise<void> {
+function Identify(config: OptableConfig, ids: string[]): Promise<void> {
   return fetch("/identify", config, {
     method: "POST",
     headers: {

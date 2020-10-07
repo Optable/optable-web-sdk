@@ -1,5 +1,5 @@
 import type { WitnessProperties } from "../edge/witness";
-import SDK from "../sdk";
+import OptableSDK from "../sdk";
 
 declare global {
   interface Window {
@@ -8,7 +8,7 @@ declare global {
 }
 
 declare module "../sdk" {
-  export interface SDK {
+  export interface OptableSDK {
     installGPTEventListeners: () => void;
   }
 }
@@ -31,9 +31,9 @@ function toWitnessProperties(event: any): WitnessProperties {
 /*
  * installGPTEventListeners() sets up event listeners on the Google Publisher Tag
  * "slotRenderEnded" and "impressionViewable" page events, and calls witness()
- * on the SDK instance to send log data to a sandbox.
+ * on the OptableSDK instance to send log data to a sandbox.
  */
-SDK.prototype.installGPTEventListeners = function () {
+OptableSDK.prototype.installGPTEventListeners = function () {
   // Next time we get called is a no-op:
   const sdk = this;
   sdk.installGPTEventListeners = function () {};

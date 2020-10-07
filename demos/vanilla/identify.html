@@ -67,7 +67,7 @@
         }
 
         optable.instance
-          .identifyWithEmail(email, ppid)
+          .identify(optable.SDK.eid(email), optable.SDK.cid(ppid))
           .then(function () {
             result.innerHTML += "Sent";
           })

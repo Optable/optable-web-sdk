@@ -1,6 +1,6 @@
 FROM node:14.5.0-alpine3.10 AS build
 
-RUN apk --update add --no-cache gettext bash make
+RUN apk --update add --no-cache gettext bash make && apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing watchexec
 RUN npm install -g npm@6.14.5
 
 WORKDIR /build
