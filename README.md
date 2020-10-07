@@ -61,27 +61,29 @@ However, since production sandboxes only listen to TLS traffic, the above is rea
 
 ### Identify API
 
-To associate a user's browser with an authenticated identifier such as an Email address, optionally linked with other identifiers, such as your own vendor, publisher, or site-level `PPID`, you can call the `identifyWithEmail` API as follows:
+To associate a user's browser with an authenticated identifier such as an Email address, optionally linked with other identifiers, such as your own vendor, publisher, or site-level `PPID`, you can call the `identify` API as follows:
 
 ```js
 const onSuccess = () => console.log("Identify API success!");
 const onFailure = (err) => console.warn("Identify API error: ${err.message}");
 
-const email = "some.email@address.com";
+const emailID = OptableSDK.eid("some.email@address.com");
 
-// Identify with Email:
-sdk.identifyWithEmail(email).then(onSuccess).catch(onFailure);
+// Identify with Email ID (eid):
+sdk.identify(emailID).then(onSuccess).catch(onFailure);
 
-// You can optionally link it with your own PPID in the same sandbox identification call:
-const ppid = "some.ppid";
-sdk.identifyWithEmail(email, ppid).then(onSuccess).catch(onFailure);
+// You can optionally link it with your own PPID in the same sandbox identification call,
+// simply pass a second argument to identify(). A custom PPID value can be sent to identify()
+// after it is prepared with the OptableSDK.cid() helper:
+const ppid = OptableSDK.cid("some.ppid");
+sdk.identify(emailID, ppid).then(onSuccess).catch(onFailure);
 ```
 
-The `identifyWithEmail()` method will asynchronously connect to the configured sandbox and send IDs for resolution.
+The `identify()` method will asynchronously connect to the configured sandbox and send IDs for resolution.
 
-> :warning: **Client-Side Email Hashing**: The SDK will compute the SHA-256 hash of the Email address on the client-side and send the hashed value to the sandbox. The Email address is **not** sent by the browser in plain text.
+> :warning: **Client-Side Email Hashing**: The `OptableSDK.eid()` helper will compute the SHA-256 hash of the Email address on the client-side and send the hashed value to the sandbox. The Email address is **not** sent by the browser in plain text.
 
-The frequency of invocation of `identifyWithEmail` is up to you, however for optimal identity resolution we recommended to call the `identifyWithEmail()` method on your `OptableSDK` instance on each page load while the user is authenticated, or periodically such as for example once every 15 to 60 minutes while the user is authenticated and actively using your site.
+The frequency of invocation of `identify` is up to you, however for optimal identity resolution we recommended to call the `identify()` method on your `OptableSDK` instance on each page load while the user is authenticated, or periodically such as for example once every 15 to 60 minutes while the user is authenticated and actively using your site.
 
 ### Targeting API
 
@@ -158,8 +160,7 @@ The following shows an example of how to safely initialize the SDK and dispatch 
     optable.cmd.push(() => {
       // Fetch input on document load
       const emailInput = document.getElementById("email");
-
-      optable.instance.identifyByEmail(emailInput.value).then(() => console.log("Identify API Success!"));
+      optable.instance.identify(optable.SDK.eid(emailInput.value)).then(() => console.log("Identify API Success!"));
     });
   });
 </script>
