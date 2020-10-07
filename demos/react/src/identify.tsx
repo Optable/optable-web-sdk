@@ -81,7 +81,7 @@ function Form() {
     setRequestDetails(request);
 
     sdk
-      .identifyWithEmail(emailChecked ? email : "", ppidChecked ? ppid : undefined)
+      .identify(emailChecked ? OptableSDK.eid(email) : "", ppidChecked ? OptableSDK.cid(ppid) : "")
       .then(() => {
         setRequestDetails({ ...request, response: {} });
       })

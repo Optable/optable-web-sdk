@@ -9,19 +9,11 @@ import { sha256 } from "js-sha256";
 class OptableSDK {
   constructor(public sandbox: OptableConfig) {}
 
-  identify(ids: string[]): Promise<void> {
-    return Identify(this.sandbox, ids);
-  }
-
-  identifyWithEmail(email: string, ppid?: string): Promise<void> {
-    var ids: string[] = [];
-    if (email) {
-      ids.push(OptableSDK.eid(email));
-    }
-    if (ppid) {
-      ids.push(OptableSDK.cid(ppid));
-    }
-    return Identify(this.sandbox, ids);
+  identify(...ids: string[]) {
+    return Identify(
+      this.sandbox,
+      ids.filter((id) => id)
+    );
   }
 
   targeting(): Promise<TargetingKeyValues> {
@@ -33,11 +25,11 @@ class OptableSDK {
   }
 
   static eid(email: string): string {
-    return "e:" + sha256.hex(email.toLowerCase().trim());
+    return email ? "e:" + sha256.hex(email.toLowerCase().trim()) : "";
   }
 
   static cid(ppid: string): string {
-    return "c:" + ppid.trim();
+    return ppid ? "c:" + ppid.trim() : "";
   }
 }
 

@@ -14,6 +14,6 @@ OptableSDK.prototype.tryIdentifyFromParams = function () {
   const qstr = new URLSearchParams(window.location.search);
   const eid = qstr.get("oeid");
   if (maybeValidEID(eid || "")) {
-    this.identify(["e:" + eid]);
+    this.identify("e:" + eid);
   }
 };
