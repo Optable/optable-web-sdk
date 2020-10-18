@@ -28,9 +28,6 @@ all: build publish
 .PHONY: build
 build: build-sdk build-demos
 
-.PHONY: publish
-publish: publish-sdk publish-demos
-
 #
 # Build web SDK and web demos targets
 #
@@ -45,12 +42,22 @@ build-demos:
 #
 # Publish web SDK and web demos container images
 #
-.PHONY: publish-sdk
-publish-sdk:
-	docker tag optable-web-sdk:$(TAG) gcr.io/optable-platform/optable-web-sdk:$(TAG)
-	docker push gcr.io/optable-platform/optable-web-sdk:$(TAG)
+
+.PHONY: publish-sdk-lib
+publish-sdk-lib:
+	docker build . $(BUILD_ARGS) --build-arg="NPMJS_AUTH_TOKEN=$(NPMJS_AUTH_TOKEN)" --target publish-lib -t optable-web-sdk:$(TAG)-publish-lib
+	docker run optable-web-sdk:$(TAG)-publish-lib npm publish --access public
+
+.PHONY: publish-sdk-web
+publish-sdk-web:
+	docker build . $(BUILD_ARGS) --target publish-web -t optable-web-sdk:$(TAG)-publish-web
+	docker run \
+		--volume $(HOME)/.config/gcloud:/root/.config/gcloud \
+		--volume $(shell pwd)/.git:/publish/.git \
+		optable-web-sdk:$(TAG)-publish-web \
+		gs-publish.sh gs://optable-web-sdk ./sdk.js $(BUILD_VERSION)
 
 .PHONY: publish-demos
-publish-demos:
+publish-demos: build-demos
 	docker tag optable-web-sdk-demos:$(TAG) gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
 	docker push gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
