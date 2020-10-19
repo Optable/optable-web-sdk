@@ -17,7 +17,7 @@ steps:
       - "apk add make git"
       - "docker run -v /etc/service_key/service-account-key.json:/key -v $HOME/.config/gcloud:/root/.config/gcloud google/cloud-sdk gcloud auth activate-service-account --key-file /key"
       - "git fetch --tags"
-      - "make BUILD_VERSION=$BUILDKITE_TAG publish-sdk-web"
+      - "make NPMJS_AUTH_TOKEN=$NPMJS_AUTH_TOKEN BUILD_VERSION=$BUILDKITE_TAG publish-sdk-web"
     plugins:
       - docker#v3.5.0:
           image: "docker:latest"
