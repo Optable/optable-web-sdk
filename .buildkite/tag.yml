@@ -1,5 +1,7 @@
 env:
   DOCKER_BUILDKIT: 1
+  # Customize fetch so that all remote tags are fetched as well
+  BUILDKITE_REFSPEC: --tags $BUILDKITE_COMMIT
 steps:
   - name: npm-publish
     commands:
@@ -16,7 +18,6 @@ steps:
     commands:
       - "apk add make git"
       - "docker run -v /etc/service_key/service-account-key.json:/key -v $HOME/.config/gcloud:/root/.config/gcloud google/cloud-sdk:alpine gcloud auth activate-service-account --key-file /key"
-      - "yes | git fetch --tags"
       - "make NPMJS_AUTH_TOKEN=$NPMJS_AUTH_TOKEN BUILD_VERSION=$BUILDKITE_TAG publish-sdk-web"
     plugins:
       - docker#v3.5.0:
