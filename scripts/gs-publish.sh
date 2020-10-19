@@ -63,7 +63,7 @@ expand_level() {
     return
   fi
 
-  local sorted_versions; sorted_versions=$(git tag -l --sort="-v:refname")
+  local sorted_versions; sorted_versions=$(git tag -l --sort="-v:refname" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$")
   local last_version; last_version=$(echo "$sorted_versions" | head -1)
 
   local major; major=$(semver get major "$version")
@@ -75,14 +75,14 @@ expand_level() {
     return
   fi
 
-  local last_minor_version; last_minor_version=$(echo "$sorted_versions" | grep -E "v$major" | head -1)
+  local last_minor_version; last_minor_version=$(echo "$sorted_versions" | grep -E "^v$major\." | head -1)
   # If current version is equal or greater latest minor version, expand major and minor
   if [[ "$(semver compare "$last_minor_version" "$version")" -lt 1 ]]; then
     echo 2
     return
   fi
 
-  local last_patch_version; last_patch_version=$(echo "$sorted_versions" | grep -E "v$major.$minor" | head -1)
+  local last_patch_version; last_patch_version=$(echo "$sorted_versions" | grep -E "^v$major\.$minor\." | head -1)
 
   # If current version is equal or greater latest patch version, expand minor
   if [[ "$(semver compare "$last_patch_version" "$version")" -lt 1 ]]; then
