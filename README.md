@@ -39,9 +39,9 @@ Or in production:
 
 Note the presence of the `async` attribute, which instructs browsers to load the library asynchronously and not block the page from rendering.
 
-## Versionning
+## Versioning
 
-When publishing its SDK, Optable follows [Semantic Versionning](https://semver.org/) conventions.
+When publishing its SDK, Optable follows [Semantic Versioning](https://semver.org/) conventions.
 You can therefore expect that there will not be any breaking API changes if you are tracking a particular major version.
 
 ## Domains and Cookies
