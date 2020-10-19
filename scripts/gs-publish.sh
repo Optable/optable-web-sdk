@@ -22,6 +22,7 @@ send_file() {
 
 publish() {
   local bucket_uri
+  # Usage of ${//} search/replace non-applicable as we *only* want to remove trailing slashes
   # shellcheck disable=SC2001
   bucket_uri="$(echo "$1" | sed 's#/*$##')"
   local file; file="$2"
