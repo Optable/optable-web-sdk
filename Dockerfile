@@ -50,11 +50,6 @@ COPY --from=build /build/demos/vanilla/identify.html ./vanilla/identify.html
 COPY --from=build /build/demos/react/dist/ ./react/dist/
 COPY --from=build /build/demos/index.html ./index.html
 
-FROM build AS publish-lib
-ARG NPMJS_AUTH_TOKEN
-RUN echo "@optable:registry=https://registry.npmjs.org/" > ~/.npmrc
-RUN echo "//registry.npmjs.org/:_authToken=$NPMJS_AUTH_TOKEN" >> ~/.npmrc
-
 FROM google/cloud-sdk:alpine AS publish-web
 WORKDIR /publish
 ENV PATH="/publish:$PATH"

@@ -45,8 +45,8 @@ build-demos:
 
 .PHONY: publish-sdk-lib
 publish-sdk-lib:
-	docker build . $(BUILD_ARGS) --build-arg="NPMJS_AUTH_TOKEN=$(NPMJS_AUTH_TOKEN)" --target publish-lib -t optable-web-sdk:$(TAG)-publish-lib
-	docker run optable-web-sdk:$(TAG)-publish-lib npm publish --access public
+	docker build . $(BUILD_ARGS) --target build -t optable-web-sdk:$(TAG)-publish-lib
+	docker run --volume $(HOME)/.npmrc:/root/.npmrc optable-web-sdk:$(TAG)-publish-lib npm publish --access public
 
 .PHONY: publish-sdk-web
 publish-sdk-web:

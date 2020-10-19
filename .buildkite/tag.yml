@@ -6,7 +6,9 @@ steps:
   - name: npm-publish
     commands:
       - "apk add make git"
-      - "make NPMJS_AUTH_TOKEN=$NPMJS_AUTH_TOKEN BUILD_VERSION=$BUILDKITE_TAG publish-sdk-lib"
+      - "echo '@optable:registry=https://registry.npmjs.org/' > /root/.npmrc"
+      - "echo '//registry.npmjs.org/:_authToken=$NPMJS_AUTH_TOKEN' >> /root/.npmrc"
+      - "make BUILD_VERSION=$BUILDKITE_TAG publish-sdk-lib"
     plugins:
       - docker#v3.5.0:
           image: "docker:latest"
