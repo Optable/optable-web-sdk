@@ -21,28 +21,28 @@ And then simply `import` and use the `OptableSDK` class as shown in the _Usage_ 
 
 ### script tag
 
-For simple integrations from your web site, you can load the SDK built for the browser from optable CDN via a HTML `script` tag. In production it's advised to lock your SDK bundle to a specific major version identified by `vX` or a specific minor version with `vX.Y`, while in development you may want to experiment with `latest`.
+For simple integrations from your web site, you can load the SDK built for the browser from Optable's CDN via a HTML `script` tag. In production it's advised to lock your SDK bundle to a specific major version identified by `vX` or a specific minor version with `vX.Y`, while in development you may want to experiment with `latest`.
 
-Eg in development use the following in the `<head>` block of your HTML page:
+E.g. in development use the following in the `<head>` block of your HTML page:
 
 ```html
 <!-- Latest version for development -->
 <script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
 ```
 
-or in production:
+Or in production:
 
 ```html
-<!-- v1 serie in production -->
-<script async src="https://cdn.optable.co/web-sdk/v1/sdk.js"></script>
+<!-- v0 in production -->
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 ```
 
 Note the presence of the `async` attribute, which instructs browsers to load the library asynchronously and not block the page from rendering.
 
 ## Versionning
 
-Optable follows [Semantic Versionning](https://semver.org/) when publishing new SDK versions, hence guarantee no API breaking changes within the same major serie.
-Major or minor series SDK references are updated with latest patches and Optable offers long term support for <INSERT NUMBER | ALL> major versions.
+When publishing its SDK, Optable follows [Semantic Versionning](https://semver.org/) conventions.
+You can therefore expect that there will not be any breaking API changes if you are tracking a particular major version.
 
 ## Domains and Cookies
 
@@ -154,7 +154,7 @@ The following shows an example of how to safely initialize the SDK and dispatch 
 
 ```html
 <!-- Asynchronously load the SDK as early as possible: -->
-<script async src="https://cdn.optable.co/web-sdk/v1/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 
 <!-- Later in the page: -->
 <script>
@@ -191,7 +191,7 @@ Loading the Optable SDK via a `script tag` on a web page which also uses the [Go
 
 ```html
 <!-- Optable SDK async load: -->
-<script async src="https://cdn.optable.co/web-sdk/v1/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 
 <!-- Google Publisher Tag (GPT) async load: -->
 <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
@@ -250,7 +250,7 @@ To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.co
 
 ```html
 <!-- Optable SDK async load: -->
-<script async src="https://cdn.optable.co/web-sdk/v1/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 <script>
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
@@ -283,7 +283,7 @@ On your website destination page, you can call a helper method provided by the S
 
 ```html
 <!-- Optable SDK async load: -->
-<script async src="https://cdn.optable.co/web-sdk/v1/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 <script>
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
