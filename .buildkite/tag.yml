@@ -1,5 +1,7 @@
 env:
   DOCKER_BUILDKIT: 1
+  # Customize fetch so that all remote tags are fetched as well
+  BUILDKITE_REFSPEC: --tags $BUILDKITE_COMMIT
 steps:
   - name: npm-publish
     commands:
