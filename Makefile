@@ -53,7 +53,6 @@ publish-sdk-web:
 	docker build . $(BUILD_ARGS) --target publish-web -t optable-web-sdk:$(TAG)-publish-web
 	docker run \
 		--volume $(HOME)/.config/gcloud:/root/.config/gcloud \
-		--volume $(shell pwd)/.git:/publish/.git \
 		optable-web-sdk:$(TAG)-publish-web \
 		gs-publish.sh gs://optable-web-sdk ./sdk.js $(BUILD_VERSION)
 
