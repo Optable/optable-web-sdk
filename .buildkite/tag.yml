@@ -16,7 +16,7 @@ steps:
           propagate-environment: true
           volumes:
             - /var/run/docker.sock:/var/run/docker.sock
-            - empty:/root/
+            - /root:/root
   - name: web-publish
     commands:
       - "apk add make git"
