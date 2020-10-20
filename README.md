@@ -2,7 +2,27 @@
 
 JavaScript SDK for integrating with optable-sandbox from a web site or web application.
 
-## Installation
+## Contents
+
+- [Installing](#installing)
+  - [npm module](#npm-module)
+  - [script tag](#script-tag)
+- [Versioning](#versioning)
+- [Domains and Cookies](#domains-and-cookies)
+- [Using (npm module)](#using--npm-module-)
+  - [Identify API](#identify-api)
+  - [Targeting API](#targeting-api)
+  - [Witness API](#witness-api)
+- [Using (script tag)](#using--script-tag-)
+- [Integrating GAM360](#integrating-gam360)
+  - [Targeting key values](#targeting-key-values)
+  - [Witnessing ad events](#witnessing-ad-events)
+- [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
+  - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
+  - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
+- [Demo Pages](#demo-pages)
+
+## Installing
 
 The [Optable](https://optable.co/) web SDK can be installed as a ES6 compatible [npm](https://www.npmjs.com/) module paired with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/), or can be loaded on a webpage directly by referencing a release build from the page HTML via a `<script>` tag.
 
@@ -52,7 +72,7 @@ For example, if your website runs at `www.customer.com` or `customer.com`, then 
 
 > :warning: **Optable Visitor ID Scope**: The _visitor ID_ configured by the Optable sandbox will be unique to a browser only within the top-level domain that the sandbox shares with the calling web site.
 
-## Usage (npm module)
+## Using (npm module)
 
 To configure an instance of `OptableSDK` integrating with an [Optable](https://optable.co/) sandbox running at hostname `sandbox.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `OptableSDK` class exported by the `@optable/web-sdk` module:
 
@@ -142,7 +162,7 @@ type WitnessProperties = {
 };
 ```
 
-## Usage (script tag)
+## Using (script tag)
 
 For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a web site via a `script` tag.
 
@@ -181,7 +201,7 @@ The following shows an example of how to safely initialize the SDK and dispatch 
 <input type="text" id="email" value="some.email@address.com" />
 ```
 
-## Integrating with GAM360
+## Integrating GAM360
 
 The Optable Web SDK can fetch targeting keyvalue data from a sandbox and send it to a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account for real-time targeting. It's also capable of intercepting advertising events from the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started) and logging them to a sandbox via the **witness API**.
 
