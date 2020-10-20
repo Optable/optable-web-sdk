@@ -64,4 +64,6 @@ To publish on GCS you must first login with an account that has write access on 
 You can do so with if you have gcloud installed with `gcloud auth login`
 or with docker `docker run -v $HOME/.config/gcloud:/root/.config/gcloud google/cloud-sdk:alpine gcloud auth login`.
 
+> :warning: **Version Expansion**: We currently do version expansion (latest, major, minor) on GCS based on the output of `git tag -l`. It's VERY important to have a fresh tag set locally before running this with `git fetch --tags`
+
 Then given a target version "X.Y.Z-pre" run `make BUILD_VERSION=vX.Y.Z-pre publish-sdk-web`.
