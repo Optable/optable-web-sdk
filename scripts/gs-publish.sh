@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -eu
 
 usage() {
   cat << USAGE >&2
@@ -14,19 +14,16 @@ if [[ $# -lt 3 ]]; then
 fi
 
 send_file() {
-  local local_path;local_path="$1"
-  local remote_path;remote_path="$2"
+  local local_path="$1"
+  local remote_path="$2"
   echo "Sending $local_path to $remote_path"
   gsutil cp "$local_path" "$remote_path"
 }
 
 publish() {
-  local bucket_uri
-  # Usage of ${//} search/replace non-applicable as we *only* want to remove trailing slashes
-  # shellcheck disable=SC2001
-  bucket_uri="$(echo "$1" | sed 's#/*$##')"
-  local file; file="$2"
-  local version; version="$3"
+  local bucket_uri=${1%/}
+  local file="$2"
+  local version="$3"
   local expand_level; expand_level="$(expand_level "$3")"
 
   local filebase; filebase=$(basename "$file")
@@ -54,7 +51,7 @@ publish() {
 # LATEST : 3 -> vX.Y vX latest
 
 expand_level() {
-  local version; version="$1"
+  local version="$1"
   local prerel; prerel=$(semver get prerel "$version")
 
   # Never expand for prereleases
