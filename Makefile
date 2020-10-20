@@ -15,7 +15,7 @@ define BUILD_ARGS
 endef
 
 define BUILD_DEMOS_ARGS
---build-arg="SDK_URI=https://sandbox.optable.co/static/web/sdk.js" \
+--build-arg="SDK_URI=https://cdn.optable.co/web-sdk/latest/sdk.js" \
 --build-arg="SANDBOX_HOST=sandbox.optable.co" \
 --build-arg="SANDBOX_INSECURE=false"
 endef
@@ -27,9 +27,6 @@ all: build publish
 
 .PHONY: build
 build: build-sdk build-demos
-
-.PHONY: publish
-publish: publish-sdk publish-demos
 
 #
 # Build web SDK and web demos targets
@@ -45,12 +42,21 @@ build-demos:
 #
 # Publish web SDK and web demos container images
 #
-.PHONY: publish-sdk
-publish-sdk:
-	docker tag optable-web-sdk:$(TAG) gcr.io/optable-platform/optable-web-sdk:$(TAG)
-	docker push gcr.io/optable-platform/optable-web-sdk:$(TAG)
+
+.PHONY: publish-sdk-lib
+publish-sdk-lib:
+	docker build . $(BUILD_ARGS) --target build -t optable-web-sdk:$(TAG)-publish-lib
+	docker run --volume $(HOME)/.npmrc:/root/.npmrc optable-web-sdk:$(TAG)-publish-lib npm publish --access public
+
+.PHONY: publish-sdk-web
+publish-sdk-web:
+	docker build . $(BUILD_ARGS) --target publish-web -t optable-web-sdk:$(TAG)-publish-web
+	docker run \
+		--volume $(HOME)/.config/gcloud:/root/.config/gcloud \
+		optable-web-sdk:$(TAG)-publish-web \
+		gs-publish.sh gs://optable-web-sdk ./sdk.js $(BUILD_VERSION)
 
 .PHONY: publish-demos
-publish-demos:
+publish-demos: build-demos
 	docker tag optable-web-sdk-demos:$(TAG) gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
 	docker push gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)

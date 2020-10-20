@@ -3,28 +3,37 @@ env:
 steps:
   - name: npm-publish
     commands:
-      - apk --update add --no-cache bash
-      - npm install -g npm@6.14.5
-      - ./scripts/patch-version.sh "$BUILDKITE_TAG"
-      - npm ci
-      - npm run build-lib
-      - echo "@optable:registry=https://registry.npmjs.org/" > ~/.npmrc
-      - echo "//registry.npmjs.org/:_authToken=$NPMJS_AUTH_TOKEN" >> ~/.npmrc
-      - npm publish --access public
-
+      - "apk add make git"
+      - "echo '@optable:registry=https://registry.npmjs.org/' > /root/.npmrc"
+      - "echo '//registry.npmjs.org/:_authToken=$NPMJS_AUTH_TOKEN' >> /root/.npmrc"
+      - "make BUILD_VERSION=$BUILDKITE_TAG publish-sdk-lib"
     plugins:
       - docker#v3.5.0:
-          image: "node:14.5.0-alpine3.10"
-          propagate-environment: true
+          image: "docker:latest"
           mount-buildkite-agent: false
+          propagate-environment: true
           volumes:
             - /var/run/docker.sock:/var/run/docker.sock
+            - /root:/root
+  - name: web-publish
+    commands:
+      - "apk add make git"
+      - "docker run -v /etc/service_key/service-account-key.json:/key -v $HOME/.config/gcloud:/root/.config/gcloud google/cloud-sdk:alpine gcloud auth activate-service-account --key-file /key"
+      - "make BUILD_VERSION=$BUILDKITE_TAG publish-sdk-web"
+    plugins:
+      - docker#v3.5.0:
+          image: "docker:latest"
+          mount-buildkite-agent: false
+          propagate-environment: true
+          volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /etc/service_key:/etc/service_key
 
-  - name: docker-publish
+  - name: demos-publish
     commands:
       - "apk add make git"
       - "cat /etc/service_key/service-account-key.json | docker login -u _json_key --password-stdin https://gcr.io"
-      - "make TAG=$BUILDKITE_TAG BUILD_VERSION=$BUILDKITE_TAG build publish"
+      - "make TAG=$BUILDKITE_TAG BUILD_VERSION=$BUILDKITE_TAG publish-demos"
     plugins:
       - docker#v3.5.0:
           image: "docker:latest"

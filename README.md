@@ -21,15 +21,28 @@ And then simply `import` and use the `OptableSDK` class as shown in the _Usage_ 
 
 ### script tag
 
-For simple integrations from your web site, you can load the SDK built for the browser from your sandbox via the HTML `script` tag. For a sandbox running at `sandbox.customer.com`include this tag in the `<head>` block of your HTML page:
+For simple integrations from your web site, you can load the SDK built for the browser from Optable's CDN via a HTML `script` tag. In production it's advised to lock your SDK bundle to a specific major version identified by `vX` or a specific minor version with `vX.Y`, while in development you may want to experiment with `latest`.
+
+E.g. in development use the following in the `<head>` block of your HTML page:
 
 ```html
-<script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
+<!-- Latest version for development -->
+<script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
+```
+
+Or in production:
+
+```html
+<!-- v0 in production -->
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 ```
 
 Note the presence of the `async` attribute, which instructs browsers to load the library asynchronously and not block the page from rendering.
 
-> :warning: **Releases**: Your [Optable](https://optable.co/) sandbox will always serve a specific [release](https://github.com/Optable/optable-web-sdk/releases) of the SDK, which you can configure via the Optable cloud control panel, or with the help of support.
+## Versioning
+
+The SDK follows [Semantic Versioning](https://semver.org/) conventions.
+You can therefore expect that there will not be any breaking API changes if you are tracking a particular major version.
 
 ## Domains and Cookies
 
@@ -131,7 +144,7 @@ type WitnessProperties = {
 
 ## Usage (script tag)
 
-For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a web site via a `script` tag. As previously mentioned, your sandbox is configured to serve such a released browser bundle via the `https://sandbox.customer.com/static/web/sdk.js` URL by default.
+For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a web site via a `script` tag.
 
 As described in the **Installation** section above, in order to avoid having to block the rendering of the page, the recommended way to load the SDK via `script` tag is asynchronously with the `async` attribute. Therefore, to use the SDK you should take care to `push` your _commands_ onto the `window.optable.cmd` array of functions, which are automatically executed by the SDK browser bundle once it has loaded.
 
@@ -141,7 +154,7 @@ The following shows an example of how to safely initialize the SDK and dispatch 
 
 ```html
 <!-- Asynchronously load the SDK as early as possible: -->
-<script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 
 <!-- Later in the page: -->
 <script>
@@ -178,7 +191,7 @@ Loading the Optable SDK via a `script tag` on a web page which also uses the [Go
 
 ```html
 <!-- Optable SDK async load: -->
-<script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 
 <!-- Google Publisher Tag (GPT) async load: -->
 <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
@@ -237,7 +250,7 @@ To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.co
 
 ```html
 <!-- Optable SDK async load: -->
-<script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 <script>
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
@@ -270,7 +283,7 @@ On your website destination page, you can call a helper method provided by the S
 
 ```html
 <!-- Optable SDK async load: -->
-<script async src="https://sandbox.customer.com/static/web/sdk.js"></script>
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
 <script>
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {

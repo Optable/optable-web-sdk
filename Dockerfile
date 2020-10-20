@@ -49,3 +49,12 @@ COPY --from=build /build/demos/vanilla/targeting/gam360.html ./vanilla/targeting
 COPY --from=build /build/demos/vanilla/identify.html ./vanilla/identify.html
 COPY --from=build /build/demos/react/dist/ ./react/dist/
 COPY --from=build /build/demos/index.html ./index.html
+
+FROM google/cloud-sdk:alpine AS publish-web
+WORKDIR /publish
+ENV PATH="/publish:$PATH"
+
+RUN curl -o semver "https://raw.githubusercontent.com/fsaintjacques/semver-tool/3.0.0/src/semver" && chmod +x semver
+
+COPY --from=build /build/browser/dist/sdk.js ./sdk.js
+COPY ./scripts/gs-publish.sh .

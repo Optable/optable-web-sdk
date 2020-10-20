@@ -3,3 +3,4 @@ lib/dist/
 browser/dist/
 .buildkite
 .git
+Dockerfile
