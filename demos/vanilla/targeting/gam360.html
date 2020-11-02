@@ -24,19 +24,31 @@
         optable.instance.installGPTEventListeners();
       });
 
-      optable.cmd.push(function () {
-        optable.instance.targeting().then(function (result) {
-          // Sets up page-level targeting in GAM360 GPT:
-          window.googletag = window.googletag || { cmd: [] };
-          googletag.cmd.push(function () {
-            for (const [key, values] of Object.entries(result)) {
-              googletag.pubads().setTargeting(key, values);
-              console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
-            }
-            googletag.pubads().refresh();
-            console.log("[OptableSDK] googletag.pubads().refresh()");
-          });
+      // Helper to load GAM ads with optional targeting data:
+      var loadGAM = function (tdata = {}) {
+        // Sets up page-level targeting in GAM360 GPT:
+        window.googletag = window.googletag || { cmd: [] };
+        googletag.cmd.push(function () {
+          for (const [key, values] of Object.entries(tdata)) {
+            googletag.pubads().setTargeting(key, values);
+            console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
+          }
+          googletag.pubads().refresh();
+          console.log("[OptableSDK] googletag.pubads().refresh()");
         });
+      };
+
+      // Try to fetch targeting data from sandbox and pass it to GAM:
+      optable.cmd.push(function () {
+        optable.instance
+          .targeting()
+          .then(function (result) {
+            loadGAM(result);
+          })
+          .catch((err) => {
+            console.log("[OptableSDK] targeting() exception: " + err.message);
+            loadGAM();
+          });
       });
     </script>
     <!-- Optable web-sdk inject targeting end -->
