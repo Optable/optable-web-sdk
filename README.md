@@ -207,7 +207,9 @@ The Optable Web SDK can fetch targeting keyvalue data from a sandbox and send it
 
 ### Targeting key values
 
-Loading the Optable SDK via a `script tag` on a web page which also uses the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started), we can further extend the `targeting` example above to show an integration with a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account:
+Loading the Optable SDK via a `script tag` on a web page which also uses the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started), we can further extend the `targeting` example above to show an integration with a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account.
+
+It's suggested to load the GAM banner view with an ad even when the call to your sandbox `targeting()` method raises an exception, as shown in the example below:
 
 ```html
 <!-- Optable SDK async load: -->
@@ -242,20 +244,34 @@ Loading the Optable SDK via a `script tag` on a web page which also uses the [Go
 <div id="div-gpt-ad-12345-0"></div>
 
 <script>
-  // Call Optable sandbox for targeting data and setup GPT page-level targeting, then
-  // explicitly refresh GPT ads:
-  optable.cmd.push(function () {
-    optable.instance.targeting().then(function (result) {
-      // Sets up page-level targeting in GAM360 GPT
-      // and explicitly calls refresh() on googletag:
-      window.googletag = window.googletag || { cmd: [] };
-      googletag.cmd.push(function () {
-        for (const [key, values] of Object.entries(result)) {
-          googletag.pubads().setTargeting(key, values);
-        }
-        googletag.pubads().refresh();
-      });
+  // Helper to load GAM ads with optional targeting data:
+  var loadGAM = function (tdata = {}) {
+    // Sets up page-level targeting in GAM360 GPT:
+    window.googletag = window.googletag || { cmd: [] };
+    googletag.cmd.push(function () {
+      for (const [key, values] of Object.entries(tdata)) {
+        googletag.pubads().setTargeting(key, values);
+      }
+
+      // Explicitly calls refresh() on googletag:
+      googletag.pubads().refresh();
     });
+  };
+
+  // Call Optable sandbox for targeting data and setup GPT page-level targeting, then
+  // explicitly refresh GPT ads.
+  //
+  // NOTE: We load and refresh GPT ads without targeting data when there is an exception,
+  // so that GAM ads are always loaded.
+  optable.cmd.push(function () {
+    optable.instance
+      .targeting()
+      .then(function (result) {
+        loadGAM(result);
+      })
+      .catch((err) => {
+        loadGAM();
+      });
   });
 
   googletag.cmd.push(() => {
