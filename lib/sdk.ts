@@ -1,9 +1,9 @@
 import type { OptableConfig } from "./config";
 import type { TargetingKeyValues } from "./edge/targeting";
 import type { WitnessProperties } from "./edge/witness";
-import Identify from "./edge/identify";
-import Targeting from "./edge/targeting";
-import Witness from "./edge/witness";
+import { Identify } from "./edge/identify";
+import { Witness } from "./edge/witness";
+import { Targeting, TargetingFromCache, TargetingClearCache } from "./edge/targeting";
 import { sha256 } from "js-sha256";
 
 class OptableSDK {
@@ -18,6 +18,14 @@ class OptableSDK {
 
   targeting(): Promise<TargetingKeyValues> {
     return Targeting(this.sandbox);
+  }
+
+  targetingFromCache(): TargetingKeyValues {
+    return TargetingFromCache(this.sandbox);
+  }
+
+  targetingClearCache() {
+    TargetingClearCache(this.sandbox);
   }
 
   witness(event: string, properties: WitnessProperties = {}): Promise<void> {

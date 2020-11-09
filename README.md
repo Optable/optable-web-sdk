@@ -16,6 +16,7 @@ JavaScript SDK for integrating with optable-sandbox from a web site or web appli
 - [Using (script tag)](#using-script-tag)
 - [Integrating GAM360](#integrating-gam360)
   - [Targeting key values](#targeting-key-values)
+  - [Targeting key values from local cache](#targeting-key-values-from-local-cache)
   - [Witnessing ad events](#witnessing-ad-events)
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
@@ -135,6 +136,25 @@ sdk
 ```
 
 On success, the resulting key values are typically sent as part of a subsequent ad call. Therefore we recommend that you either call targeting() before each ad call, or in parallel periodically, caching the resulting key values which you then provide in ad calls.
+
+#### Caching Targeting Data
+
+The `targeting` API will automatically cache resulting key value data in client storage on success. You can subsequently retrieve the cached key value data as follows:
+
+```{javascript
+const cachedTargetingData = sdk.targetingFromCache();
+for (const [key, values] of Object.entries(cachedTargetingData)) {
+  console.log(`Targeting KV: ${key} = ${values.join(",")}`);
+}
+```
+
+You can also clear the locally cached targeting data:
+
+```javascript
+sdk.targetingClearCache();
+```
+
+Note that both `targetingFromCache()` and `targetingClearCache()` are synchronous.
 
 ### Witness API
 
@@ -279,6 +299,67 @@ It's suggested to load the GAM banner view with an ad even when the call to your
   });
 </script>
 ```
+
+Note the use of `googletag.pubads().disableInitialLoad()` in the above example. This will disable GAM ads from loading until the call to `googletag.pubads().refresh()` from the `loadGAM()` function.
+
+### Targeting key values from local cache
+
+It's also possible to avoid disabling of the initial ad load by using the SDK's `targetingFromCache()` method instead as in the following example:
+
+```html
+<!-- Optable SDK async load: -->
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
+
+<!-- Google Publisher Tag (GPT) async load: -->
+<script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+
+<!-- Optable SDK, GPT, and targeting data initialization: -->
+<script>
+  window.optable = window.optable || { cmd: [] };
+  window.googletag = window.googletag || { cmd: [] };
+
+  // Init Optable SDK via command:
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({ host: "sandbox.customer.com", site: "my-site" });
+  });
+
+  // Init GPT and disable initial ad load so that we can load targeting data first:
+  googletag.cmd.push(() => {
+    adSlot = googletag
+      .defineSlot(...)
+      .addService(googletag.pubads());
+
+    // Attempt to load Optable targeting key values from local cache, then load GAM ads:
+    optable.cmd.push(function () {
+      const tdata = optable.instance.targetingFromCache();
+      for (const [key, values] of Object.entries(tdata)) {
+        googletag.pubads().setTargeting(key, values);
+      }
+
+      googletag.pubads().enableSingleRequest();
+      googletag.enableServices();
+    });
+  });
+</script>
+
+<!-- Placeholder DIV for adSlot... referenced by googletag.defineSlot() above: -->
+<div id="div-gpt-ad-12345-0"></div>
+
+<script>
+  // Call Optable sandbox for targeting data which will update the local cache on success.
+  optable.cmd.push(function () {
+    optable.instance.targeting().catch((err) => {
+      // Maybe log error
+    });
+  });
+
+  googletag.cmd.push(() => {
+    googletag.display(adSlot);
+  });
+</script>
+```
+
+Note that the above example fetches locally cached targeting key values and calls `googletag.pubads().setTargeting()` with them. Note also that the usual `targeting()` call is done as well, though its return value is ignored. This ensures that the local targeting cache is kept updated as activations are modified.
 
 ### Witnessing ad events
 
