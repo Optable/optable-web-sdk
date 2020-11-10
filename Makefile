@@ -33,11 +33,19 @@ build: build-sdk build-demos
 #
 .PHONY: build-sdk
 build-sdk:
+	docker build . $(BUILD_ARGS) --target build -t optable-web-sdk:$(TAG)-build
 	docker build . $(BUILD_ARGS) --target run -t optable-web-sdk:$(TAG)
 
 .PHONY: build-demos
 build-demos:
 	docker build . $(BUILD_ARGS) $(BUILD_DEMOS_ARGS) --target run_demos -t optable-web-sdk-demos:$(TAG)
+
+#
+# Run web SDK tests
+#
+.PHONY: test-sdk
+test-sdk: build-sdk
+	docker run -it optable-web-sdk:$(TAG)-build npm run test
 
 #
 # Publish web SDK and web demos container images
