@@ -17,9 +17,9 @@ class LocalStorage {
     this.targetingKey = "OPTABLE_TGT_" + sfx;
   }
 
-  getTargeting(): TargetingKeyValues {
+  getTargeting(): TargetingKeyValues | null {
     const kvs = window.localStorage.getItem(this.targetingKey);
-    return kvs ? JSON.parse(kvs) : null;
+    return kvs ? (JSON.parse(kvs) as TargetingKeyValues) : null;
   }
 
   setTargeting(keyvalues: TargetingKeyValues) {

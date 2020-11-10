@@ -22,7 +22,7 @@ async function Targeting(config: OptableConfig): Promise<TargetingKeyValues> {
   return response;
 }
 
-function TargetingFromCache(config: OptableConfig): TargetingKeyValues {
+function TargetingFromCache(config: OptableConfig): TargetingKeyValues | null {
   const ls = new LocalStorage(config);
   return ls.getTargeting();
 }

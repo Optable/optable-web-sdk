@@ -20,7 +20,7 @@ class OptableSDK {
     return Targeting(this.sandbox);
   }
 
-  targetingFromCache(): TargetingKeyValues {
+  targetingFromCache(): TargetingKeyValues | null {
     return TargetingFromCache(this.sandbox);
   }
 
