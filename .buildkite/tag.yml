@@ -28,7 +28,6 @@ steps:
           volumes:
             - /var/run/docker.sock:/var/run/docker.sock
             - /etc/service_key:/etc/service_key
-
   - name: demos-publish
     commands:
       - "apk add make git"

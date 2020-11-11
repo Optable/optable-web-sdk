@@ -20,13 +20,13 @@ steps:
       - docker#v3.5.0:
           image: "node:14.5.0-alpine3.10"
           mount-buildkite-agent: false
-  - name: docker-build-sdk
+  - name: docker-build-and-test-sdk
     <<: *dind
     if: "!build.pull_request.draft"
     commands:
       - "apk add make git"
       - "cat /etc/service_key/service-account-key.json | docker login -u _json_key --password-stdin https://gcr.io"
-      - "make build-sdk"
+      - "make test-sdk"
   - name: docker-build-demos
     <<: *dind
     if: "!build.pull_request.draft"

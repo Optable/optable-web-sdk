@@ -12,8 +12,18 @@ function maybeValidEID(eid: string): boolean {
 
 OptableSDK.prototype.tryIdentifyFromParams = function () {
   const qstr = new URLSearchParams(window.location.search);
-  const eid = qstr.get("oeid");
-  if (maybeValidEID(eid || "")) {
-    this.identify("e:" + eid);
+  const keys = qstr.keys();
+  var eid: string | null = "";
+
+  for (const key of keys) {
+    if (key.match(/^oeid$/i)) {
+      eid = qstr.get(key);
+      break;
+    }
+  }
+
+  eid = eid || "";
+  if (maybeValidEID(eid)) {
+    this.identify("e:" + eid.toLowerCase());
   }
 };

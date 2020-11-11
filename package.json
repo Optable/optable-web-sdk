@@ -8,23 +8,26 @@
   "license": "SEE LICENSE IN LICENSE",
   "version": "0.0.0-experimental",
   "devDependencies": {
-    "@babel/core": "^7.10.1",
-    "@babel/plugin-proposal-class-properties": "^7.10.4",
-    "@babel/plugin-transform-runtime": "^7.10.1",
-    "@babel/preset-env": "^7.10.1",
-    "@babel/preset-typescript": "^7.10.1",
-    "babel-loader": "^8.1.0",
-    "core-js": "3",
-    "typescript": "^4.0.2",
-    "webpack": "^4.43.0",
+    "@babel/core": "^7.12.3",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-transform-runtime": "^7.12.1",
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-typescript": "^7.12.1",
+    "@types/jest": "^26.0.15",
+    "babel-jest": "^26.6.3",
+    "babel-loader": "^8.2.0",
+    "core-js": "^3.7.0",
+    "jest": "^26.6.3",
+    "typescript": "^4.0.5",
+    "webpack": "^4.44.2",
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "@babel/runtime": "^7.10.1",
-    "@types/micromodal": "^0.3.1",
+    "@babel/runtime": "^7.12.5",
+    "@types/micromodal": "^0.3.2",
     "js-sha256": "^0.9.0",
     "micromodal": "^0.4.6",
-    "regenerator-runtime": "^0.13.5"
+    "regenerator-runtime": "^0.13.7"
   },
   "files": [
     "lib/dist/**/*.js",
@@ -37,6 +40,7 @@
     "build": "npm run build-lib && npm run build-web",
     "start": "tsc -b browser --watch & webpack --config=./browser/webpack.config.js --mode=development --watch --devtool=source-map",
     "build-lib": "tsc -b lib",
-    "build-web": "tsc -b browser && webpack --config=./browser/webpack.config.js"
+    "build-web": "tsc -b browser && webpack --config=./browser/webpack.config.js",
+    "test": "jest"
   }
 }
