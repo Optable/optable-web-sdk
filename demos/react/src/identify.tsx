@@ -93,15 +93,16 @@ function Form() {
   return (
     <>
       <fieldset>
-        <legend>Web SDK Demo: Identify API</legend>
         <div>
-          <input
-            id="email-checked"
-            type="checkbox"
-            checked={emailChecked}
-            onChange={({ currentTarget: { checked } }) => setEmailChecked(checked)}
-          />
-          <label htmlFor="email-checked">Send Email:</label>
+          <label htmlFor="email-checked">
+            <input
+              id="email-checked"
+              type="checkbox"
+              checked={emailChecked}
+              onChange={({ currentTarget: { checked } }) => setEmailChecked(checked)}
+            />
+            &nbsp;Email Address:
+          </label>
           <input
             type="email"
             size={64}
@@ -112,13 +113,15 @@ function Form() {
         </div>
         <br />
         <div>
-          <input
-            id="ppid-checked"
-            type="checkbox"
-            checked={ppidChecked}
-            onChange={({ currentTarget: { checked } }) => setPPIDChecked(checked)}
-          />
-          <label htmlFor="ppid-checked"> Send PPID:</label>
+          <label htmlFor="ppid-checked">
+            <input
+              id="ppid-checked"
+              type="checkbox"
+              checked={ppidChecked}
+              onChange={({ currentTarget: { checked } }) => setPPIDChecked(checked)}
+            />
+            &nbsp;Send PPID:
+          </label>
           <input
             type="text"
             size={64}
@@ -128,15 +131,16 @@ function Form() {
           />
         </div>
         <br />
-        <button onClick={() => identify()}>Identify</button>
+        <button className="button-primary" onClick={() => identify()}>
+          Identify
+        </button>
       </fieldset>
-      <hr />
-      <div>{requestDetails && <RequestDetails {...requestDetails} />}</div>
+      <div className="code-result">{requestDetails && <RequestDetails {...requestDetails} />}</div>
     </>
   );
 }
 
-const anchor = document.body;
+const anchor = document.getElementById("app");
 anchor &&
   ReactDOM.render(
     <React.StrictMode>

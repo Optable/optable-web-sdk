@@ -53,29 +53,24 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: identify API</h4>
-          <p>
-            Simple <code>script</code> tag integration showing how to send a hashed Email address and optional publisher
-            user ID to your sandbox.
-          </p>
+          <h4>Example: profile API</h4>
+          <p>Shows how to set visitor traits (e.g., <code>age=45</code>) and sync them to your sandbox.</p>
+          <pre>
+          <code>
+            // Set some traits on the current visitor:
+            optable.instance.profile({ gender: "F", age: 38, favColor: "blue" });
+
+            // Set some new traits and update some existing on the current visitor:
+            optable.instance.profile({ favColor: "green", firstName: "Mary", lastName: "Smith" });
+          </code>
+          </pre>
         </div>
       </div>
 
       <div class="row">
         <div class="twelve column">
-          <fieldset>
-            <div>
-              <label for="email-checked"><input id="email-checked" type="checkbox" checked /> Email Address:</label>
-              <input id="email" type="email" size="64" />
-            </div>
-            <br />
-            <div>
-              <label for="ppid-checked"><input id="ppid-checked" type="checkbox" /> Send PPID:</label>
-              <input id="ppid" type="text" size="64" disabled />
-            </div>
-            <br />
-            <button id="identify-button" class="button-primary">Identify</button>
-          </fieldset>
+          <button id="profile-button1">Traits 1</button>
+          <button id="profile-button2">Traits 2</button>
         </div>
       </div>
 
@@ -96,40 +91,27 @@
     </div>
 
     <script>
-      document.getElementById("email-checked").onchange = function () {
-        document.getElementById("email").disabled = !this.checked;
-      };
-
-      document.getElementById("ppid-checked").onchange = function () {
-        document.getElementById("ppid").disabled = !this.checked;
-      };
-
-      document.getElementById("identify-button").addEventListener("click", () => {
-        const emailCb = document.getElementById("email-checked");
-        const ppidCb = document.getElementById("ppid-checked");
+      document.getElementById("profile-button1").addEventListener("click", () => {
         const result = document.getElementById("result");
-
-        var email = null;
-        var ppid = null;
-        result.innerHTML = "";
-
-        if (emailCb.checked) {
-          email = document.getElementById("email").value;
-          result.innerHTML += "Email: " + email + " (" + optable.SDK.eid(email) + ")<br />";
-        }
-
-        if (ppidCb.checked) {
-          ppid = document.getElementById("ppid").value;
-          result.innerHTML += "PPID: " + ppid + " (" + optable.SDK.cid(ppid) + ")<br />";
-        }
-
         optable.instance
-          .identify(optable.SDK.eid(email), optable.SDK.cid(ppid))
+          .profile({ gender: "F", age: 38, favColor: "blue" })
           .then(function () {
-            result.innerHTML += "Sent";
+            result.innerHTML += '<br /><b>Upsert traits:</b> { gender: "F", age: 38, favColor: "blue" }';
           })
           .catch((err) => {
-            result.innerHTML += "Error:<br />" + err.message;
+            result.innerHTML += "<br /><b>Error profile-button1:</b> " + err.message;
+          });
+      });
+
+      document.getElementById("profile-button2").addEventListener("click", () => {
+        optable.instance
+          .profile({ favColor: "green", firstName: "Mary", lastName: "Smith" })
+          .then(function () {
+            result.innerHTML +=
+              '<br /><b>Upsert traits:</b> { favColor: "green", firstName: "Mary", lastName: "Smith" }';
+          })
+          .catch((err) => {
+            result.innerHTML += "<br /><b>Error profile-button2:</b> " + err.message;
           });
       });
     </script>
