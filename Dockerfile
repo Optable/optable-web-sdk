@@ -44,9 +44,12 @@ COPY --from=build /build/conf/nginx.conf /etc/nginx/conf.d/default.conf
 
 FROM nginx:1.17 AS run_demos
 WORKDIR /usr/share/nginx/html/
-COPY --from=build /build/demos/publishers/ ./publishers/
 COPY --from=build /build/demos/vanilla/targeting/gam360.html ./vanilla/targeting/gam360.html
+COPY --from=build /build/demos/vanilla/targeting/gam360-cached.html ./vanilla/targeting/gam360-cached.html
 COPY --from=build /build/demos/vanilla/identify.html ./vanilla/identify.html
+COPY --from=build /build/demos/vanilla/profile.html ./vanilla/profile.html
+COPY --from=build /build/demos/vanilla/witness.html ./vanilla/witness.html
+COPY --from=build /build/demos/vanilla/authenticator.html ./vanilla/authenticator.html
 COPY --from=build /build/demos/react/dist/ ./react/dist/
 COPY --from=build /build/demos/index.html ./index.html
 

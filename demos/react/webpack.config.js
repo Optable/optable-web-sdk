@@ -31,6 +31,8 @@ module.exports = {
         insecure: process.env.SANDBOX_INSECURE === "true",
       }),
     }),
-    new HtmlWebpackPlugin(),
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, "src", "index.html"),
+    }),
   ],
 };

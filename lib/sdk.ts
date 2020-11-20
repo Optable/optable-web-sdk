@@ -1,9 +1,11 @@
 import type { OptableConfig } from "./config";
 import type { TargetingKeyValues } from "./edge/targeting";
 import type { WitnessProperties } from "./edge/witness";
+import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
-import { Witness } from "./edge/witness";
 import { Targeting, TargetingFromCache, TargetingClearCache } from "./edge/targeting";
+import { Witness } from "./edge/witness";
+import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 
 class OptableSDK {
@@ -30,6 +32,10 @@ class OptableSDK {
 
   witness(event: string, properties: WitnessProperties = {}): Promise<void> {
     return Witness(this.sandbox, event, properties);
+  }
+
+  profile(traits: ProfileTraits): Promise<void> {
+    return Profile(this.sandbox, traits);
   }
 
   static eid(email: string): string {
