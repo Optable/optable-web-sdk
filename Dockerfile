@@ -52,6 +52,8 @@ COPY --from=build /build/demos/vanilla/witness.html ./vanilla/witness.html
 COPY --from=build /build/demos/vanilla/authenticator.html ./vanilla/authenticator.html
 COPY --from=build /build/demos/react/dist/ ./react/dist/
 COPY --from=build /build/demos/index.html ./index.html
+COPY --from=build /build/demos/css/ ./css/
+COPY --from=build /build/demos/images/ ./images/
 
 FROM google/cloud-sdk:alpine AS publish-web
 WORKDIR /publish
