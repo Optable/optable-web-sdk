@@ -11,6 +11,7 @@ JavaScript SDK for integrating with optable-sandbox from a web site or web appli
 - [Domains and Cookies](#domains-and-cookies)
 - [Using (npm module)](#using-npm-module)
   - [Identify API](#identify-api)
+  - [Profile API](#profile-api)
   - [Targeting API](#targeting-api)
   - [Witness API](#witness-api)
 - [Using (script tag)](#using-script-tag)
@@ -119,6 +120,34 @@ The `identify()` method will asynchronously connect to the configured sandbox an
 
 The frequency of invocation of `identify` is up to you, however for optimal identity resolution we recommended to call the `identify()` method on your `OptableSDK` instance on each page load while the user is authenticated, or periodically such as for example once every 15 to 60 minutes while the user is authenticated and actively using your site.
 
+### Profile API
+
+To associate key value traits with a user's browser, for eventual audience assembly, you can call the profile API as follows:
+
+```javascript
+const onSuccess = () => console.log("Profile API success!");
+const onFailure = (err) => console.warn("Profile API error: ${err.message}");
+
+const visitorTraits = {
+  gender: "M",
+  age: 44,
+  favColor: "blue",
+  hasAccount: true,
+};
+
+sdk.profile(visitorTraits).then(onSuccess).catch(onFailure);
+```
+
+The specified visitor traits are associated with the user's browser and can be matched during audience assembly.
+
+Note that visitor traits are key value pairs and have type `ProfileTraits`:
+
+```typescript
+type ProfileTraits = {
+  [key: string]: string | number | boolean;
+};
+```
+
 ### Targeting API
 
 To get the targeting key values associated by the configured sandbox with the user's browser in real-time, you can call the targeting API as follows:
@@ -166,7 +195,8 @@ const onFailure = (err) => console.warn("Witness API error: ${err.message}");
 
 const eventProperties = {
   property_one: "some_value",
-  property_two: "some other value",
+  property_two: 123,
+  property_three: false,
 };
 
 sdk.witness("event.type.here", eventProperties).then(onSuccess).catch(onFailure);
@@ -174,11 +204,11 @@ sdk.witness("event.type.here", eventProperties).then(onSuccess).catch(onFailure)
 
 The specified event type and properties are associated with the logged event and which can be used for matching during audience assembly.
 
-Note that event properties are string keyvalue pairs and have type `WitnessProperties`:
+Note that event properties are key value pairs and have type `WitnessProperties`:
 
 ```typescript
 type WitnessProperties = {
-  [key: string]: string;
+  [key: string]: string | number | boolean;
 };
 ```
 
