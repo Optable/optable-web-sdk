@@ -172,8 +172,10 @@ The `targeting` API will automatically cache resulting key value data in client 
 
 ```{javascript
 const cachedTargetingData = sdk.targetingFromCache();
-for (const [key, values] of Object.entries(cachedTargetingData)) {
-  console.log(`Targeting KV: ${key} = ${values.join(",")}`);
+if (cachedTargetingData) {
+  for (const [key, values] of Object.entries(cachedTargetingData)) {
+    console.log(`Targeting KV: ${key} = ${values.join(",")}`);
+  }
 }
 ```
 

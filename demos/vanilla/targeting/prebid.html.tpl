@@ -63,77 +63,85 @@
       var FAILSAFE_TIMEOUT = 5000;
 
       var bannerSizes = {
-        "/22081946781/web-sdk-demo-gam360/header-ad": [
-          [728, 90],
-        ],
+        "/22081946781/web-sdk-demo-gam360/header-ad": [[728, 90]],
         "/22081946781/web-sdk-demo-gam360/box-ad": [
           [250, 250],
           [300, 250],
           [200, 200],
         ],
-        "/22081946781/web-sdk-demo-gam360/footer-ad": [
-          [728, 90],
-        ],
+        "/22081946781/web-sdk-demo-gam360/footer-ad": [[728, 90]],
       };
 
-      var adUnits = [{
-        code: "/22081946781/web-sdk-demo-gam360/header-ad",
-        mediaTypes: {
-          banner: {
-            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/header-ad"],
-          }
+      var adUnits = [
+        {
+          code: "/22081946781/web-sdk-demo-gam360/header-ad",
+          mediaTypes: {
+            banner: {
+              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/header-ad"],
+            },
+          },
+          bids: [
+            {
+              bidder: "districtmDMX",
+              params: {
+                dmxid: "/22081946781/web-sdk-demo-gam360/header-ad",
+                memberid: "102034",
+              },
+            },
+          ],
         },
-        bids: [{
-          bidder: "districtmDMX",
-          params: {
-            dmxid: "/22081946781/web-sdk-demo-gam360/header-ad",
-            memberid: "102034",
-          }
-        }]
-      },{
-        code: "/22081946781/web-sdk-demo-gam360/box-ad",
-        mediaTypes: {
-          banner: {
-            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/box-ad"],
-          }
+        {
+          code: "/22081946781/web-sdk-demo-gam360/box-ad",
+          mediaTypes: {
+            banner: {
+              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/box-ad"],
+            },
+          },
+          bids: [
+            {
+              bidder: "districtmDMX",
+              params: {
+                dmxid: "/22081946781/web-sdk-demo-gam360/box-ad",
+                memberid: "102034",
+              },
+            },
+          ],
         },
-        bids: [{
-          bidder: "districtmDMX",
-          params: {
-            dmxid: "/22081946781/web-sdk-demo-gam360/box-ad",
-            memberid: "102034",
-          }
-        }]
-      },{
-        code: "/22081946781/web-sdk-demo-gam360/footer-ad",
-        mediaTypes: {
-          banner: {
-            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/footer-ad"],
-          }
+        {
+          code: "/22081946781/web-sdk-demo-gam360/footer-ad",
+          mediaTypes: {
+            banner: {
+              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/footer-ad"],
+            },
+          },
+          bids: [
+            {
+              bidder: "districtmDMX",
+              params: {
+                dmxid: "/22081946781/web-sdk-demo-gam360/footer-ad",
+                memberid: "102034",
+              },
+            },
+          ],
         },
-        bids: [{
-          bidder: "districtmDMX",
-          params: {
-            dmxid: "/22081946781/web-sdk-demo-gam360/footer-ad",
-            memberid: "102034",
-          }
-        }]
-      }];
+      ];
 
       function initAdserver() {
-        if (pbjs.initAdserverSet)
-          return;
+        if (pbjs.initAdserverSet) return;
         pbjs.initAdserverSet = true;
 
-        googletag.cmd.push(function() {
+        googletag.cmd.push(function () {
           pbjs.setTargetingForGPTAsync && pbjs.setTargetingForGPTAsync();
 
           // Setup page-level GAM targeting from any cached targeting data, and load GAM ads:
-          optable.cmd.push(function() {
+          optable.cmd.push(function () {
             const tdata = optable.instance.targetingFromCache();
-            for (const [key, values] of Object.entries(tdata)) {
-              googletag.pubads().setTargeting(key, values);
-              console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
+
+            if (tdata) {
+              for (const [key, values] of Object.entries(tdata)) {
+                googletag.pubads().setTargeting(key, values);
+                console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
+              }
             }
 
             googletag.pubads().refresh();
@@ -142,8 +150,8 @@
         });
       }
 
-      pbjs.que.push(function() {
-        optable.cmd.push(function() {
+      pbjs.que.push(function () {
+        optable.cmd.push(function () {
           const tdata = optable.instance.targetingFromCache();
 
           if (tdata) {
@@ -159,22 +167,28 @@
 
             if (segments.length > 0) {
               const sbh = optable.instance.sandbox.host + "/" + optable.instance.sandbox.site;
-              pbjs.setConfig({ fpd: { user: { data: [ { id: sbh, name: sbh, segment: segments } ] } } });
+              pbjs.setConfig({ fpd: { user: { data: [{ id: sbh, name: sbh, segment: segments }] } } });
               console.log("[OptableSDK] pbjs.setConfig({ fpd: ... })");
             }
           }
 
-          pbjs.setConfig({ priceGranularity: "low" });
+          pbjs.setConfig({
+            priceGranularity: "low",
+            userSync: {
+              iframeEnabled: true,
+              enabledBidders: ["districtmDMX"],
+            },
+          });
           pbjs.addAdUnits(adUnits);
           pbjs.requestBids({
             bidsBackHandler: initAdserver,
-            timeout: PREBID_TIMEOUT
+            timeout: PREBID_TIMEOUT,
           });
           console.log("[OptableSDK] pbjs.requestBids(...)");
         });
       });
 
-      setTimeout(function() {
+      setTimeout(function () {
         initAdserver();
       }, FAILSAFE_TIMEOUT);
 
@@ -222,10 +236,21 @@
         <div class="twelve column">
           <h4>Example: targeting &amp; Prebid.js activation</h4>
           <p>
-            Shows how to load active cohorts for a visitor and pass them to Prebid.js via <a href="https://docs.prebid.org/dev-docs/publisher-api-reference.html#setConfig-fpd">setConfig-fpd</a>. It's assumed in this example that your primary ad server is <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) and that you are integrated with it using the <a href="https://developers.google.com/publisher-tag/guides/get-started">Google Publisher Tag</a> (GPT), so we also pass matching active cohorts to GAM.
+            Shows how to load active cohorts for a visitor and pass them to Prebid.js via
+            <a href="https://docs.prebid.org/dev-docs/publisher-api-reference.html#setConfig-fpd">setConfig-fpd</a>.
+            It's assumed in this example that your primary ad server is
+            <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) and that you are integrated with it
+            using the
+            <a href="https://developers.google.com/publisher-tag/guides/get-started">Google Publisher Tag</a> (GPT), so
+            we also pass matching active cohorts to GAM.
           </p>
           <p>
-            In this example, we use the <code>targetingFromCache</code> API to retrieve any targeting data from browser LocalStorage, in order to pass it to both Prebid.js and GPT. We also call the SDK <code>targeting</code> API which will fetch the latest targeting data from our sandbox and cache it locally for later use. Since these two events happen asynchronously, it's possible that the targeting data passed to GAM is slightly outdated. To ensure ad targeting accuracy, we recommend calling <code>targeting</code> to update the local cache on every page load.
+            In this example, we use the <code>targetingFromCache</code> API to retrieve any targeting data from browser
+            LocalStorage, in order to pass it to both Prebid.js and GPT. We also call the SDK <code>targeting</code> API
+            which will fetch the latest targeting data from our sandbox and cache it locally for later use. Since these
+            two events happen asynchronously, it's possible that the targeting data passed to GAM is slightly outdated.
+            To ensure ad targeting accuracy, we recommend calling <code>targeting</code> to update the local cache on
+            every page load.
           </p>
         </div>
       </div>

@@ -71,9 +71,12 @@
         // Setup page-level GAM targeting from any cached targeting data and load ads as usual:
         optable.cmd.push(function () {
           const tdata = optable.instance.targetingFromCache();
-          for (const [key, values] of Object.entries(tdata)) {
-            googletag.pubads().setTargeting(key, values);
-            console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
+
+          if (tdata) {
+            for (const [key, values] of Object.entries(tdata)) {
+              googletag.pubads().setTargeting(key, values);
+              console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
+            }
           }
 
           googletag.pubads().enableSingleRequest();
