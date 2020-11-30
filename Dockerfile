@@ -47,7 +47,9 @@ WORKDIR /usr/share/nginx/html/
 COPY --from=build /build/demos/vanilla/targeting/gam360.html ./vanilla/targeting/gam360.html
 COPY --from=build /build/demos/vanilla/targeting/gam360-cached.html ./vanilla/targeting/gam360-cached.html
 COPY --from=build /build/demos/vanilla/targeting/prebid.html ./vanilla/targeting/prebid.html
+COPY --from=build /build/demos/vanilla/targeting/prebid-us-east-16.html ./vanilla/targeting/prebid-us-east-16.html
 COPY --from=build /build/demos/vanilla/targeting/prebid.js ./vanilla/targeting/prebid.js
+COPY --from=build /build/demos/vanilla/targeting/prebid-us-east-16.js ./vanilla/targeting/prebid-us-east-16.js
 COPY --from=build /build/demos/vanilla/identify.html ./vanilla/identify.html
 COPY --from=build /build/demos/vanilla/profile.html ./vanilla/profile.html
 COPY --from=build /build/demos/vanilla/witness.html ./vanilla/witness.html
