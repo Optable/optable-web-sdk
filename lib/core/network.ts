@@ -1,16 +1,28 @@
 import type { OptableConfig } from "../config";
 import { getConfig } from "../config";
 import { version } from "../build.json";
+import { LocalStorage } from "./storage";
 
 function buildRequest(path: string, config: OptableConfig, init?: RequestInit): Request {
-  const { site, host, insecure } = getConfig(config);
+  const { site, host, insecure, cookies } = getConfig(config);
 
   const proto = insecure ? "http" : "https";
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
-  url.search = new URLSearchParams({
-    cookies: "yes",
-    osdk: `web-${version}`,
-  }).toString();
+
+  if (cookies) {
+    url.search = new URLSearchParams({
+      cookies: "yes",
+      osdk: `web-${version}`,
+    }).toString();
+  } else {
+    const ls = new LocalStorage(config);
+    const pass = ls.getPassport();
+    url.search = new URLSearchParams({
+      cookies: "no",
+      passport: pass ? pass : "",
+      osdk: `web-${version}`,
+    }).toString();
+  }
 
   const requestInit: RequestInit = { ...init };
   requestInit.credentials = "include";
@@ -28,6 +40,11 @@ async function fetch<T>(path: string, config: OptableConfig, init?: RequestInit)
 
   if (!response.ok) {
     throw new Error(data.error);
+  }
+
+  if (data.passport) {
+    const ls = new LocalStorage(config);
+    ls.setPassport(data.passport);
   }
 
   return data;

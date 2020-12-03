@@ -1,4 +1,5 @@
 .prettierrc
 browser/dist
 lib/dist
-demos/publishers
+demos/vanilla/nocookies/targeting/prebid*.js
+demos/vanilla/targeting/prebid*.js

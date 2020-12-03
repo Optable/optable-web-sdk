@@ -10,11 +10,17 @@ function toBinary(str: string): string {
 }
 
 class LocalStorage {
+  private passportKey: string;
   private targetingKey: string;
 
   constructor(private Config: OptableConfig) {
     const sfx = btoa(toBinary(`${this.Config.host}/${this.Config.site}`));
+    this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_TGT_" + sfx;
+  }
+
+  getPassport(): string | null {
+    return window.localStorage.getItem(this.passportKey);
   }
 
   getTargeting(): TargetingKeyValues | null {
@@ -22,10 +28,20 @@ class LocalStorage {
     return kvs ? (JSON.parse(kvs) as TargetingKeyValues) : null;
   }
 
+  setPassport(passport: string) {
+    if (passport && passport.length > 0) {
+      window.localStorage.setItem(this.passportKey, passport);
+    }
+  }
+
   setTargeting(keyvalues: TargetingKeyValues) {
     if (keyvalues) {
       window.localStorage.setItem(this.targetingKey, JSON.stringify(keyvalues));
     }
+  }
+
+  clearPassport() {
+    window.localStorage.removeItem(this.passportKey);
   }
 
   clearTargeting() {
