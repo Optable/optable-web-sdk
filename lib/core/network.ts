@@ -45,6 +45,13 @@ async function fetch<T>(path: string, config: OptableConfig, init?: RequestInit)
   if (data.passport) {
     const ls = new LocalStorage(config);
     ls.setPassport(data.passport);
+
+    // We delete the passport attribute from the returned payload. This is because
+    // the targeting edge handler was initially made to return targeting data directly
+    // in the form of 'key values' on the returned JSON payload -- if we don't delete
+    // the `passport` attribute here, it may end up sent as targeting data to ad servers.
+    // Not the end of the world, but something we want to avoid due to passport size.
+    delete data.passport;
   }
 
   return data;
