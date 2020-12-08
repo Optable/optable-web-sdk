@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" href="/images/favicon.png" />
 
     <!-- Prebid.js lib: -->
-    <script async src="prebid-us-east-16.js"></script>
+    <script async src="prebid.js"></script>
 
     <!-- GPT header tag start -->
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
@@ -26,6 +26,7 @@
           host: "localhost",
           site: "web-sdk-demo",
           insecure: JSON.parse("true"),
+          cookies: false,
         });
 
         optable.instance.tryIdentifyFromParams();
@@ -227,7 +228,7 @@
     <div class="container">
       <div class="row">
         <div class="twelve column" style="margin-top: 5%;">
-          <a href="/"><img src="/images/logo.png" width="200" /></a>
+          <a href="/index-nocookies.html"><img src="/images/logo.png" width="200" /></a>
           <hr />
         </div>
       </div>

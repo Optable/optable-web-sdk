@@ -9,6 +9,7 @@ JavaScript SDK for integrating with optable-sandbox from a web site or web appli
   - [script tag](#script-tag)
 - [Versioning](#versioning)
 - [Domains and Cookies](#domains-and-cookies)
+  - [LocalStorage](#localstorage)
 - [Using (npm module)](#using-npm-module)
   - [Identify API](#identify-api)
   - [Profile API](#profile-api)
@@ -73,6 +74,18 @@ The SDK does **not** depend on the availability of the third-party cookie featur
 For example, if your website runs at `www.customer.com` or `customer.com`, then ideally your sandbox will be configured to run at `sandbox.customer.com`, and will read/write a domain-level first-party cookie at `customer.com`. The contents of the cookie will not be accessible to any third-party scripts. Finally, the cookie will have the `SameSite=Lax`attribute so that it is available on the first visit.
 
 > :warning: **Optable Visitor ID Scope**: The _visitor ID_ configured by the Optable sandbox will be unique to a browser only within the top-level domain that the sandbox shares with the calling web site.
+
+### LocalStorage
+
+In cases where it is not practical or possible to configure your sandbox to run on the same effective top-level domain plus one (eTLD+1) as your website(s), then the default cookie-based transport that the SDK depends on will not work. Instead, a fallback cookie-less transport utilizing browser `LocalStorage` is recommended. To switch to the cookie-less transport, simply set the optional `cookies` parameter to `false` when creating your SDK instance. For example:
+
+```javascript
+import OptableSDK from "@optable/web-sdk";
+
+const sdk = new OptableSDK({ host: "sandbox.customer.com", site: "my-site", cookies: false });
+```
+
+Note that the default is `cookies: true` and will be inferred if you do not specify the `cookies` parameter at all.
 
 ## Using (npm module)
 

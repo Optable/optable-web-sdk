@@ -1,16 +1,28 @@
 import type { OptableConfig } from "../config";
 import { getConfig } from "../config";
 import { version } from "../build.json";
+import { LocalStorage } from "./storage";
 
 function buildRequest(path: string, config: OptableConfig, init?: RequestInit): Request {
-  const { site, host, insecure } = getConfig(config);
+  const { site, host, insecure, cookies } = getConfig(config);
 
   const proto = insecure ? "http" : "https";
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
-  url.search = new URLSearchParams({
-    cookies: "yes",
-    osdk: `web-${version}`,
-  }).toString();
+
+  if (cookies) {
+    url.search = new URLSearchParams({
+      cookies: "yes",
+      osdk: `web-${version}`,
+    }).toString();
+  } else {
+    const ls = new LocalStorage(config);
+    const pass = ls.getPassport();
+    url.search = new URLSearchParams({
+      cookies: "no",
+      passport: pass ? pass : "",
+      osdk: `web-${version}`,
+    }).toString();
+  }
 
   const requestInit: RequestInit = { ...init };
   requestInit.credentials = "include";
@@ -28,6 +40,18 @@ async function fetch<T>(path: string, config: OptableConfig, init?: RequestInit)
 
   if (!response.ok) {
     throw new Error(data.error);
+  }
+
+  if (data.passport) {
+    const ls = new LocalStorage(config);
+    ls.setPassport(data.passport);
+
+    // We delete the passport attribute from the returned payload. This is because
+    // the targeting edge handler was initially made to return targeting data directly
+    // in the form of 'key values' on the returned JSON payload -- if we don't delete
+    // the `passport` attribute here, it may end up sent as targeting data to ad servers.
+    // Not the end of the world, but something we want to avoid due to passport size.
+    delete data.passport;
   }
 
   return data;

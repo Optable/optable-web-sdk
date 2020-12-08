@@ -23,15 +23,16 @@
 
       optable.cmd.push(function () {
         optable.instance = new optable.SDK({
-          host: "localhost",
+          host: "${SANDBOX_HOST}",
           site: "web-sdk-demo",
-          insecure: JSON.parse("true"),
+          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+          cookies: false,
         });
 
         optable.instance.tryIdentifyFromParams();
       });
     </script>
-    <script async src="http://localhost:8081/sdk.js"></script>
+    <script async src="${SDK_URI}"></script>
     <!-- Optable web-sdk loader end -->
 
     <script>
@@ -227,7 +228,7 @@
     <div class="container">
       <div class="row">
         <div class="twelve column" style="margin-top: 5%;">
-          <a href="/"><img src="/images/logo.png" width="200" /></a>
+          <a href="/index-nocookies.html"><img src="/images/logo.png" width="200" /></a>
           <hr />
         </div>
       </div>
