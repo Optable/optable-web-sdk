@@ -155,19 +155,25 @@
           const tdata = optable.instance.targetingFromCache();
 
           if (tdata) {
-            const segments = [];
+            const segmentProviders = [];
+
             for (const [key, values] of Object.entries(tdata)) {
-              for (const [idx, value] of Object.entries(values)) {
-                segments.push({
+              const segments = values.map((value) => ({
+                name: key,
+                value: value,
+              }));
+
+              if (segments.length > 0) {
+                segmentProviders.push({
+                  id: key,
                   name: key,
-                  value: value,
+                  segment: segments
                 });
               }
             }
 
-            if (segments.length > 0) {
-              const sbh = optable.instance.sandbox.host + "/" + optable.instance.sandbox.site;
-              pbjs.setConfig({ fpd: { user: { data: [{ id: sbh, name: sbh, segment: segments }] } } });
+            if (segmentProviders.length > 0) {
+              pbjs.setConfig({ fpd: { user: { data: segmentProviders } } });
               console.log("[OptableSDK] pbjs.setConfig({ fpd: ... })");
             }
           }
