@@ -152,30 +152,10 @@
 
       pbjs.que.push(function () {
         optable.cmd.push(function () {
-          const tdata = optable.instance.targetingFromCache();
-
-          if (tdata) {
-            const segmentProviders = [];
-
-            for (const [key, values] of Object.entries(tdata)) {
-              const segments = values.map((value) => ({
-                name: key,
-                value: value,
-              }));
-
-              if (segments.length > 0) {
-                segmentProviders.push({
-                  id: key,
-                  name: key,
-                  segment: segments
-                });
-              }
-            }
-
-            if (segmentProviders.length > 0) {
-              pbjs.setConfig({ fpd: { user: { data: segmentProviders } } });
-              console.log("[OptableSDK] pbjs.setConfig({ fpd: ... })");
-            }
+          const pbdata = optable.instance.prebidUserDataFromCache();
+          if (pbdata.length > 0) {
+            pbjs.setConfig({ fpd: { user: { data: pbdata } } });
+            console.log("[OptableSDK] pbjs.setConfig({ fpd: ... })");
           }
 
           pbjs.setConfig({

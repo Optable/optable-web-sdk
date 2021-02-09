@@ -1,5 +1,5 @@
 import type { OptableConfig } from "./config";
-import type { TargetingKeyValues } from "./edge/targeting";
+import { PrebidUserData, PrebidUserDataFromCache, TargetingKeyValues } from "./edge/targeting";
 import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
@@ -28,6 +28,10 @@ class OptableSDK {
 
   targetingClearCache() {
     TargetingClearCache(this.sandbox);
+  }
+
+  prebidUserDataFromCache(): PrebidUserData {
+    return PrebidUserDataFromCache(this.sandbox);
   }
 
   witness(event: string, properties: WitnessProperties = {}): Promise<void> {
