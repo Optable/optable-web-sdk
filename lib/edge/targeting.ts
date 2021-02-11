@@ -32,5 +32,38 @@ function TargetingClearCache(config: OptableConfig) {
   ls.clearTargeting();
 }
 
-export { Targeting, TargetingFromCache, TargetingClearCache, TargetingKeyValues };
+type PrebidUserSegment = { name: string; value: string };
+type PrebidUserSegmentProvider = { id: string; name: string; segment: PrebidUserSegment[] };
+type PrebidUserData = PrebidUserSegmentProvider[];
+
+function PrebidUserDataFromCache(config: OptableConfig): PrebidUserData {
+  const tdata = TargetingFromCache(config);
+  const result = [];
+
+  for (const [key, values] of Object.entries(tdata || {})) {
+    const segments = values.map((value) => ({
+      name: key,
+      value: value,
+    }));
+
+    if (segments.length > 0) {
+      result.push({
+        id: key,
+        name: key,
+        segment: segments,
+      });
+    }
+  }
+
+  return result;
+}
+
+export {
+  Targeting,
+  TargetingFromCache,
+  TargetingClearCache,
+  TargetingKeyValues,
+  PrebidUserDataFromCache,
+  PrebidUserData,
+};
 export default Targeting;

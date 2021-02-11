@@ -1,5 +1,8 @@
 .prettierrc
+
+# build outputs
 browser/dist
 lib/dist
-demos/vanilla/nocookies/targeting/prebid*.js
-demos/vanilla/targeting/prebid*.js
+
+# demos
+demos
