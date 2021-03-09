@@ -48,8 +48,8 @@ function PrebidUserDataFromCache(config: OptableConfig): PrebidUserData {
 
     if (segments.length > 0) {
       result.push({
-        id: key,
-        name: key,
+        id: "optable",
+        name: "optable",
         segment: segments,
       });
     }
