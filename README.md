@@ -1,6 +1,6 @@
 # Optable Web SDK [![buildkite](https://badge.buildkite.com/314d07ac4946d31b6fde7a7534a9f13ab72c8aedf761a7ed24.svg)](https://buildkite.com/optable/web-sdk-publish-tag)
 
-JavaScript SDK for integrating with optable-sandbox from a web site or web application.
+JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](https://docs.optable.co/) from a web site or web application.
 
 ## Contents
 
@@ -29,7 +29,7 @@ JavaScript SDK for integrating with optable-sandbox from a web site or web appli
 
 The [Optable](https://optable.co/) web SDK can be installed as a ES6 compatible [npm](https://www.npmjs.com/) module paired with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/), or can be loaded on a webpage directly by referencing a release build from the page HTML via a `<script>` tag.
 
-> :warning: **CORS Configuration**: Regardless of how you install the SDK, make sure that the _Allowed HTTP Origins_ setting in the Optable sandbox that you are integrating with contains the URL(s) of any web site(s) where the SDK is being used, otherwise your browser may block communication with the sandbox.
+> :warning: **CORS Configuration**: Regardless of how you install the SDK, make sure that the _Allowed HTTP Origins_ setting in the Optable DCN that you are integrating with contains the URL(s) of any web site(s) where the SDK is being used, otherwise your browser may block communication with the DCN.
 
 ### npm module
 
@@ -69,43 +69,43 @@ You can therefore expect that there will not be any breaking API changes if you 
 
 ## Domains and Cookies
 
-The SDK does **not** depend on the availability of the third-party cookie feature in browsers. By default, the [Optable](https://optable.co/) SDK makes use of a secure HTTP-only _first-party_ browser cookie in order to anonymously identify browsers via a _visitor ID_, within the context of any web sites sharing an _effective top-level domain plus one_ (eTLD+1) with the configured sandbox host.
+The SDK does **not** depend on the availability of the third-party cookie feature in browsers. By default, the [Optable](https://optable.co/) SDK makes use of a secure HTTP-only _first-party_ browser cookie in order to anonymously identify browsers via a _visitor ID_, within the context of any web sites sharing an _effective top-level domain plus one_ (eTLD+1) with the configured DCN host.
 
-For example, if your website runs at `www.customer.com` or `customer.com`, then ideally your sandbox will be configured to run at `sandbox.customer.com`, and will read/write a domain-level first-party cookie at `customer.com`. The contents of the cookie will not be accessible to any third-party scripts. Finally, the cookie will have the `SameSite=Lax`attribute so that it is available on the first visit.
+For example, if your website runs at `www.customer.com` or `customer.com`, then ideally your DCN will be configured to run at `dcn.customer.com`, and will read/write a domain-level first-party cookie at `customer.com`. The contents of the cookie will not be accessible to any third-party scripts. Finally, the cookie will have the `SameSite=Lax`attribute so that it is available on the first visit.
 
-> :warning: **Optable Visitor ID Scope**: The _visitor ID_ configured by the Optable sandbox will be unique to a browser only within the top-level domain that the sandbox shares with the calling web site.
+> :warning: **Optable Visitor ID Scope**: The _visitor ID_ configured by the OptablDe CN will be unique to a browser only within the top-level domain that the DCN shares with the calling web site.
 
 ### LocalStorage
 
-In cases where it is not practical or possible to configure your sandbox to run on the same effective top-level domain plus one (eTLD+1) as your website(s), then the default cookie-based transport that the SDK depends on will not work. Instead, a fallback cookie-less transport utilizing browser `LocalStorage` is recommended. To switch to the cookie-less transport, simply set the optional `cookies` parameter to `false` when creating your SDK instance. For example:
+In cases where it is not practical or possible to configure your DCN to run on the same effective top-level domain plus one (eTLD+1) as your website(s), then the default cookie-based transport that the SDK depends on will not work. Instead, a fallback cookie-less transport utilizing browser `LocalStorage` is recommended. To switch to the cookie-less transport, simply set the optional `cookies` parameter to `false` when creating your SDK instance. For example:
 
 ```javascript
 import OptableSDK from "@optable/web-sdk";
 
-const sdk = new OptableSDK({ host: "sandbox.customer.com", site: "my-site", cookies: false });
+const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", cookies: false });
 ```
 
 Note that the default is `cookies: true` and will be inferred if you do not specify the `cookies` parameter at all.
 
 ## Using (npm module)
 
-To configure an instance of `OptableSDK` integrating with an [Optable](https://optable.co/) sandbox running at hostname `sandbox.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `OptableSDK` class exported by the `@optable/web-sdk` module:
+To configure an instance of `OptableSDK` integrating with an [Optable](https://optable.co/) DCN running at hostname `dcn.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `OptableSDK` class exported by the `@optable/web-sdk` module:
 
 ```js
 import OptableSDK from "@optable/web-sdk";
 
-const sdk = new OptableSDK({ host: "sandbox.customer.com", site: "my-site" });
+const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site" });
 ```
 
-You can then call various SDK APIs on the instance as shown in the examples below. It's also possible to configure multiple instances of `OptableSDK` in order to connect to other (e.g., partner) sandboxes and/or reference other configured web site slug IDs.
+You can then call various SDK APIs on the instance as shown in the examples below. It's also possible to configure multiple instances of `OptableSDK` in order to connect to other (e.g., partner) DCNs and/or reference other configured web site slug IDs.
 
-Note that all SDK communication with Optable sandboxes is done over TLS. The only exception to this is if you instantiate the `OptableSDK` class with the `insecure` optional boolean parameter set to `true`. For example:
+Note that all SDK communication with Optable DCNs is done over TLS. The only exception to this is if you instantiate the `OptableSDK` class with the `insecure` optional boolean parameter set to `true`. For example:
 
 ```js
-const sdk = new OptableSDK({ host: "sandbox.customer.com", site: "my-site", insecure: true });
+const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", insecure: true });
 ```
 
-However, since production sandboxes only listen to TLS traffic, the above is really only useful for developers of `optable-sandbox` running the sandbox locally for testing. See [developer docs](https://github.com/Optable/optable-web-sdk/tree/master/docs) for other developer notes.
+However, since production DCNs only listen to TLS traffic, the above is meant to be used by Optable developers running the DCN locally for testing. See [developer docs](https://github.com/Optable/optable-web-sdk/tree/master/docs) for other developer notes.
 
 ### Identify API
 
@@ -120,16 +120,16 @@ const emailID = OptableSDK.eid("some.email@address.com");
 // Identify with Email ID (eid):
 sdk.identify(emailID).then(onSuccess).catch(onFailure);
 
-// You can optionally link it with your own PPID in the same sandbox identification call,
+// You can optionally link it with your own PPID in the same DCN identification call,
 // simply pass a second argument to identify(). A custom PPID value can be sent to identify()
 // after it is prepared with the OptableSDK.cid() helper:
 const ppid = OptableSDK.cid("some.ppid");
 sdk.identify(emailID, ppid).then(onSuccess).catch(onFailure);
 ```
 
-The `identify()` method will asynchronously connect to the configured sandbox and send IDs for resolution.
+The `identify()` method will asynchronously connect to the configured DCN and send IDs for resolution.
 
-> :warning: **Client-Side Email Hashing**: The `OptableSDK.eid()` helper will compute the SHA-256 hash of the Email address on the client-side and send the hashed value to the sandbox. The Email address is **not** sent by the browser in plain text.
+> :warning: **Client-Side Email Hashing**: The `OptableSDK.eid()` helper will compute the SHA-256 hash of the Email address on the client-side and send the hashed value to the DCN. The Email address is **not** sent by the browser in plain text.
 
 The frequency of invocation of `identify` is up to you, however for optimal identity resolution we recommended to call the `identify()` method on your `OptableSDK` instance on each page load while the user is authenticated, or periodically such as for example once every 15 to 60 minutes while the user is authenticated and actively using your site.
 
@@ -163,7 +163,7 @@ type ProfileTraits = {
 
 ### Targeting API
 
-To get the targeting key values associated by the configured sandbox with the user's browser in real-time, you can call the targeting API as follows:
+To get the targeting key values associated by the configured DCN with the user's browser in real-time, you can call the targeting API as follows:
 
 ```js
 sdk
@@ -202,7 +202,7 @@ Note that both `targetingFromCache()` and `targetingClearCache()` are synchronou
 
 ### Witness API
 
-To send real-time event data from the user's browser to the sandbox for eventual audience assembly, you can call the witness API as follows:
+To send real-time event data from the user's browser to the DCN for eventual audience assembly, you can call the witness API as follows:
 
 ```js
 const onSuccess = () => console.log("Witness API success!");
@@ -235,7 +235,7 @@ As described in the **Installation** section above, in order to avoid having to 
 
 The browser bundle exports the same `OptableSDK` constructor documented in the **npm module** section above in the `optable` window object, as `optable.SDK`
 
-The following shows an example of how to safely initialize the SDK and dispatch an `identify` API request to a sandbox, from an input element after the document was loaded.
+The following shows an example of how to safely initialize the SDK and dispatch an `identify` API request to a DCN, from an input element after the document was loaded.
 
 ```html
 <!-- Asynchronously load the SDK as early as possible: -->
@@ -250,7 +250,7 @@ The following shows an example of how to safely initialize the SDK and dispatch 
     // At this point optable.SDK is available and can be used to create a new sdk instance.
     // That instance can be stored anywhere for later referencing.
     // One option is to keep it within the global optable object space.
-    optable.instance = new optable.SDK({ host: "sandbox.customer.com", site: "my-site" });
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
   });
 
   // Now configure DOM content loaded event listener to dispatch identify() API:
@@ -268,13 +268,13 @@ The following shows an example of how to safely initialize the SDK and dispatch 
 
 ## Integrating GAM360
 
-The Optable Web SDK can fetch targeting keyvalue data from a sandbox and send it to a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account for real-time targeting. It's also capable of intercepting advertising events from the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started) and logging them to a sandbox via the **witness API**.
+The Optable Web SDK can fetch targeting keyvalue data from a DCN and send it to a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account for real-time targeting. It's also capable of intercepting advertising events from the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started) and logging them to a DCN via the **witness API**.
 
 ### Targeting key values
 
 Loading the Optable SDK via a `script tag` on a web page which also uses the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started), we can further extend the `targeting` example above to show an integration with a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account.
 
-It's suggested to load the GAM banner view with an ad even when the call to your sandbox `targeting()` method raises an exception, as shown in the example below:
+It's suggested to load the GAM banner view with an ad even when the call to your DCN `targeting()` method raises an exception, as shown in the example below:
 
 ```html
 <!-- Optable SDK async load: -->
@@ -290,7 +290,7 @@ It's suggested to load the GAM banner view with an ad even when the call to your
 
   // Init Optable SDK via command:
   optable.cmd.push(function () {
-    optable.instance = new optable.SDK({ host: "sandbox.customer.com", site: "my-site" });
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
   });
 
   // Init GPT and disable initial ad load so that we can load targeting data first:
@@ -323,7 +323,7 @@ It's suggested to load the GAM banner view with an ad even when the call to your
     });
   };
 
-  // Call Optable sandbox for targeting data and setup GPT page-level targeting, then
+  // Call Optable DCN for targeting data and setup GPT page-level targeting, then
   // explicitly refresh GPT ads.
   //
   // NOTE: We load and refresh GPT ads without targeting data when there is an exception,
@@ -365,7 +365,7 @@ It's also possible to avoid disabling of the initial ad load by using the SDK's 
 
   // Init Optable SDK via command:
   optable.cmd.push(function () {
-    optable.instance = new optable.SDK({ host: "sandbox.customer.com", site: "my-site" });
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
   });
 
   // Init GPT and disable initial ad load so that we can load targeting data first:
@@ -391,7 +391,7 @@ It's also possible to avoid disabling of the initial ad load by using the SDK's 
 <div id="div-gpt-ad-12345-0"></div>
 
 <script>
-  // Call Optable sandbox for targeting data which will update the local cache on success.
+  // Call Optable DCN for targeting data which will update the local cache on success.
   optable.cmd.push(function () {
     optable.instance.targeting().catch((err) => {
       // Maybe log error
@@ -408,7 +408,7 @@ Note that the above example fetches locally cached targeting key values and call
 
 ### Witnessing ad events
 
-To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.slotrenderendedevent) and [ImpressionViewableEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.impressionviewableevent) and send log data to your sandbox using the **witness API**, simply install GPT event listeners on the SDK instance as follows:
+To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.slotrenderendedevent) and [ImpressionViewableEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.impressionviewableevent) and send log data to your DCN using the **witness API**, simply install GPT event listeners on the SDK instance as follows:
 
 ```html
 <!-- Optable SDK async load: -->
@@ -449,7 +449,7 @@ On your website destination page, you can call a helper method provided by the S
 <script>
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
-    optable.instance = new optable.SDK({ host: "sandbox.customer.com", site: "my-site" });
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
     optable.instance.tryIdentifyFromParams();
   });
 </script>
@@ -457,6 +457,6 @@ On your website destination page, you can call a helper method provided by the S
 
 ## Demo Pages
 
-The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) sandbox.
+The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
 
-You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found [here](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo sandbox at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
+You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found [here](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
