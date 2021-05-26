@@ -73,7 +73,7 @@ The SDK does **not** depend on the availability of the third-party cookie featur
 
 For example, if your website runs at `www.customer.com` or `customer.com`, then ideally your DCN will be configured to run at `dcn.customer.com`, and will read/write a domain-level first-party cookie at `customer.com`. The contents of the cookie will not be accessible to any third-party scripts. Finally, the cookie will have the `SameSite=Lax`attribute so that it is available on the first visit.
 
-> :warning: **Optable Visitor ID Scope**: The _visitor ID_ configured by the OptablDe CN will be unique to a browser only within the top-level domain that the DCN shares with the calling web site.
+> :warning: **Optable Visitor ID Scope**: The _visitor ID_ configured by the Optable DCN will be unique to a browser only within the top-level domain that the DCN shares with the calling web site.
 
 ### LocalStorage
 
