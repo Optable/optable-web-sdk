@@ -69,15 +69,15 @@ You can therefore expect that there will not be any breaking API changes if you 
 
 ## Domains and Cookies
 
-The SDK does **not** depend on the availability of the third-party cookie feature in browsers. By default, the [Optable](https://optable.co/) SDK makes use of a secure HTTP-only _first-party_ browser cookie in order to anonymously identify browsers via a _visitor ID_, within the context of any web sites sharing an _effective top-level domain plus one_ (eTLD+1) with the configured DCN host.
+By default, the [Optable](https://optable.co/) SDK makes use of a secure HTTP-only _first-party_ browser cookie in order to anonymously identify browsers via a _visitor ID_, within the context of any web sites sharing an _effective top-level domain plus one_ (eTLD+1) with the configured DCN host.
 
-For example, if your website runs at `www.customer.com` or `customer.com`, then ideally your DCN will be configured to run at `dcn.customer.com`, and will read/write a domain-level first-party cookie at `customer.com`. The contents of the cookie will not be accessible to any third-party scripts. Finally, the cookie will have the `SameSite=Lax`attribute so that it is available on the first visit.
+For example, if your website runs at `www.customer.com` or `customer.com`, then ideally your DCN will be configured to run at `dcn.customer.com`, and will read/write a first-party cookie at `customer.com`. The contents of the cookie will not be accessible to any third-party scripts. Finally, the cookie will have the `SameSite=Lax`attribute so that it is available on the first visit.
 
 > :warning: **Optable Visitor ID Scope**: The _visitor ID_ configured by the Optable DCN will be unique to a browser only within the top-level domain that the DCN shares with the calling web site.
 
 ### LocalStorage
 
-In cases where it is not practical or possible to configure your DCN to run on the same effective top-level domain plus one (eTLD+1) as your website(s), then the default cookie-based transport that the SDK depends on will not work. Instead, a fallback cookie-less transport utilizing browser `LocalStorage` is recommended. To switch to the cookie-less transport, simply set the optional `cookies` parameter to `false` when creating your SDK instance. For example:
+In cases where it is not practical or possible to configure your DCN to run on the same effective top-level domain plus one (eTLD+1) as your website(s), then the default cookie-based transport that the SDK depends on will not work. Instead, you can configure the SDK to use browser `LocalStorage`. To switch to the `LocalStorage` based configuration, simply set the optional `cookies` parameter to `false` when creating your SDK instance. For example:
 
 ```javascript
 import OptableSDK from "@optable/web-sdk";
@@ -105,7 +105,7 @@ Note that all SDK communication with Optable DCNs is done over TLS. The only exc
 const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", insecure: true });
 ```
 
-However, since production DCNs only listen to TLS traffic, the above is meant to be used by Optable developers running the DCN locally for testing. See [developer docs](https://github.com/Optable/optable-web-sdk/tree/master/docs) for other developer notes.
+Note that production DCNs only listen to TLS traffic. The `insecure: true` option is meant to be used by Optable developers running the DCN locally for testing. See [developer docs](https://github.com/Optable/optable-web-sdk/tree/master/docs) for other developer notes.
 
 ### Identify API
 
@@ -427,7 +427,7 @@ A working example of both targeting and event witnessing is available in the dem
 
 ## Identifying visitors arriving from Email newsletters
 
-If you send Email newsletters that contain links to your website, then you may want to automatically _identify_ visitors that have clicked on any such links via their Email address. Website traffic which is originating from a subscriber click on a link in a newsletter is considered to be implicitly authenticated by the recipient of the Email, therefore serving as an excellent source of linking of online user identities.
+If you send Email newsletters that contain links to your website, then you may want to automatically _identify_ visitors that have clicked on any such links via their Email address. 
 
 ### Insert oeid into your Email newsletter template
 
