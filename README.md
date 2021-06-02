@@ -427,7 +427,7 @@ A working example of both targeting and event witnessing is available in the dem
 
 ## Identifying visitors arriving from Email newsletters
 
-If you send Email newsletters that contain links to your website, then you may want to automatically _identify_ visitors that have clicked on any such links via their Email address. 
+If you send Email newsletters that contain links to your website, then you may want to automatically _identify_ visitors that have clicked on any such links via their Email address.
 
 ### Insert oeid into your Email newsletter template
 

@@ -1,4 +1,4 @@
-FROM node:14.5.0-alpine3.10 AS build
+FROM node:15-alpine3.13 AS build
 
 RUN apk --update add --no-cache gettext bash make && apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing watchexec
 

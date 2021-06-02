@@ -27,7 +27,13 @@
     "js-sha256": "^0.9.0",
     "regenerator-runtime": "^0.13.7"
   },
-  "files": ["lib/dist/**/*.js", "lib/dist/build.json", "lib/dist/**/*.d.ts", "browser/dist/**/*.js", "LICENSE"],
+  "files": [
+    "lib/dist/**/*.js",
+    "lib/dist/build.json",
+    "lib/dist/**/*.d.ts",
+    "browser/dist/**/*.js",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "npm run build-lib && npm run build-web",
     "start": "tsc -b browser --watch & webpack --config=./browser/webpack.config.js --mode=development --watch --devtool=source-map",
