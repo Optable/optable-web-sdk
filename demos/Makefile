@@ -12,7 +12,6 @@ html:
 	envsubst < ./vanilla/targeting/gam360-cached.html.tpl > ./vanilla/targeting/gam360-cached.html && \
 	envsubst < ./vanilla/targeting/prebid.html.tpl > ./vanilla/targeting/prebid.html && \
 	envsubst < ./vanilla/targeting/prebid-us-east-16.html.tpl > ./vanilla/targeting/prebid-us-east-16.html && \
-	envsubst < ./vanilla/authenticator.html.tpl > ./vanilla/authenticator.html && \
 	envsubst < ./vanilla/nocookies/identify.html.tpl > ./vanilla/nocookies/identify.html && \
 	envsubst < ./vanilla/nocookies/witness.html.tpl > ./vanilla/nocookies/witness.html && \
 	envsubst < ./vanilla/nocookies/profile.html.tpl > ./vanilla/nocookies/profile.html && \
