@@ -1,7 +1,6 @@
-FROM node:14.5.0-alpine3.10 AS build
+FROM node:15-alpine3.13 AS build
 
 RUN apk --update add --no-cache gettext bash make && apk add --no-cache -X http://dl-cdn.alpinelinux.org/alpine/edge/testing watchexec
-RUN npm install -g npm@6.14.5
 
 WORKDIR /build
 
@@ -53,7 +52,6 @@ COPY --from=build /build/demos/vanilla/targeting/prebid-us-east-16.js ./vanilla/
 COPY --from=build /build/demos/vanilla/identify.html ./vanilla/identify.html
 COPY --from=build /build/demos/vanilla/profile.html ./vanilla/profile.html
 COPY --from=build /build/demos/vanilla/witness.html ./vanilla/witness.html
-COPY --from=build /build/demos/vanilla/authenticator.html ./vanilla/authenticator.html
 COPY --from=build /build/demos/vanilla/nocookies/targeting/gam360.html ./vanilla/nocookies/targeting/gam360.html
 COPY --from=build /build/demos/vanilla/nocookies/targeting/gam360-cached.html ./vanilla/nocookies/targeting/gam360-cached.html
 COPY --from=build /build/demos/vanilla/nocookies/targeting/prebid.html ./vanilla/nocookies/targeting/prebid.html
