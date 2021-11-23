@@ -1,7 +1,7 @@
 dind: &dind
   plugins:
     - docker#v3.5.0:
-        image: "docker:latest"
+        image: "docker:20.10.6"
         mount-buildkite-agent: false
         propagate-environment: true
         volumes:
