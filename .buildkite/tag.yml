@@ -9,7 +9,7 @@ steps:
       - "make BUILD_VERSION=$BUILDKITE_TAG publish-sdk-lib"
     plugins:
       - docker#v3.5.0:
-          image: "docker:latest"
+          image: "docker:20.10.6"
           mount-buildkite-agent: false
           propagate-environment: true
           volumes:
@@ -22,7 +22,7 @@ steps:
       - "make BUILD_VERSION=$BUILDKITE_TAG publish-sdk-web"
     plugins:
       - docker#v3.5.0:
-          image: "docker:latest"
+          image: "docker:20.10.6"
           mount-buildkite-agent: false
           propagate-environment: true
           volumes:
@@ -35,7 +35,7 @@ steps:
       - "make TAG=$BUILDKITE_TAG BUILD_VERSION=$BUILDKITE_TAG publish-demos"
     plugins:
       - docker#v3.5.0:
-          image: "docker:latest"
+          image: "docker:20.10.6"
           mount-buildkite-agent: false
           propagate-environment: true
           volumes:
