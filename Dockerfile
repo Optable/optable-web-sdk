@@ -36,12 +36,12 @@ ENV SANDBOX_INSECURE=$SANDBOX_INSECURE
 
 RUN make -C demos
 
-FROM nginx:1.17 AS run
+FROM nginx:1.20 AS run
 WORKDIR /usr/share/nginx/html/
 COPY --from=build /build/browser/dist/sdk.js ./sdk.js
 COPY --from=build /build/conf/nginx.conf /etc/nginx/conf.d/default.conf
 
-FROM nginx:1.17 AS run_demos
+FROM nginx:1.20 AS run_demos
 WORKDIR /usr/share/nginx/html/
 COPY --from=build /build/demos/vanilla/targeting/gam360.html ./vanilla/targeting/gam360.html
 COPY --from=build /build/demos/vanilla/targeting/gam360-cached.html ./vanilla/targeting/gam360-cached.html
