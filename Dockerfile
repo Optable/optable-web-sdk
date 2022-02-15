@@ -46,23 +46,20 @@ WORKDIR /usr/share/nginx/html/
 COPY --from=build /build/demos/vanilla/targeting/gam360.html ./vanilla/targeting/gam360.html
 COPY --from=build /build/demos/vanilla/targeting/gam360-cached.html ./vanilla/targeting/gam360-cached.html
 COPY --from=build /build/demos/vanilla/targeting/prebid.html ./vanilla/targeting/prebid.html
-COPY --from=build /build/demos/vanilla/targeting/prebid-us-east-16.html ./vanilla/targeting/prebid-us-east-16.html
 COPY --from=build /build/demos/vanilla/targeting/prebid.js ./vanilla/targeting/prebid.js
-COPY --from=build /build/demos/vanilla/targeting/prebid-us-east-16.js ./vanilla/targeting/prebid-us-east-16.js
 COPY --from=build /build/demos/vanilla/identify.html ./vanilla/identify.html
 COPY --from=build /build/demos/vanilla/profile.html ./vanilla/profile.html
 COPY --from=build /build/demos/vanilla/witness.html ./vanilla/witness.html
 COPY --from=build /build/demos/vanilla/nocookies/targeting/gam360.html ./vanilla/nocookies/targeting/gam360.html
 COPY --from=build /build/demos/vanilla/nocookies/targeting/gam360-cached.html ./vanilla/nocookies/targeting/gam360-cached.html
 COPY --from=build /build/demos/vanilla/nocookies/targeting/prebid.html ./vanilla/nocookies/targeting/prebid.html
-COPY --from=build /build/demos/vanilla/nocookies/targeting/prebid-us-east-16.html ./vanilla/nocookies/targeting/prebid-us-east-16.html
 COPY --from=build /build/demos/vanilla/nocookies/targeting/prebid.js ./vanilla/nocookies/targeting/prebid.js
-COPY --from=build /build/demos/vanilla/nocookies/targeting/prebid-us-east-16.js ./vanilla/nocookies/targeting/prebid-us-east-16.js
 COPY --from=build /build/demos/vanilla/nocookies/identify.html ./vanilla/nocookies/identify.html
 COPY --from=build /build/demos/vanilla/nocookies/profile.html ./vanilla/nocookies/profile.html
 COPY --from=build /build/demos/vanilla/nocookies/witness.html ./vanilla/nocookies/witness.html
 COPY --from=build /build/demos/react/dist/ ./react/dist/
 COPY --from=build /build/demos/index.html ./index.html
+COPY --from=build /build/demos/index-nocookies.html ./index-nocookies.html
 COPY --from=build /build/demos/css/ ./css/
 COPY --from=build /build/demos/images/ ./images/
 

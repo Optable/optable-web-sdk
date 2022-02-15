@@ -32,24 +32,40 @@ function TargetingClearCache(config: OptableConfig) {
   ls.clearTargeting();
 }
 
-type PrebidUserSegment = { name: string; value: string };
-type PrebidUserSegmentProvider = { id: string; name: string; segment: PrebidUserSegment[] };
+type PrebidUserSegment = { id: string };
+type PrebidSegtax = { segtax: number };
+type PrebidUserSegmentProvider = { name: string; ext: PrebidSegtax; segment: PrebidUserSegment[] };
 type PrebidUserData = PrebidUserSegmentProvider[];
 
+/*
+ * Prebid.js supports passing seller-defined audiences to compatible
+ * bidder adapters.
+ *
+ * We return the contents to be pushed to ortb2.user.data and passed to
+ * bidder adapters via setConfig(ortb2.user.data)... the caller is free
+ * to append additional objects before setting the final result.
+ *
+ * References:
+ * https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy
+ * https://iabtechlab.com/wp-content/uploads/2021/03/IABTechLab_Taxonomy_and_Data_Transparency_Standards_to_Support_Seller-defined_Audience_and_Context_Signaling_2021-03.pdf
+ */
 function PrebidUserDataFromCache(config: OptableConfig): PrebidUserData {
   const tdata = TargetingFromCache(config);
   const result = [];
 
-  for (const [key, values] of Object.entries(tdata || {})) {
+  for (const [_, values] of Object.entries(tdata || {})) {
     const segments = values.map((value) => ({
-      name: key,
-      value: value,
+      id: value,
     }));
 
     if (segments.length > 0) {
       result.push({
-        id: "optable",
-        name: "optable",
+        name: "optable.co",
+        /*
+         * 5001 is Optable Private Member Defined Audiences
+         * See: https://github.com/InteractiveAdvertisingBureau/openrtb/pull/81
+         */
+        ext: { segtax: 5001 },
         segment: segments,
       });
     }

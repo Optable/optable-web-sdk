@@ -20,6 +20,9 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Targeting key values](#targeting-key-values)
   - [Targeting key values from local cache](#targeting-key-values-from-local-cache)
   - [Witnessing ad events](#witnessing-ad-events)
+- [Integrating Prebid](#integrating-prebid)
+  - [Seller Defined Audiences](#seller-defined-audiences)
+  - [Custom key values](#custom-key-values)
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
@@ -425,6 +428,161 @@ Note that you can call `installGPTEventListeners()` as many times as you like on
 
 A working example of both targeting and event witnessing is available in the demo pages.
 
+## Integrating Prebid
+
+The Optable Web SDK can fetch targeting data from a DCN and prepare an audience taxonomy object similar to the one described in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `prebidUserDataFromCache()` function returns the object from the targeting data stored by `targeting()` API calls in `LocalStorage`.
+
+### Seller Defined Audiences
+
+The HTML code snippet below shows how `prebidUserDataFromCache()` can be used to retrieve targeting data from the `LocalStorage` administered by the Optable SDK, and write Seller Defined Audiences (SDA) into [prebid.js](https://prebid.org/product-suite/prebid-js/) which is also loaded into the page, using `pbjs.setConfig({ ortb2: { user: { data: [ { ... } ] } } })` as documented in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `targeting()` API is also called in order to retrieve and locally store the latest matching activations from `dcn.customer.com/my-site`.
+
+Note that [prebid.js bidder adapters](https://docs.prebid.org/dev-docs/bidders.html) can subsequently retrieve the data from the [global config](https://docs.prebid.org/features/firstPartyData.html#supplying-global-data).
+
+An example of how to install the SDA data through `pbjs` is shown below. The `districtMDMX` bidder adapter is referenced, though the integration would look similar with any SDA compatible bidder adapters.
+
+For a working demo showing a `pbjs` and GAM integrated together, see the [demo pages section](#demo-pages) below.
+
+```html
+<!-- Optable SDK async load: -->
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
+
+<!-- Prebid.js lib async load: -->
+<script async src="prebid.js"></script>
+
+<!-- Initialize Optable SDK, and targeting call early when possible: -->
+<script>
+  window.optable = window.optable || { cmd: [] };
+
+  // Init Optable SDK via command:
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
+  });
+
+  // Call Optable DCN for targeting data which will update the local cache on success.
+  optable.cmd.push(function () {
+    optable.instance.targeting().catch((err) => {
+      // Maybe log error
+    });
+  });
+</script>
+
+<!-- Placeholder DIV for adSlot -->
+<div id="div-gpt-ad-12345-0"></div>
+
+<!-- Initialize prebid.js -->
+<script>
+  window.pbjs = window.pbjs || { que: [] };
+
+  var PREBID_TIMEOUT = 3000;
+  var FAILSAFE_TIMEOUT = 5000;
+
+  var adUnits = [
+    {
+      code: "/22081946781/web-sdk-demo/box-ad",
+      mediaTypes: {
+        banner: {
+          sizes: [
+            [250, 250],
+            [300, 250],
+            [200, 200],
+          ],
+        },
+      },
+      bids: [
+        {
+          bidder: "districtmDMX",
+          params: {
+            dmxid: "/22081946781/web-sdk-demo/box-ad",
+            memberid: "102034",
+          },
+        },
+      ],
+    },
+  ];
+
+  function initAdserver() {
+    if (pbjs.initAdserverSet) return;
+    pbjs.initAdserverSet = true;
+    // ... etc ...
+  }
+
+  pbjs.que.push(function () {
+    optable.cmd.push(function () {
+      const pbdata = optable.instance.prebidUserDataFromCache();
+      if (pbdata.length > 0) {
+        pbjs.setConfig({
+          ortb2: {
+            user: {
+              data: pbdata,
+            },
+          },
+        });
+      }
+
+      // ... etc ...
+
+      pbjs.requestBids({
+        bidsBackHandler: initAdserver,
+        timeout: PREBID_TIMEOUT,
+      });
+    });
+  });
+
+  setTimeout(function () {
+    initAdserver();
+  }, FAILSAFE_TIMEOUT);
+</script>
+```
+
+### Custom key values
+
+For bidder adapters that do not support SDA, but that do support targeting private marketplace deals to key values, you can use a samilar approach to the [Google Ad Manager integration with key values from local cache](#targeting-key-values-from-local-cache). For example, for the IX bidder adapter and [IX bidder-specific FPD](https://docs.prebid.org/dev-docs/bidders/ix.html#ix-bidder-specific-fpd), you can encode the targeting key values as shown below:
+
+```html
+<script>
+  // ...
+  // prior to pbjs.requestBids():
+  pbjs.que.push(function () {
+    optable.cmd.push(function () {
+      const tdata = optable.instance.targetingFromCache();
+      var fpd = {};
+
+      /*
+       * Flatten targeting key=values from Optable SDK targeting cache
+       * into a custom key value object, such that a key K with values
+       * V1, V2, ... in the Optable SDK targeting cache is transformed
+       * to look like:
+       * {
+       *   K + V1: 1,
+       *   K + V2: 1,
+       *   ...
+       * }
+       *
+       * Note that + above indicates string concatenation.
+       *
+       * Optable DCNs have K configured to "optable" by default, so the
+       * above would result in a custom key value "optable_audienceKeyword=1"
+       * being set whenever the visitor is matched to the activated audience
+       * specified by audienceKeyword by the DCN.
+       */
+      for (const [key, values] of Object.entries(tdata || {})) {
+        for (const seg of values) {
+          fpd[key + seg] = "1";
+        }
+      }
+
+      pbjs.setConfig({
+        ix: {
+          firstPartyData: fpd,
+        },
+      });
+    });
+
+    pbjs.requestBids(...);
+  });
+</script>
+```
+
 ## Identifying visitors arriving from Email newsletters
 
 If you send Email newsletters that contain links to your website, then you may want to automatically _identify_ visitors that have clicked on any such links via their Email address.
@@ -460,3 +618,5 @@ On your website destination page, you can call a helper method provided by the S
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
 
 You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found [here](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
+
+Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described [here](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).

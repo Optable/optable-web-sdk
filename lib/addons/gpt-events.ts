@@ -31,7 +31,7 @@ function toWitnessProperties(event: any): WitnessProperties {
 /*
  * installGPTEventListeners() sets up event listeners on the Google Publisher Tag
  * "slotRenderEnded" and "impressionViewable" page events, and calls witness()
- * on the OptableSDK instance to send log data to a sandbox.
+ * on the OptableSDK instance to send log data to a DCN.
  */
 OptableSDK.prototype.installGPTEventListeners = function () {
   // Next time we get called is a no-op:

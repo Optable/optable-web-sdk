@@ -21,7 +21,7 @@
       </div>
       <div class="row">
         <div class="twelve column">
-          <h4>👋 demo.optable.co (cookies=false)</h4>
+          <h4>👋 demo.optable.co (LocalStorage)</h4>
           <p>
             To learn about optable-web-sdk integration on your web site or application, see the latest releases, or
             report an issue, please check out the
@@ -34,14 +34,14 @@
           </p>
           <p>
             <strong
-              >Note that the examples below initialize the OptableSDK with cookies=false, so all ID transport is done
+              >Note that the examples below initialize the OptableSDK with cookies=false, so all ID storage is done
               using browser LocalStorage.</strong
             >
             Generally, it is preferable to use secure first party HTTP-only cookies for transporting IDs from
             OptableSDK. However, when the integrating website does not share the same top-level domain name with the
-            Optable Sandbox, then first party cookies are not reliable, and the LocalStorage method is suggested. To
-            enable it, simply initialize the OptableSDK object with the <code>cookies</code> option set to
-            <code>false</code>, and the SDK will do the rest.
+            Optable DCN, then first party cookies are not reliable, and the LocalStorage method is suggested. To enable
+            it, simply initialize the OptableSDK object with the <code>cookies</code> option set to <code>false</code>,
+            and the SDK will do the rest.
           </p>
         </div>
       </div>
@@ -51,28 +51,28 @@
           <table class="u-full-width">
             <thead>
               <tr>
-                <th>Link</th>
+                <th>API</th>
                 <th>Description</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><a href="/vanilla/nocookies/identify.html">identify API</a></td>
+                <td><a href="/vanilla/nocookies/identify.html">identify</a></td>
                 <td>
                   Simple <code>script</code> tag integration showing how to send a hashed Email address and optional
-                  publisher user ID to your sandbox.
+                  publisher user ID to your DCN.
                 </td>
               </tr>
               <tr>
-                <td><a href="/vanilla/nocookies/witness.html">witness API</a></td>
-                <td>Shows how to log events with optional properties to your sandbox.</td>
+                <td><a href="/vanilla/nocookies/witness.html">witness</a></td>
+                <td>Shows how to log events with optional properties to your DCN.</td>
               </tr>
               <tr>
-                <td><a href="/vanilla/nocookies/profile.html">profile API</a></td>
-                <td>Shows how to set visitor traits (e.g., <code>age=45</code>) and sync them to your sandbox.</td>
+                <td><a href="/vanilla/nocookies/profile.html">profile</a></td>
+                <td>Shows how to set visitor traits (e.g., <code>age=45</code>) and sync them to your DCN.</td>
               </tr>
               <tr>
-                <td><a href="/vanilla/nocookies/targeting/gam360.html">targeting &amp; GAM360 activation</a></td>
+                <td><a href="/vanilla/nocookies/targeting/gam360.html">targeting: GAM360</a></td>
                 <td>
                   Shows how to load active cohorts for a visitor and pass them to
                   <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) via the
@@ -82,7 +82,7 @@
               </tr>
               <tr>
                 <td>
-                  <a href="/vanilla/nocookies/targeting/gam360-cached.html">cached targeting &amp; GAM360 activation</a>
+                  <a href="/vanilla/nocookies/targeting/gam360-cached.html">targeting: GAM360 (cached data)</a>
                 </td>
                 <td>
                   Shows how to load and cache active cohorts in a visitor's browser. Separately, cached cohorts are
@@ -91,15 +91,26 @@
                   ad targeting.
                 </td>
               </tr>
+              <tr>
+                <td><a href="/vanilla/nocookies/targeting/prebid.html">targeting: Prebid.js</a></td>
+                <td>
+                  Shows how to load and cache active cohorts in a visitor's browser. Separately, cached cohorts are
+                  passed to <a href="https://prebid.org/">Prebid.js</a> bidder adapters via the
+                  <a href="https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy"
+                    >first-party data segments and taxonomy mechanism</a
+                  >.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
       <div class="row">
-        <div class="twelve column" style="font-size: 0.8rem; padding: 10px;">
+        <div class="twelve column" style="padding: 10px;">
           <center>
             <a href="https://www.optable.co/">Home</a> | <a href="https://www.optable.co/company/contact">Contact</a> |
-            <a href="https://optable.co/privacy">Privacy</a> |
+	    <a href="https://docs.optable.co/">Documentation</a> |
+            <a href="https://www.optable.co/privacy/products-and-services-privacy-policy">Privacy</a> |
             <a href="https://www.linkedin.com/company/optableco/">LinkedIn</a> |
             <a href="https://twitter.com/optable_co">Twitter</a>
           </center>
