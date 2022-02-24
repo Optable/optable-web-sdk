@@ -1,6 +1,6 @@
 import type { OptableConfig } from "../config";
 import { getConfig } from "../config";
-import { version } from "../build.json";
+import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
 function buildRequest(path: string, config: OptableConfig, init?: RequestInit): Request {
@@ -12,7 +12,7 @@ function buildRequest(path: string, config: OptableConfig, init?: RequestInit): 
   if (cookies) {
     url.search = new URLSearchParams({
       cookies: "yes",
-      osdk: `web-${version}`,
+      osdk: `web-${buildInfo.version}`,
     }).toString();
   } else {
     const ls = new LocalStorage(config);
@@ -20,7 +20,7 @@ function buildRequest(path: string, config: OptableConfig, init?: RequestInit): 
     url.search = new URLSearchParams({
       cookies: "no",
       passport: pass ? pass : "",
-      osdk: `web-${version}`,
+      osdk: `web-${buildInfo.version}`,
     }).toString();
   }
 

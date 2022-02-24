@@ -54,7 +54,7 @@
       <div class="row">
         <div class="twelve column">
           <h4>Example: profile API</h4>
-          <p>Shows how to set visitor traits (e.g., <code>age=45</code>) and sync them to your sandbox.</p>
+          <p>Shows how to set visitor traits (e.g., <code>age=45</code>) and sync them to your DCN.</p>
           <pre>
           <code>
             // Set some traits on the current visitor:

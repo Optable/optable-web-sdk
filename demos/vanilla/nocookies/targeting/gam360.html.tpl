@@ -108,7 +108,7 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: targeting &amp; GAM360 activation</h4>
+          <h4>Example: targeting API: GAM360</h4>
           <p>
             Shows how to load active cohorts for a visitor and pass them to
             <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) via the

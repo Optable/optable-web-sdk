@@ -9,37 +9,41 @@ import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 
 class OptableSDK {
-  constructor(public sandbox: OptableConfig) {}
+  public sandbox: OptableConfig; // legacy
+
+  constructor(public dcn: OptableConfig) {
+    this.sandbox = dcn; // legacy
+  }
 
   identify(...ids: string[]) {
     return Identify(
-      this.sandbox,
+      this.dcn,
       ids.filter((id) => id)
     );
   }
 
   targeting(): Promise<TargetingKeyValues> {
-    return Targeting(this.sandbox);
+    return Targeting(this.dcn);
   }
 
   targetingFromCache(): TargetingKeyValues | null {
-    return TargetingFromCache(this.sandbox);
+    return TargetingFromCache(this.dcn);
   }
 
   targetingClearCache() {
-    TargetingClearCache(this.sandbox);
+    TargetingClearCache(this.dcn);
   }
 
   prebidUserDataFromCache(): PrebidUserData {
-    return PrebidUserDataFromCache(this.sandbox);
+    return PrebidUserDataFromCache(this.dcn);
   }
 
   witness(event: string, properties: WitnessProperties = {}): Promise<void> {
-    return Witness(this.sandbox, event, properties);
+    return Witness(this.dcn, event, properties);
   }
 
   profile(traits: ProfileTraits): Promise<void> {
-    return Profile(this.sandbox, traits);
+    return Profile(this.dcn, traits);
   }
 
   static eid(email: string): string {

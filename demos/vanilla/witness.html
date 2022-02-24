@@ -55,7 +55,7 @@
         <div class="twelve column">
           <h4>Example: witness API</h4>
           <p>
-            Shows how to log events with optional properties to your sandbox.
+            Shows how to log events with optional properties to your DCN.
           </p>
         </div>
       </div>

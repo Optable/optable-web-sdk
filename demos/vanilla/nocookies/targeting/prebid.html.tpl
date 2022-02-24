@@ -36,12 +36,12 @@
     <!-- Optable web-sdk loader end -->
 
     <script>
-      // Hook GPT event listeners and send events to sandbox:
+      // Hook GPT event listeners and send events to DCN:
       optable.cmd.push(function () {
         optable.instance.installGPTEventListeners();
       });
 
-      // Try to fetch and cache targeting data from sandbox:
+      // Try to fetch and cache targeting data from DCN:
       optable.cmd.push(function () {
         optable.instance.targeting().catch((err) => {
           console.log("[OptableSDK] targeting() exception: " + err.message);
@@ -153,24 +153,18 @@
 
       pbjs.que.push(function () {
         optable.cmd.push(function () {
-          const tdata = optable.instance.targetingFromCache();
-
-          if (tdata) {
-            const segments = [];
-            for (const [key, values] of Object.entries(tdata)) {
-              for (const [idx, value] of Object.entries(values)) {
-                segments.push({
-                  name: key,
-                  value: value,
-                });
+          const pbdata = optable.instance.prebidUserDataFromCache();
+          if (pbdata.length > 0) {
+            pbjs.setConfig({
+              ortb2: {
+                user: {
+                  data: pbdata
+                }
               }
-            }
+            });
 
-            if (segments.length > 0) {
-              const sbh = optable.instance.sandbox.host + "/" + optable.instance.sandbox.site;
-              pbjs.setConfig({ fpd: { user: { data: [{ id: sbh, name: sbh, segment: segments }] } } });
-              console.log("[OptableSDK] pbjs.setConfig({ fpd: ... })");
-            }
+            console.log("[OptableSDK] pbjs.setConfig(ortb2.user.data)");
+            console.log(pbdata);
           }
 
           pbjs.setConfig({
@@ -235,7 +229,7 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: targeting &amp; Prebid.js activation</h4>
+          <h4>Example: targeting API: Prebid.js</h4>
           <p>
             Shows how to load active cohorts for a visitor and pass them to Prebid.js via
             <a href="https://docs.prebid.org/dev-docs/publisher-api-reference.html#setConfig-fpd">setConfig-fpd</a>.
@@ -246,12 +240,12 @@
             we also pass matching active cohorts to GAM.
           </p>
           <p>
-            In this example, we use the <code>targetingFromCache</code> API to retrieve any targeting data from browser
-            LocalStorage, in order to pass it to both Prebid.js and GPT. We also call the SDK <code>targeting</code> API
-            which will fetch the latest targeting data from our sandbox and cache it locally for later use. Since these
+            In this example, we use the <code>prebidUserDataFromCache</code> API to retrieve any targeting data from browser
+            LocalStorage, in order to pass it to Prebid.js via <a href="https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy">seller defined audiences</a>. We also call the SDK <code>targeting</code> API
+            which will fetch the latest targeting data from our DCN and cache it locally for later use. Since these
             two events happen asynchronously, it's possible that the targeting data passed to GAM is slightly outdated.
-            To ensure ad targeting accuracy, we recommend calling <code>targeting</code> to update the local cache on
-            every page load.
+            To ensure ad targeting accuracy, it is recommended to call <code>targeting</code> to update the local cache on
+            page load.
           </p>
         </div>
       </div>

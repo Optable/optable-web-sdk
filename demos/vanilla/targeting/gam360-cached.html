@@ -30,12 +30,12 @@
 
     <!-- Optable web-sdk inject targeting start -->
     <script>
-      // Hook GPT event listeners and send events to sandbox:
+      // Hook GPT event listeners and send events to DCN:
       optable.cmd.push(function () {
         optable.instance.installGPTEventListeners();
       });
 
-      // Try to fetch and cache targeting data from sandbox:
+      // Try to fetch and cache targeting data from DCN:
       optable.cmd.push(function () {
         optable.instance.targeting().catch((err) => {
           console.log("[OptableSDK] targeting() exception: " + err.message);
@@ -99,7 +99,7 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: cached targeting &amp; GAM360 activation</h4>
+          <h4>Example: targeting API: GAM360 (cached data)</h4>
           <p>
             Shows how to load and cache active cohorts in a visitor's browser. Separately, cached cohorts are passed to
             <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) via the
@@ -109,10 +109,10 @@
           <p>
             In this example, we use the <code>targetingFromCache()</code> API to retrieve any targeting data from
             browser LocalStorage, in order to pass it to GPT via <code>googletag.pubads().setTargeting()</code>. We also
-            call the SDK <code>targeting</code> API which will fetch the latest targeting data from our sandbox and
+            call the SDK <code>targeting</code> API which will fetch the latest targeting data from our DCN and
             cache it locally for later use. Since these two events happen asynchronously, it's possible that the
-            targeting data passed to GAM is slightly outdated. To ensure ad targeting accuracy, we recommend calling
-            <code>targeting</code> to update the local cache on every page load.
+            targeting data passed to GAM is slightly outdated. To ensure ad targeting accuracy, it is recommended to call
+            <code>targeting</code> to update the local cache on page load.
           </p>
           <p>
             If you are comfortable with disabling initial load on GAM ads and always loading them explicitly with the

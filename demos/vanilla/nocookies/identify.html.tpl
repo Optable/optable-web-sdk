@@ -57,7 +57,7 @@
           <h4>Example: identify API</h4>
           <p>
             Simple <code>script</code> tag integration showing how to send a hashed Email address and optional publisher
-            user ID to your sandbox.
+            user ID to your DCN.
           </p>
         </div>
       </div>
