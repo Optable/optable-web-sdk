@@ -17,16 +17,16 @@
 
       optable.cmd.push(function () {
         optable.instance = new optable.SDK({
-          host: "localhost",
+          host: "node1.cloud.test",
           site: "web-sdk-demo",
-          insecure: JSON.parse("true"),
+          insecure: JSON.parse("false"),
           cookies: false,
         });
 
         optable.instance.tryIdentifyFromParams();
       });
     </script>
-    <script async src="http://localhost:8081/sdk.js"></script>
+    <script async src="http://localhost:8181/sdk.js"></script>
     <!-- Optable web-sdk loader end -->
 
     <!-- Optable web-sdk inject targeting start -->
