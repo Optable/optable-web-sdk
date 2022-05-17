@@ -61,6 +61,11 @@ jobs:
       - checkout
       - attach_workspace:
           at: "~"
+      - run:
+          name: Setup NPM registry access
+          command: |
+            echo '@optable:registry=https://registry.npmjs.org/' > /root/.npmrc
+            echo '//registry.npmjs.org/:_authToken=$NPMJS_AUTH_TOKEN' >> /root/.npmrc
       - run: npm publish --access public
       - run: scripts/gs-publish.sh gs://optable-web-sdk ./browser/dist/sdk.js "${CIRCLE_TAG}"
       - run: docker build -t gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG} ./demos
@@ -82,6 +87,7 @@ workflows:
       - publish:
           context:
             - gcp-prod
+            - npm-prod
           requires:
             - build
           filters:
