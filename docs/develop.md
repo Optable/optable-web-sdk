@@ -9,7 +9,7 @@ You can also develop it natively by installing Node and NPM on your machine.
 
 `docker-compose up` will build and start both the SDK standalone docker container and a separate container with several web SDK demos.
 
-Once started via docker-compose, you can access the demos by browsing to `http://localhost:8081/`.
+Once started via docker-compose, you can access the demos by browsing to `http://localhost:8180/`.
 (Re)-Building of browser bundle, sdk and demos is done locally using `make`.
 
 The latest SDK standalone bundle build will be accessible from `http://localhost:8181/sdk.js`
