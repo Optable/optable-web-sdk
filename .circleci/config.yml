@@ -26,6 +26,7 @@ jobs:
           <<: *setup_env
       - run: asdf plugin add nodejs || true
       - run: asdf plugin add semver || true
+      - run: asdf install
       - save_cache:
           key: v1-asdf-{{ checksum ".tool-versions" }}
           paths:
@@ -62,6 +63,8 @@ jobs:
       - checkout
       - attach_workspace:
           at: "~"
+      - run:
+          <<: *setup_env
       - run:
           name: Setup NPM registry access
           command: |
