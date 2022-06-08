@@ -66,12 +66,20 @@ jobs:
       - run:
           <<: *setup_env
       - run:
+          name: Setup application credentials
+          command: echo $GCLOUD_SERVICE_KEY > ~/key.json
+
+      - run:
+          name: Activate GCP service account
+          command: gcloud auth activate-service-account --key-file=/home/circleci/key.json
+      - run:
           name: Setup NPM registry access
           command: |
             echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
             echo "//registry.npmjs.org/:_authToken=$NPMJS_AUTH_TOKEN" >> ~/.npmrc
       - run: ./scripts/patch-version.sh "${CIRCLE_TAG:-v0.0.0-${CIRCLE_SHA::7}}"
       - run: npm publish --access public
+
       - run: scripts/gs-publish.sh gs://optable-web-sdk ./browser/dist/sdk.js "${CIRCLE_TAG}"
       - run: docker build -t gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG} ./demos
       - run: docker push gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG}
