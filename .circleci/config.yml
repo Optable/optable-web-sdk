@@ -25,6 +25,7 @@ jobs:
       - run:
           <<: *setup_env
       - run: asdf plugin add nodejs || true
+      - run: asdf plugin add semver || true
       - save_cache:
           key: v1-asdf-{{ checksum ".tool-versions" }}
           paths:
