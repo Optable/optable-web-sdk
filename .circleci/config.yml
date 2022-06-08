@@ -67,6 +67,7 @@ jobs:
           command: |
             echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
             echo "//registry.npmjs.org/:_authToken=$NPMJS_AUTH_TOKEN" >> ~/.npmrc
+      - run: ./scripts/patch-version.sh "${CIRCLE_TAG:-v0.0.0-${CIRCLE_SHA::7}}"
       - run: npm publish --access public
       - run: scripts/gs-publish.sh gs://optable-web-sdk ./browser/dist/sdk.js "${CIRCLE_TAG}"
       - run: docker build -t gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG} ./demos
