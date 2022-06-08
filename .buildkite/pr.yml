@@ -1,4 +1,0 @@
-steps:
-  - name: byebye
-    commands:
-      - "echo So long buildkite!"
