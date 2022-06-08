@@ -82,6 +82,7 @@ jobs:
 
       - run: scripts/gs-publish.sh gs://optable-web-sdk ./browser/dist/sdk.js "${CIRCLE_TAG}"
       - run: docker build -t gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG} ./demos
+      - gcp-gcr/gcr-auth
       - run: docker push gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG}
 
 workflows:
