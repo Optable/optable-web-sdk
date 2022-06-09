@@ -1,61 +1,15 @@
 version: "3.7"
 services:
   web-sdk:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run
-      cache_from:
-        - gcr.io/optable-platform/optable-web-sdk:build
+    image: nginx:1.20
     volumes:
       - ./browser/dist:/usr/share/nginx/html:ro,delegated
-    depends_on:
-      - web-sdk-builder
     ports:
-      - "8081:80"
-    networks:
-      - sdk
-
-  web-sdk-builder:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: build
-      cache_from:
-        - gcr.io/optable-platform/optable-web-sdk:build
-    command: sh -c "npm install && npm start"
-    volumes:
-      - .:/build:delegated
+      - "8181:80"
 
   web-demo:
-    build:
-      context: .
-      target: run_demos
-      args:
-        SDK_URI: http://localhost:8081/sdk.js
-        SANDBOX_HOST: localhost
-        SANDBOX_INSECURE: "true"
+    image: nginx:1.20
     volumes:
-      - ./demos:/usr/share/nginx/html:delegated
+      - ./demos:/usr/share/nginx/html:ro,delegated
     ports:
-      - "8080:80"
-    networks:
-      - demo
-
-  web-demo-builder:
-    build:
-      context: .
-      target: build
-      cache_from:
-        - gcr.io/optable-platform/optable-web-sdk:build
-    command: sh -c "set -eux && npm --prefix demos/react ci && exec watchexec 'make -C demos' --exts 'tpl,tsx' --restart -s SIGKILL"
-    environment:
-      SDK_URI: http://localhost:8081/sdk.js
-      SANDBOX_HOST: localhost
-      SANDBOX_INSECURE: "true"
-    volumes:
-      - ./demos:/build/demos:delegated
-
-networks:
-  sdk:
-  demo:
+      - "8180:80"

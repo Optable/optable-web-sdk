@@ -1,70 +1,49 @@
-# BUILD_VERSION is the version of the build.
-BUILD_VERSION ?= $(shell git describe --tags)
-# BUILD_COMMIT is the commit from which the binary was built.
-BUILD_COMMIT ?= $(shell git rev-parse HEAD)
-# BUILD_DATE is the date at which the binary was built.
-BUILD_DATE ?= $(shell date -u "+%Y-%m-%dT%H:%M:%S+00:00")
+.DEFAULT_GOAL := all
 
-TAG ?= latest
+.PHONY: test-sdk
+test: deps
+	npm run test
 
-define BUILD_ARGS
---build-arg="BUILDKIT_INLINE_CACHE=1" \
---build-arg="BUILD_VERSION=$(BUILD_VERSION)" \
---build-arg="BUILD_COMMIT=$(BUILD_COMMIT)" \
---build-arg="BUILD_DATE=$(BUILD_DATE)"
-endef
+.PHONY: build-web
+build-web: deps
+	npm run build-web -- --mode=production
 
-define BUILD_DEMOS_ARGS
---build-arg="SDK_URI=https://cdn.optable.co/web-sdk/latest/sdk.js" \
---build-arg="SANDBOX_HOST=sandbox.optable.co" \
---build-arg="SANDBOX_INSECURE=false"
-endef
-
-.DEFAULT_GOAL := build
-
-.PHONY: all
-all: build publish
+.PHONY: build-lib
+build-lib: deps
+	npm run build-lib
 
 .PHONY: build
-build: build-sdk build-demos
+build: build-web build-lib
 
-#
-# Build web SDK and web demos targets
-#
-.PHONY: build-sdk
-build-sdk:
-	docker build . $(BUILD_ARGS) --target build -t optable-web-sdk:$(TAG)-build
-	docker build . $(BUILD_ARGS) --target run -t optable-web-sdk:$(TAG)
+.PHONY: deps
+deps:
+	npm ci
 
-.PHONY: build-demos
-build-demos:
-	docker build . $(BUILD_ARGS) $(BUILD_DEMOS_ARGS) --target run_demos -t optable-web-sdk-demos:$(TAG)
+export SDK_URI ?= http://localhost:8181/sdk.js
+export SANDBOX_HOST ?= node1.cloud.test
+export SANDBOX_INSECURE ?= false
 
-#
-# Run web SDK tests
-#
-.PHONY: test-sdk
-test-sdk: build-sdk
-	docker run -it optable-web-sdk:$(TAG)-build npm run test
+.PHONY: demo-html
+demos: demo-html demo-react
 
-#
-# Publish web SDK and web demos container images
-#
+.PHONY: demo-html
+demo-html:
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/identify.html.tpl > demos/vanilla/identify.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/witness.html.tpl > demos/vanilla/witness.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/profile.html.tpl > demos/vanilla/profile.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/targeting/gam360.html.tpl > demos/vanilla/targeting/gam360.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
 
-.PHONY: publish-sdk-lib
-publish-sdk-lib:
-	docker build . $(BUILD_ARGS) --target build -t optable-web-sdk:$(TAG)-publish-lib
-	docker run --volume $(HOME)/.npmrc:/root/.npmrc optable-web-sdk:$(TAG)-publish-lib npm publish --access public
+.PHONY: demo-react
+demo-react: build-lib
+	npm --prefix demos/react ci
+	npm --prefix demos/react run build
 
-.PHONY: publish-sdk-web
-publish-sdk-web:
-	docker build . $(BUILD_ARGS) --target publish-web -t optable-web-sdk:$(TAG)-publish-web
-	docker run \
-		--volume $(HOME)/.config/gcloud:/root/.config/gcloud \
-		optable-web-sdk:$(TAG)-publish-web \
-		gs-publish.sh gs://optable-web-sdk ./sdk.js $(BUILD_VERSION)
-
-.PHONY: publish-demos
-publish-demos: build-demos
-	docker tag optable-web-sdk-demos:$(TAG) gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
-	docker push gcr.io/optable-platform/optable-web-sdk-demos:$(TAG)
+all: test build demos
