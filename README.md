@@ -1,4 +1,4 @@
-# Optable Web SDK [![buildkite](https://badge.buildkite.com/314d07ac4946d31b6fde7a7534a9f13ab72c8aedf761a7ed24.svg)](https://buildkite.com/optable/web-sdk-publish-tag)
+# Optable Web SDK [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Optable/optable-web-sdk/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Optable/optable-web-sdk/tree/master)
 
 JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](https://docs.optable.co/) from a web site or web application.
 
