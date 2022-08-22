@@ -1,0 +1,17 @@
+{
+  "name": "@optable/web-sdk-demo-npm",
+  "version": "1.0.0",
+  "description": "Demo of optable/web-sdk using NPM",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "webpack"
+  },
+  "author": "Optable Technologies Inc.",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@optable/web-sdk": "^0.10.0",
+    "html-webpack-plugin": "^5.3.2",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0"
+  }
+}

@@ -4,7 +4,7 @@ import OptableSDK, { OptableConfig } from "@optable/web-sdk";
 
 const OptableContext = createContext<OptableSDK | null>(null);
 
-// Sandbox configuration injected by webpack based on build environment
+// Sandbox configuration injected by webpack based on build environment (see demos/react/webpack.config.js)
 declare global {
   const SANDBOX_CONFIG: OptableConfig;
 }
