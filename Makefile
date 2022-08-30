@@ -47,7 +47,8 @@ demo-react: build-lib
 	npm --prefix demos/react run build
 
 .PHONY: demo-npm
-demo-npm: npm --prefix demos/npm ci
+demo-npm:
+	npm --prefix demos/npm ci
 	npm --prefix demos/npm run build
 
 all: test build demos
