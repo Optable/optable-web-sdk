@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Optable Web SDK Demos - NPM</title>
+    <meta name="description" content="Optable Web SDK Demos - NPM" />
+  </head>
+  <body>
+    <h1>Example index.html importing a locally built <code>main.js</code></h1>
+    The <code>index.html</code> you are rendering is importing a locally build <code>main.js</code> (using webpack).
+    <br />
+    <br />
+    The <code>main.js</code> file imports Optable's <a href="https://github.com/Optable/optable-web-sdk">web-sdk</a> and makes
+    example API calls to the configured DCN. The SDK was installed using NPM.
+    <br />
+    <br />
+    To change the compiled <code>main.js</code>, edit the file <code>demos/npm/src/identifyAndTargeting.js</code>.
+    <br />
+    Make sure to configure the SDK according to your DCN's host and use the slug of the site you created in the DCN.
+    <br />
+    Then build again using webpack from the folder demos/npm:
+    <pre>
+      npm run build
+    </pre>
+    Finally, refresh this page (or open the generated <code>index.html</code> file located in <code>demos/npm/dist/index.html</code>).
+    <br />
+    <br />
+    Each render will execute the generated code located in <code>demos/npm/dist/main.js</code> and output logs in the web console.
+  </body>
+</html>

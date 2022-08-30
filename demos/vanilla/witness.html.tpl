@@ -53,7 +53,7 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: witness API</h4>
+          <h4>Example: witness API using cookies</h4>
           <p>
             Shows how to log events with optional properties to your DCN.
           </p>

@@ -24,7 +24,7 @@ export SANDBOX_HOST ?= node1.cloud.test
 export SANDBOX_INSECURE ?= false
 
 .PHONY: demo-html
-demos: demo-html demo-react
+demos: demo-html demo-react demo-npm
 
 .PHONY: demo-html
 demo-html:
@@ -45,5 +45,10 @@ demo-html:
 demo-react: build-lib
 	npm --prefix demos/react ci
 	npm --prefix demos/react run build
+
+.PHONY: demo-npm
+demo-npm:
+	npm --prefix demos/npm ci
+	npm --prefix demos/npm run build
 
 all: test build demos

@@ -53,7 +53,7 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: identify API</h4>
+          <h4>Example: identify API using cookies</h4>
           <p>
             Simple <code>script</code> tag integration showing how to send a hashed Email address and optional publisher
             user ID to your DCN.
