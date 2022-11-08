@@ -29,7 +29,7 @@ sdk.identify(emailID, ppid)
 // DCN that are activated AND include one (or more) of the current user's registered identifiers.
 // See https://github.com/Optable/optable-web-sdk#targeting-api for more info.
 sdk
-  .targeting()
+  .targetingKeyValues()
   .then((keyvalues) => {
     for (const [key, values] of Object.entries(keyvalues)) {
       console.log(`Targeting KV: ${key} = ${values.join(",")}`);

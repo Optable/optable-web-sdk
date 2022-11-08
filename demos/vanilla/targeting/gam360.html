@@ -51,13 +51,11 @@
       // Try to fetch targeting data from DCN and pass it to GAM:
       optable.cmd.push(function () {
         optable.instance
-          .targeting()
-          .then(function (result) {
-            loadGAM(result);
-          })
+          .targetingKeyValues()
+          .then(loadGAM)
           .catch((err) => {
             console.log("[OptableSDK] targeting() exception: " + err.message);
-            loadGAM();
+            loadGAM()
           });
       });
     </script>
@@ -115,7 +113,7 @@
             ad targeting.
           </p>
           <p>
-            In this example, the call to the <code>targeting</code> API happens first and, on success or error, banner
+            In this example, the call to the <code>targetingKeyValues()</code> API happens first and, on success or error, banner
             ads are loaded from Optable's demo GAM account via <code>googletag.pubads().refresh()</code>. In order to
             prevent ads loading until the asynchronous <code>targeting</code> call is done, we start by disabling
             automatic ads loading with <code>googletag.pubads().disableInitialLoad()</code>.

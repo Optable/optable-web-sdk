@@ -71,7 +71,7 @@
 
         // Setup page-level GAM targeting from any cached targeting data and load ads as usual:
         optable.cmd.push(function () {
-          const tdata = optable.instance.targetingFromCache();
+          const tdata = optable.instance.targetingKeyValuesFromCache();
 
           if (tdata) {
             for (const [key, values] of Object.entries(tdata)) {

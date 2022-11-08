@@ -70,10 +70,10 @@
 
         // Setup page-level GAM targeting from any cached targeting data and load ads as usual:
         optable.cmd.push(function () {
-          const tdata = optable.instance.targetingFromCache();
+          const gamTargeting = optable.instance.targetingKeyValuesFromCache();
 
-          if (tdata) {
-            for (const [key, values] of Object.entries(tdata)) {
+          if (gamTargeting) {
+            for (const [key, values] of Object.entries(gamTargeting)) {
               googletag.pubads().setTargeting(key, values);
               console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
             }
@@ -107,7 +107,7 @@
             ad targeting.
           </p>
           <p>
-            In this example, we use the <code>targetingFromCache()</code> API to retrieve any targeting data from
+            In this example, we use the <code>targetingKeyValuesFromCache()</code> API to retrieve any targeting data from
             browser LocalStorage, in order to pass it to GPT via <code>googletag.pubads().setTargeting()</code>. We also
             call the SDK <code>targeting</code> API which will fetch the latest targeting data from our DCN and
             cache it locally for later use. Since these two events happen asynchronously, it's possible that the
