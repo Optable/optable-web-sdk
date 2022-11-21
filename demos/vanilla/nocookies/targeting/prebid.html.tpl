@@ -136,7 +136,7 @@
 
           // Setup page-level GAM targeting from any cached targeting data, and load GAM ads:
           optable.cmd.push(function () {
-            const tdata = optable.instance.targetingFromCache();
+            const tdata = optable.instance.targetingKeyValuesFromCache();
 
             if (tdata) {
               for (const [key, values] of Object.entries(tdata)) {
@@ -240,7 +240,7 @@
             we also pass matching active cohorts to GAM.
           </p>
           <p>
-            In this example, we use the <code>prebidUserDataFromCache</code> API to retrieve any targeting data from browser
+            In this example, we use the <code>prebidUserDataFromCache()</code> API to retrieve any targeting data from browser
             LocalStorage, in order to pass it to Prebid.js via <a href="https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy">seller defined audiences</a>. We also call the SDK <code>targeting</code> API
             which will fetch the latest targeting data from our DCN and cache it locally for later use. Since these
             two events happen asynchronously, it's possible that the targeting data passed to GAM is slightly outdated.

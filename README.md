@@ -166,21 +166,19 @@ type ProfileTraits = {
 
 ### Targeting API
 
-To get the targeting key values associated by the configured DCN with the user's browser in real-time, you can call the targeting API as follows:
+To get the targeting information associated by the configured DCN with the user's browser in real-time, you can call the targeting API as follows:
 
 ```js
 sdk
   .targeting()
-  .then((keyvalues) => {
-    // Iterate over all the key values entries and print them
-    for (const [key, values] of Object.entries(keyvalues)) {
-      console.log(`Targeting KV: ${key} = ${values.join(",")}`);
-    }
+  .then((response) => {
+    console.log(`Audience targeting: ${targeting.audience}`)
+    console.log(`User targeting: ${targeting.user}`)
   })
   .catch((err) => console.warn(`Targeting API Error: ${err.message}`));
 ```
 
-On success, the resulting key values are typically sent as part of a subsequent ad call. Therefore we recommend that you either call targeting() before each ad call, or in parallel periodically, caching the resulting key values which you then provide in ad calls.
+On success, the resulting targeting data is typically sent as part of a subsequent ad call. Therefore we recommend that you either call targeting() before each ad call, or in parallel periodically, caching the resulting targeting data which you then provide in ad calls.
 
 #### Caching Targeting Data
 
@@ -189,9 +187,8 @@ The `targeting` API will automatically cache resulting key value data in client 
 ```{javascript
 const cachedTargetingData = sdk.targetingFromCache();
 if (cachedTargetingData) {
-  for (const [key, values] of Object.entries(cachedTargetingData)) {
-    console.log(`Targeting KV: ${key} = ${values.join(",")}`);
-  }
+  console.log(`Audience targeting: ${targeting.audience}`)
+  console.log(`User targeting: ${targeting.user}`)
 }
 ```
 
@@ -271,7 +268,7 @@ The following shows an example of how to safely initialize the SDK and dispatch 
 
 ## Integrating GAM360
 
-The Optable Web SDK can fetch targeting keyvalue data from a DCN and send it to a [Google Ad Manager 360](https://admanager.google.com/home/) ad server account for real-time targeting. It's also capable of intercepting advertising events from the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started) and logging them to a DCN via the **witness API**.
+The Optable Web SDK can fetch targeting data from a DCN and map it to be sent to [Google Ad Manager 360](https://admanager.google.com/home/) ad server account for real-time targeting. It's also capable of intercepting advertising events from the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started) and logging them to a DCN via the **witness API**.
 
 ### Targeting key values
 
@@ -333,10 +330,8 @@ It's suggested to load the GAM banner view with an ad even when the call to your
   // so that GAM ads are always loaded.
   optable.cmd.push(function () {
     optable.instance
-      .targeting()
-      .then(function (result) {
-        loadGAM(result);
-      })
+      .targetingKeyValues()
+      .then(loadGAM)
       .catch((err) => {
         loadGAM();
       });
@@ -352,7 +347,7 @@ Note the use of `googletag.pubads().disableInitialLoad()` in the above example. 
 
 ### Targeting key values from local cache
 
-It's also possible to avoid disabling of the initial ad load by using the SDK's `targetingFromCache()` method instead as in the following example:
+It's also possible to avoid disabling of the initial ad load by using the SDK's `targetingKeyValuesFromCache()` method instead as in the following example:
 
 ```html
 <!-- Optable SDK async load: -->
@@ -379,7 +374,7 @@ It's also possible to avoid disabling of the initial ad load by using the SDK's 
 
     // Attempt to load Optable targeting key values from local cache, then load GAM ads:
     optable.cmd.push(function () {
-      const tdata = optable.instance.targetingFromCache();
+      const tdata = optable.instance.targetingKeyValuesFromCache();
       for (const [key, values] of Object.entries(tdata)) {
         googletag.pubads().setTargeting(key, values);
       }
@@ -536,7 +531,7 @@ For a working demo showing a `pbjs` and GAM integrated together, see the [demo p
 
 ### Custom key values
 
-For bidder adapters that do not support SDA, but that do support targeting private marketplace deals to key values, you can use a samilar approach to the [Google Ad Manager integration with key values from local cache](#targeting-key-values-from-local-cache). For example, for the IX bidder adapter and [IX bidder-specific FPD](https://docs.prebid.org/dev-docs/bidders/ix.html#ix-bidder-specific-fpd), you can encode the targeting key values as shown below:
+For bidder adapters that do not support SDA, but that do support targeting private marketplace deals to key values, you can use a similar approach to the [Google Ad Manager integration with key values from local cache](#targeting-key-values-from-local-cache). For example, for the IX bidder adapter and [IX bidder-specific FPD](https://docs.prebid.org/dev-docs/bidders/ix.html#ix-bidder-specific-fpd), you can encode the targeting key values as shown below:
 
 ```html
 <script>
@@ -544,7 +539,7 @@ For bidder adapters that do not support SDA, but that do support targeting priva
   // prior to pbjs.requestBids():
   pbjs.que.push(function () {
     optable.cmd.push(function () {
-      const tdata = optable.instance.targetingFromCache();
+      const tdata = optable.instance.targetingKeyValuesFromCache();
       var fpd = {};
 
       /*

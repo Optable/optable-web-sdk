@@ -1,9 +1,15 @@
 import type { OptableConfig } from "./config";
-import { PrebidUserData, PrebidUserDataFromCache, TargetingKeyValues } from "./edge/targeting";
 import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
-import { Targeting, TargetingFromCache, TargetingClearCache } from "./edge/targeting";
+import {
+  TargetingKeyValues,
+  PrebidUserData,
+  TargetingResponse,
+  Targeting,
+  TargetingFromCache,
+  TargetingClearCache
+} from "./edge/targeting";
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
@@ -22,11 +28,11 @@ class OptableSDK {
     );
   }
 
-  targeting(): Promise<TargetingKeyValues> {
+  targeting(): Promise<TargetingResponse> {
     return Targeting(this.dcn);
   }
 
-  targetingFromCache(): TargetingKeyValues | null {
+  targetingFromCache(): TargetingResponse | null {
     return TargetingFromCache(this.dcn);
   }
 
@@ -34,8 +40,22 @@ class OptableSDK {
     TargetingClearCache(this.dcn);
   }
 
+  async prebidUserData(): Promise<PrebidUserData> {
+    return PrebidUserData(await this.targeting())
+  }
+
   prebidUserDataFromCache(): PrebidUserData {
-    return PrebidUserDataFromCache(this.dcn);
+    const tdata = this.targetingFromCache()
+    return PrebidUserData(tdata);
+  }
+
+  async targetingKeyValues(): Promise<TargetingKeyValues> {
+    return TargetingKeyValues(await this.targeting())
+  }
+
+  targetingKeyValuesFromCache(): TargetingKeyValues {
+    const tdata = this.targetingFromCache()
+    return TargetingKeyValues(tdata);
   }
 
   witness(event: string, properties: WitnessProperties = {}): Promise<void> {
@@ -52,6 +72,14 @@ class OptableSDK {
 
   static cid(ppid: string): string {
     return ppid ? "c:" + ppid.trim() : "";
+  }
+
+  static TargetingKeyValues(tdata: TargetingResponse): TargetingKeyValues {
+    return TargetingKeyValues(tdata)
+  }
+
+  static PrebidUserData(tdata: TargetingResponse): PrebidUserData {
+    return PrebidUserData(tdata)
   }
 }
 
