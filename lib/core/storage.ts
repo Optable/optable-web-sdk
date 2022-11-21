@@ -36,7 +36,7 @@ class LocalStorage {
 
     const audiences = Object.entries(parsed).map(([keyspace, values]) => {
       return {
-        provider: "optable.co" as const,
+        provider: "optable.co",
         keyspace,
         // 5001 is Optable Private Member Defined Audiences
         // See: https://github.com/InteractiveAdvertisingBureau/openrtb/pull/81

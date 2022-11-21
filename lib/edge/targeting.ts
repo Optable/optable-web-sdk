@@ -2,23 +2,20 @@ import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 
-type AudienceProvider = "optable.co"
-type UserProvider = "optable.co" | "uidapi.com"
-
 type Identifier = {
   id: string;
 };
 
 type AudienceIdentifiers = {
   ids: Identifier[];
-  provider: AudienceProvider;
+  provider: string;
   rtb_segtax: number; // taxonomy identifier for RTB UserSegments
-  keyspace?: string;   // GAM targeting key for optable.co audience provider
+  keyspace?: string;  // targeting key for integrations allowing for key/values targeting
 }
 
 type UserIdentifiers = {
   ids: Identifier[];
-  provider: UserProvider;
+  provider: string;
 }
 
 type TargetingResponse = {
