@@ -3,3 +3,16 @@ lib/dist/
 demos/react/dist
 demos/npm/dist
 browser/dist/
+
+demos/vanilla/identify.html
+demos/vanilla/nocookies/identify.html
+demos/vanilla/nocookies/profile.html
+demos/vanilla/nocookies/targeting/gam360-cached.html
+demos/vanilla/nocookies/targeting/gam360.html
+demos/vanilla/nocookies/targeting/prebid.html
+demos/vanilla/nocookies/witness.html
+demos/vanilla/profile.html
+demos/vanilla/targeting/gam360-cached.html
+demos/vanilla/targeting/gam360.html
+demos/vanilla/targeting/prebid.html
+demos/vanilla/witness.html
