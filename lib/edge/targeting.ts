@@ -1,6 +1,7 @@
 import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
+import {UIDAgentType, User as RTB2User} from "./rtb2";
 
 type Identifier = {
   id: string;
@@ -49,29 +50,36 @@ function TargetingClearCache(config: OptableConfig) {
   ls.clearTargeting();
 }
 
-type PrebidUserSegment = Identifier
-type PrebidSegtax = { segtax: number };
-type PrebidUserSegmentProvider = { name: string; ext: PrebidSegtax; segment: PrebidUserSegment[] };
-type PrebidUserData = PrebidUserSegmentProvider[];
+type PrebidORTB2 = {user?: RTB2User}
 
 /*
  * Prebid.js supports passing seller-defined audiences to compatible
  * bidder adapters.
  *
- * We return the contents to be pushed to ortb2.user.data and passed to
- * bidder adapters via setConfig(ortb2.user.data)... the caller is free
+ * We return the contents to be merged in ortb2 and passed to
+ * bidder adapters via mergeConfig(ortb2)... the caller is free
  * to append additional objects before setting the final result.
  *
  * References:
  * https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy
  * https://iabtechlab.com/wp-content/uploads/2021/03/IABTechLab_Taxonomy_and_Data_Transparency_Standards_to_Support_Seller-defined_Audience_and_Context_Signaling_2021-03.pdf
  */
-function PrebidUserData(tdata: TargetingResponse | null): PrebidUserData {
-  return (tdata?.audience ?? []).map((identifiers) => ({
-    name: identifiers.provider,
-    segment: identifiers.ids,
-    ext: { segtax: identifiers.rtb_segtax },
-  }))
+function PrebidORTB2(tdata: TargetingResponse | null): PrebidORTB2 {
+  return {
+    user: {
+      data: (tdata?.audience ?? []).map((identifiers) => ({
+        name: identifiers.provider,
+        segment: identifiers.ids,
+        ext: { segtax: identifiers.rtb_segtax },
+      })),
+      ext: {
+        eids: (tdata?.user ?? []).map((identifiers) => ({
+          source: identifiers.provider,
+          uids: identifiers.ids.map(({ id }) => ({ id, atype: UIDAgentType.PersonID })),
+        })),
+      }
+    }
+  }
 }
 
 type TargetingKeyValues = { [key: string]: string[] };
@@ -99,7 +107,7 @@ export {
   TargetingFromCache,
   TargetingClearCache,
   TargetingResponse,
-  PrebidUserData,
+  PrebidORTB2,
   TargetingKeyValues,
 };
 export default Targeting;

@@ -425,11 +425,11 @@ A working example of both targeting and event witnessing is available in the dem
 
 ## Integrating Prebid
 
-The Optable Web SDK can fetch targeting data from a DCN and prepare an audience taxonomy object similar to the one described in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `prebidUserDataFromCache()` function returns the object from the targeting data stored by `targeting()` API calls in `LocalStorage`.
+The Optable Web SDK can fetch targeting data from a DCN and prepare an audience taxonomy object similar to the one described in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `prebidORTB2FromCache()` function returns the object from the targeting data stored by `targeting()` API calls in `LocalStorage`.
 
 ### Seller Defined Audiences
 
-The HTML code snippet below shows how `prebidUserDataFromCache()` can be used to retrieve targeting data from the `LocalStorage` administered by the Optable SDK, and write Seller Defined Audiences (SDA) into [prebid.js](https://prebid.org/product-suite/prebid-js/) which is also loaded into the page, using `pbjs.setConfig({ ortb2: { user: { data: [ { ... } ] } } })` as documented in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `targeting()` API is also called in order to retrieve and locally store the latest matching activations from `dcn.customer.com/my-site`.
+The HTML code snippet below shows how `prebidORTB2FromCache()` can be used to retrieve targeting data from the `LocalStorage` administered by the Optable SDK, and write Seller Defined Audiences (SDA) into [prebid.js](https://prebid.org/product-suite/prebid-js/) which is also loaded into the page, using `pbjs.mergeConfig({ ortb2: ortb2 })` as documented in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `targeting()` API is also called in order to retrieve and locally store the latest matching activations from `dcn.customer.com/my-site`.
 
 Note that [prebid.js bidder adapters](https://docs.prebid.org/dev-docs/bidders.html) can subsequently retrieve the data from the [global config](https://docs.prebid.org/features/firstPartyData.html#supplying-global-data).
 
@@ -503,16 +503,8 @@ For a working demo showing a `pbjs` and GAM integrated together, see the [demo p
 
   pbjs.que.push(function () {
     optable.cmd.push(function () {
-      const pbdata = optable.instance.prebidUserDataFromCache();
-      if (pbdata.length > 0) {
-        pbjs.setConfig({
-          ortb2: {
-            user: {
-              data: pbdata,
-            },
-          },
-        });
-      }
+      const ortb2 = optable.instance.prebidORTB2FromCache();
+      pbjs.mergeConfig({ ortb2: ortb2 });
 
       // ... etc ...
 
