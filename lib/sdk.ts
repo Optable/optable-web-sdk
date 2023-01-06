@@ -4,11 +4,11 @@ import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import {
   TargetingKeyValues,
-  PrebidUserData,
   TargetingResponse,
   Targeting,
   TargetingFromCache,
-  TargetingClearCache
+  TargetingClearCache,
+  PrebidORTB2
 } from "./edge/targeting";
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
@@ -40,13 +40,13 @@ class OptableSDK {
     TargetingClearCache(this.dcn);
   }
 
-  async prebidUserData(): Promise<PrebidUserData> {
-    return PrebidUserData(await this.targeting())
+  async prebidORTB2(): Promise<PrebidORTB2> {
+    return PrebidORTB2(await this.targeting())
   }
 
-  prebidUserDataFromCache(): PrebidUserData {
+  prebidORTB2FromCache(): PrebidORTB2 {
     const tdata = this.targetingFromCache()
-    return PrebidUserData(tdata);
+    return PrebidORTB2(tdata);
   }
 
   async targetingKeyValues(): Promise<TargetingKeyValues> {
@@ -78,8 +78,8 @@ class OptableSDK {
     return TargetingKeyValues(tdata)
   }
 
-  static PrebidUserData(tdata: TargetingResponse): PrebidUserData {
-    return PrebidUserData(tdata)
+  static PrebidORTB2(tdata: TargetingResponse): PrebidORTB2 {
+    return PrebidORTB2(tdata)
   }
 }
 
