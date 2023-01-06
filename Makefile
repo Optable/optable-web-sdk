@@ -40,6 +40,7 @@ demo-html:
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 
 .PHONY: demo-react
 demo-react: build-lib
