@@ -59,7 +59,7 @@ jobs:
           paths:
             - project/lib/dist
             - project/browser/dist
-            - project/demos/react/dist
+            - project/demos/
 
   publish:
     <<: *defaults
