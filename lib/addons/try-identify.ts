@@ -10,13 +10,13 @@ function maybeValidEID(eid: string): boolean {
   return eid.match(/^[a-f0-9]{64}$/i) !== null;
 }
 
-OptableSDK.prototype.tryIdentifyFromParams = function () {
+OptableSDK.prototype.tryIdentifyFromParams = function (paramKey?: string) {
   const qstr = new URLSearchParams(window.location.search);
   const keys = qstr.keys();
   var eid: string | null = "";
 
   for (const key of keys) {
-    if (key.match(/^oeid$/i)) {
+    if (key.match(new RegExp('^' + (paramKey || 'oeid') + '$', 'i'))) {
       eid = qstr.get(key);
       break;
     }
