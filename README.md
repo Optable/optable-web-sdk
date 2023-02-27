@@ -595,10 +595,7 @@ On your website destination page, you can call a helper method provided by the S
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
     optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
-    optable.instance.tryIdentifyFromParams(); // uses default parameter key 'oeid'
-    // or specify custom parameter key
-    // https://www.mysite.com?origin=newsletter&user_id=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789&foo=bar
-    // optable.instance.tryIdentifyFromParams('user_id');
+    optable.instance.tryIdentifyFromParams();
   });
 </script>
 ```
