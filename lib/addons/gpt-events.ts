@@ -10,6 +10,7 @@ declare global {
 declare module "../sdk" {
   export interface OptableSDK {
     installGPTEventListeners: () => void;
+    installGPTSecureSignals: () => void;
   }
 }
 
@@ -49,4 +50,39 @@ OptableSDK.prototype.installGPTEventListeners = function () {
       sdk.witness("googletag.events.impressionViewable", toWitnessProperties(event));
     });
   });
+};
+
+/*
+ * installGPTSecureSignals() sets up secure signals on GPT instance from targeting.
+ */
+OptableSDK.prototype.installGPTSecureSignals = function () {
+  // Next time we get called is a no-op:
+  const sdk = this;
+  sdk.installGPTSecureSignals = function () {};
+
+  // Obtain targeting response
+  const targeting = sdk.targetingFromCache();
+
+  window.googletag = window.googletag || { cmd: [] };
+  const gpt = window.googletag;
+
+  gpt.cmd.push(function () {
+    if (!gpt.secureSignalProviders) {
+      gpt.secureSignalProviders = [];
+    }
+
+    for(const userIds of targeting?.user ?? []) {
+      if (!userIds.ids.length) {
+        continue
+      }
+
+      console.log("Adding GPT secure signal provider", userIds.provider)
+      gpt.secureSignalProviders.push({
+        id: "pubcid.org",
+        collectorFunction: function() {
+          return Promise.resolve(userIds.ids[0])
+        },
+      })
+    }
+  })
 };

@@ -20,7 +20,7 @@ deps:
 	npm ci
 
 export SDK_URI ?= http://localhost:8181/sdk.js
-export SANDBOX_HOST ?= node1.cloud.test
+export SANDBOX_HOST ?= sandbox.optable.co
 export SANDBOX_INSECURE ?= false
 
 .PHONY: demo-html
@@ -40,6 +40,8 @@ demo-html:
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblaw-privateid.html.tpl > demos/integration/loblaw-privateid.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblaw-privateid-gpt.html.tpl > demos/integration/loblaw-privateid-gpt.html
 
 .PHONY: demo-react
 demo-react: build-lib
