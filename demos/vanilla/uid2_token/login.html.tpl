@@ -133,7 +133,7 @@
 
             __uid2.init({
                 callback: onUid2IdentityUpdated,
-                baseUrl: "https://uid2.cloud.optable.co",
+                baseUrl: "${UID2_BASE_URL}",
                 identity: identity
             });
           })
