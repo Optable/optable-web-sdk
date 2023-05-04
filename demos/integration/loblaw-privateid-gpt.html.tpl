@@ -22,7 +22,7 @@
           host: "${SANDBOX_HOST}",
           site: "web-sdk-demo",
           insecure: JSON.parse("${SANDBOX_INSECURE}"),
-          cookies: false,
+          cookies: (new URLSearchParams(window.location.search)).get("cookies") === "yes",
         });
         optable.instance.targeting()
         optable.instance.installGPTSecureSignals();

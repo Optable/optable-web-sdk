@@ -154,12 +154,9 @@
       pbjs.que.push(function () {
         optable.cmd.push(function () {
           const ortb2 = optable.instance.prebidORTB2FromCache();
-          pbjs.mergeConfig({ ortb2: ortb2 });
-
-          console.log("[OptableSDK] pbjs.mergeConfig(ortb2)");
-          console.log(ortb2);
 
           pbjs.setConfig({
+            ortb2: ortb2,
             priceGranularity: "low",
             userSync: {
               iframeEnabled: true,
