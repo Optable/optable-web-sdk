@@ -40,8 +40,8 @@ demo-html:
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
-	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblaw-privateid.html.tpl > demos/integration/loblaw-privateid.html
-	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblaw-privateid-gpt.html.tpl > demos/integration/loblaw-privateid-gpt.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblawmedia-privateid-prebid-gpt.html.tpl > demos/integration/loblawmedia-privateid-prebid-gpt.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblawmedia-privateid-signal-gpt.html.tpl > demos/integration/loblawmedia-privateid-signal-gpt.html
 
 .PHONY: demo-react
 demo-react: build-lib

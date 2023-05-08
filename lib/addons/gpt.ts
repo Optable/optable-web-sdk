@@ -78,7 +78,7 @@ OptableSDK.prototype.installGPTSecureSignals = function () {
 
       console.log("Adding GPT secure signal provider", userIds.provider)
       gpt.secureSignalProviders.push({
-        id: "pubcid.org",
+        id: "loblawmedia.ca",
         collectorFunction: function() {
           return Promise.resolve(userIds.ids[0])
         },

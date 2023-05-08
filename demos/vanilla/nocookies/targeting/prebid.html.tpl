@@ -221,7 +221,7 @@
           <h4>Example: targeting API: Prebid.js</h4>
           <p>
             Shows how to load active cohorts for a visitor and pass them to Prebid.js via
-            <a href="https://docs.prebid.org/dev-docs/publisher-api-reference.html#setConfig-fpd">setConfig-fpd</a>.
+            <a href="https://docs.prebid.org/dev-docs/publisher-api-reference/setConfig.html#setConfig-fpd">setConfig-fpd</a>.
             It's assumed in this example that your primary ad server is
             <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) and that you are integrated with it
             using the
