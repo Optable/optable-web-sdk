@@ -42,6 +42,7 @@ jobs:
       SDK_URI: https://cdn.optable.co/web-sdk/latest/sdk.js
       SANDBOX_HOST: sandbox.optable.co
       SANDBOX_INSECURE: "false"
+      UID2_BASE_URL: https://prod.uidapi.com
     steps:
       - checkout
       - attach_workspace:
@@ -53,6 +54,7 @@ jobs:
           export SDK_URI="https://cdn.optable.co/web-sdk/${CIRCLE_TAG}/sdk.js"
           export SANDBOX_HOST="sandbox.optable.co"
           export SANDBOX_INSECURE="false"
+          export UID2_BASE_URL="https://prod.uidapi.com"
           make -j --output-sync
       - persist_to_workspace:
           root: "~"

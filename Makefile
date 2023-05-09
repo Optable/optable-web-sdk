@@ -22,6 +22,7 @@ deps:
 export SDK_URI ?= http://localhost:8181/sdk.js
 export SANDBOX_HOST ?= sandbox.optable.co
 export SANDBOX_INSECURE ?= false
+export UID2_BASE_URL ?= https://operator-integ.uidapi.com
 
 .PHONY: demo-html
 demos: demo-html demo-react demo-npm
@@ -42,6 +43,8 @@ demo-html:
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblawmedia-privateid-prebid-gpt.html.tpl > demos/integration/loblawmedia-privateid-prebid-gpt.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/loblawmedia-privateid-signal-gpt.html.tpl > demos/integration/loblawmedia-privateid-signal-gpt.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL} ' < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL} ' < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
 
 .PHONY: demo-react
 demo-react: build-lib
