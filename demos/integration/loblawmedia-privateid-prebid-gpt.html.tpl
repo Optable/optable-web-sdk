@@ -57,7 +57,7 @@
 
             Make sure to include the <code>mabidder</code> bidder your <code>addAdUnits()</code> Prebid.js's call, and to enable the <code>loblawmediapid</code> user ID module. See <a target="_blank" rel="noopener" href="https://docs.prebid.org/dev-docs/modules/userId.html#user-id-sub-modules">https://docs.prebid.org/dev-docs/modules/userId.html</a>.<br/>
 
-            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources.<br/> A convenience function <code>setLoblawMediaPrivateID</code> must be used on the web SDK to pass down Loblaw Media Private ID's to Prebid.js.
+            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources and cached for consumption by other libraries.
           </p>
           <p>
           Example of a full integration snippet which configures Prebid.js and GPT:
@@ -75,9 +75,6 @@ optable.cmd.push(function () {
 
   // Update cached targeting
   optable.instance.targeting();
-
-  // Inject Loblaw Media Private ID for Prebid.js user ID module
-  optable.instance.setLoblawMediaPrivateID();
 });
 
 // Disable initial GPT load
@@ -193,7 +190,6 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
         });
 
         optable.instance.targeting()
-        optable.instance.setLoblawMediaPrivateID();
       });
 
       googletag.cmd.push(function () {

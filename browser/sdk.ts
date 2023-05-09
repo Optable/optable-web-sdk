@@ -2,7 +2,6 @@ import Commands from "./commands";
 
 import OptableSDK from "../lib/sdk";
 import "../lib/addons/gpt";
-import "../lib/addons/loblawmediapid";
 import "../lib/addons/try-identify";
 
 type OptableGlobal = {

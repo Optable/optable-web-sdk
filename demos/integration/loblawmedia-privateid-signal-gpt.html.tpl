@@ -69,9 +69,10 @@ optable.cmd.push(function () {
     site: "{MY_NODE_ORIGIN}"
   });
 
-  // Update cached targeting
-  optable.instance.targeting()
-  optable.instance.installGPTSecureSignals();
+  // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
+  optable.instance.targeting().then(() => {
+    optable.instance.installGPTLoblawMediaPrivateID();
+  });
 });
 
 // Define some Ad slots and request bids through Prebid.js.
@@ -162,8 +163,9 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
             insecure: JSON.parse("${SANDBOX_INSECURE}"),
             cookies: (new URLSearchParams(window.location.search)).get("cookies") === "yes",
           });
-          optable.instance.targeting()
-          optable.instance.installGPTSecureSignals();
+          optable.instance.targeting().then(() => {
+            optable.instance.installGPTLoblawMediaPrivateID();
+          });
         });
 
         googletag.cmd.push(function() {

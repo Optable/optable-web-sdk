@@ -1,4 +1,5 @@
 import type { WitnessProperties } from "../edge/witness";
+import { loblawMediaPrivateIDProvider } from "../edge/targeting";
 import OptableSDK from "../sdk";
 
 declare global {
@@ -10,7 +11,7 @@ declare global {
 declare module "../sdk" {
   export interface OptableSDK {
     installGPTEventListeners: () => void;
-    installGPTSecureSignals: () => void;
+    installGPTLoblawMediaPrivateID: () => void;
   }
 }
 
@@ -53,15 +54,12 @@ OptableSDK.prototype.installGPTEventListeners = function () {
 };
 
 /*
- * installGPTSecureSignals() sets up secure signals on GPT instance from targeting.
+ * installGPTLoblawMediaPrivateID() sets up loblaw media private ID secure signals on GPT from targeting.
  */
-OptableSDK.prototype.installGPTSecureSignals = function () {
+OptableSDK.prototype.installGPTLoblawMediaPrivateID = function () {
   // Next time we get called is a no-op:
   const sdk = this;
-  sdk.installGPTSecureSignals = function () {};
-
-  // Obtain targeting response
-  const targeting = sdk.targetingFromCache();
+  sdk.installGPTLoblawMediaPrivateID = function () {};
 
   window.googletag = window.googletag || { cmd: [] };
   const gpt = window.googletag;
@@ -71,18 +69,11 @@ OptableSDK.prototype.installGPTSecureSignals = function () {
       gpt.secureSignalProviders = [];
     }
 
-    for(const userIds of targeting?.user ?? []) {
-      if (!userIds.ids.length) {
-        continue
-      }
-
-      console.log("Adding GPT secure signal provider", userIds.provider)
-      gpt.secureSignalProviders.push({
-        id: "loblawmedia.ca",
-        collectorFunction: function() {
-          return Promise.resolve(userIds.ids[0])
-        },
-      })
-    }
+    gpt.secureSignalProviders.push({
+      id: loblawMediaPrivateIDProvider,
+      collectorFunction: function() {
+        return Promise.resolve(sdk.loblawMediaPrivateIDFromCache())
+      },
+    })
   })
 };

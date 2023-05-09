@@ -8,7 +8,8 @@ import {
   Targeting,
   TargetingFromCache,
   TargetingClearCache,
-  PrebidORTB2
+  PrebidORTB2,
+  LoblawMediaPrivateIDFromCache
 } from "./edge/targeting";
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
@@ -38,6 +39,10 @@ class OptableSDK {
 
   targetingClearCache() {
     TargetingClearCache(this.dcn);
+  }
+
+  loblawMediaPrivateIDFromCache(): string | null {
+    return LoblawMediaPrivateIDFromCache(this.dcn)
   }
 
   async prebidORTB2(): Promise<PrebidORTB2> {
