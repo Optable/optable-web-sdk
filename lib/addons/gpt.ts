@@ -72,7 +72,7 @@ OptableSDK.prototype.installGPTLoblawMediaPrivateID = function () {
     gpt.secureSignalProviders.push({
       id: loblawMediaPrivateIDProvider,
       collectorFunction: function() {
-        return Promise.resolve(sdk.loblawMediaPrivateIDFromCache())
+        return Promise.resolve({ id: sdk.loblawMediaPrivateIDFromCache() })
       },
     })
   })

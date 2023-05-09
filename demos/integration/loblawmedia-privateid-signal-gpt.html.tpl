@@ -52,11 +52,11 @@
           <h5>Step 3</h5>
           <p>
             In order to communicate Private ID's to Loblaw Media from your Web SDK source.<br/>
-            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources.<br/> A convenience function <code>installGPTSecureSignals</code> must be used on the web SDK to install all secure signal sources handled by Optable's SDK.
+            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources.<br/> A convenience function <code>installGPTLoblawMediaPrivateID</code> must be used on the web SDK to install all secure signal sources handled by Optable's SDK.<br/>
+            Note that this function uses targeting cache internally, which is why in the following example we propose to install the secure signal provider only once targeting cache as been populated.
           </p>
-
           <p>
-          Example of a full integration snippet which configures GPT to send requests to GAM including Loblaw Media Private IDs as secure signals:
+          Example of a full integration snippet which configures GPT to send requests to GAM including Loblaw Media Private IDs as secure signal:
 
             <pre><code style="padding: 20px">// Setup both Optable and GPT SDKs.
 window.optable = window.optable || { cmd: [] };

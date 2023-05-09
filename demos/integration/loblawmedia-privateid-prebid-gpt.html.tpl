@@ -60,7 +60,9 @@
             Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources and cached for consumption by other libraries.
           </p>
           <p>
-          Example of a full integration snippet which configures Prebid.js and GPT:
+          Example of a full integration snippet which configures Prebid.js and GPT. <br/>
+          While the userId module is responsible of passing the user's Private ID to Loblaw Media bidder (mabidder), it's also being passed to GAM through secure signals by using <code>installGPTLoblawMediaPrivateID</code>.<br/>
+          Note that this function uses targeting cache internally, which is why in the following example we propose to install the secure signal provider only once targeting cache as been populated.
 
             <pre><code style="padding: 20px">// Setup Optable, Prebid.js and GPT SDKs.
 window.optable = window.optable || { cmd: [] };
@@ -73,8 +75,10 @@ optable.cmd.push(function () {
     site: "{MY_NODE_ORIGIN}",
   });
 
-  // Update cached targeting
-  optable.instance.targeting();
+  // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
+  optable.instance.targeting().then(() => {
+    optable.instance.installGPTLoblawMediaPrivateID();
+  });
 });
 
 // Disable initial GPT load
@@ -189,7 +193,9 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
           cookies: cookiesTransport,
         });
 
-        optable.instance.targeting()
+        optable.instance.targeting().then(() => {
+          optable.instance.installGPTLoblawMediaPrivateID();
+        });
       });
 
       googletag.cmd.push(function () {
