@@ -2,6 +2,7 @@ import type { OptableConfig } from "./config";
 import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
+import { Uid2Token } from "./edge/uid2_token";
 import {
   TargetingKeyValues,
   TargetingResponse,
@@ -26,6 +27,10 @@ class OptableSDK {
       this.dcn,
       ids.filter((id) => id)
     );
+  }
+
+  uid2Token(id: string) {
+    return Uid2Token(this.dcn, id);
   }
 
   targeting(): Promise<TargetingResponse> {
