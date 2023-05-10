@@ -1,6 +1,6 @@
 import type { OptableConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
-import { loblawMediaPrivateIDProvider } from "../edge/targeting";
+import { lmpidProvider } from "../edge/targeting";
 
 function toBinary(str: string): string {
   const codeUnits = new Uint16Array(str.length);
@@ -14,7 +14,7 @@ class LocalStorage {
   private passportKey: string;
   private targetingV1Key: string;
   private targetingKey: string;
-  private loblawMediaPrivateIDKey: string;
+  private lmpidKey: string;
 
   constructor(private Config: OptableConfig) {
     const sfx = btoa(toBinary(`${this.Config.host}/${this.Config.site}`));
@@ -23,7 +23,7 @@ class LocalStorage {
 
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
-    this.loblawMediaPrivateIDKey = "__loblawmedia_privateid_token"
+    this.lmpidKey = "__lmpid"
   }
 
   getPassport(): string | null {
@@ -74,23 +74,23 @@ class LocalStorage {
     }
 
     window.localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
-    this.setLoblawMediaPrivateID(targeting)
+    this.setLmpid(targeting)
   }
 
-  // setLoblawMediaPrivateID conditionally set the LoblawMediaPrivateID in local storage
+  // setLmpid conditionally set the Lmpid in local storage
   // based on the provider being present in the targeting response
-  setLoblawMediaPrivateID(targeting: TargetingResponse) {
-    const provider = targeting.user?.find((userIds) => userIds.provider === loblawMediaPrivateIDProvider);
+  setLmpid(targeting: TargetingResponse) {
+    const provider = targeting.user?.find((userIds) => userIds.provider === lmpidProvider);
     // Don't touch local storage if the provider is not enabled
     if (!provider) {
       return
     }
 
-    window.localStorage.setItem(this.loblawMediaPrivateIDKey, provider.ids?.[0]?.id ?? "");
+    window.localStorage.setItem(this.lmpidKey, provider.ids?.[0]?.id ?? "");
   }
 
-  getLoblawMediaPrivateID(): string | null {
-    return window.localStorage.getItem(this.loblawMediaPrivateIDKey) ?? null;
+  getLmpid(): string | null {
+    return window.localStorage.getItem(this.lmpidKey) ?? null;
   }
 
   clearPassport() {
@@ -102,5 +102,5 @@ class LocalStorage {
   }
 }
 
-export { LocalStorage, loblawMediaPrivateIDProvider };
+export { LocalStorage, lmpidProvider };
 export default LocalStorage;

@@ -55,13 +55,13 @@
           <p>
             In order to communicate Private ID's to Loblaw Media from your Web SDK source, depending on how you generated your Prebid.js distribution, you may need to update it to include <code>mabidder</code> bidder. See <a target="_blank" rel="noopener" href="https://docs.prebid.org/download.html">https://docs.prebid.org/download.html</a>.<br/>
 
-            Make sure to include the <code>mabidder</code> bidder your <code>addAdUnits()</code> Prebid.js's call, and to enable the <code>loblawmediapid</code> user ID module. See <a target="_blank" rel="noopener" href="https://docs.prebid.org/dev-docs/modules/userId.html#user-id-sub-modules">https://docs.prebid.org/dev-docs/modules/userId.html</a>.<br/>
+            Make sure to include the <code>mabidder</code> bidder your <code>addAdUnits()</code> Prebid.js's call, and to enable the <code>lmpid</code> user ID module. See <a target="_blank" rel="noopener" href="https://docs.prebid.org/dev-docs/modules/userId.html#user-id-sub-modules">https://docs.prebid.org/dev-docs/modules/userId.html</a>.<br/>
 
             Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources and cached for consumption by other libraries.
           </p>
           <p>
           Example of a full integration snippet which configures Prebid.js and GPT. <br/>
-          While the userId module is responsible of passing the user's Private ID to Loblaw Media bidder (mabidder), it's also being passed to GAM through secure signals by using <code>installGPTLoblawMediaPrivateID</code>.<br/>
+          While the userId module is responsible of passing the user's Private ID to Loblaw Media bidder (mabidder), it's also being passed to GAM through secure signals by using <code>installGPTSecureSignals</code>.<br/>
           Note that this function uses targeting cache internally, which is why in the following example we propose to install the secure signal provider only once targeting cache as been populated.
 
             <pre><code style="padding: 20px">// Setup Optable, Prebid.js and GPT SDKs.
@@ -77,7 +77,7 @@ optable.cmd.push(function () {
 
   // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
   optable.instance.targeting().then(() => {
-    optable.instance.installGPTLoblawMediaPrivateID();
+    optable.instance.installGPTSecureSignals();
   });
 });
 
@@ -88,7 +88,7 @@ googletag.cmd.push(function () {
 
 pbjs.que.push(function () {
   // Enable Loblaw Media Private ID user ID module
-  pbjs.setConfig({ userSync: { userIds: [{ name: "loblawmediapid" }] } })
+  pbjs.setConfig({ userSync: { userIds: [{ name: "lmpid" }] } })
 
   // Configure some ad units.
   // Note that while it's not relevant for Private ID integration,
@@ -194,7 +194,7 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
         });
 
         optable.instance.targeting().then(() => {
-          optable.instance.installGPTLoblawMediaPrivateID();
+          optable.instance.installGPTSecureSignals();
         });
       });
 
@@ -204,7 +204,7 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
 
       pbjs.que.push(function () {
         pbjs.setConfig({
-          userSync: { userIds: [{ name: "loblawmediapid" }] },
+          userSync: { userIds: [{ name: "lmpid" }] },
         })
 
         pbjs.addAdUnits([

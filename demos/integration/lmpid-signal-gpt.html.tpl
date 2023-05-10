@@ -52,7 +52,7 @@
           <h5>Step 3</h5>
           <p>
             In order to communicate Private ID's to Loblaw Media from your Web SDK source.<br/>
-            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources.<br/> A convenience function <code>installGPTLoblawMediaPrivateID</code> must be used on the web SDK to install all secure signal sources handled by Optable's SDK.<br/>
+            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources.<br/> A convenience function <code>installGPTSecureSignals</code> must be used on the web SDK to install all secure signal sources handled by Optable's SDK.<br/>
             Note that this function uses targeting cache internally, which is why in the following example we propose to install the secure signal provider only once targeting cache as been populated.
           </p>
           <p>
@@ -71,7 +71,7 @@ optable.cmd.push(function () {
 
   // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
   optable.instance.targeting().then(() => {
-    optable.instance.installGPTLoblawMediaPrivateID();
+    optable.instance.installGPTSecureSignals();
   });
 });
 
@@ -164,7 +164,7 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
             cookies: (new URLSearchParams(window.location.search)).get("cookies") === "yes",
           });
           optable.instance.targeting().then(() => {
-            optable.instance.installGPTLoblawMediaPrivateID();
+            optable.instance.installGPTSecureSignals();
           });
         });
 
