@@ -14,6 +14,8 @@ COPY ./vanilla/nocookies/targeting/prebid.js ./vanilla/nocookies/targeting/prebi
 COPY ./vanilla/nocookies/identify.html ./vanilla/nocookies/identify.html
 COPY ./vanilla/nocookies/profile.html ./vanilla/nocookies/profile.html
 COPY ./vanilla/nocookies/witness.html ./vanilla/nocookies/witness.html
+COPY ./vanilla/uid2_token/index.html ./vanilla/uid2_token/index.html
+COPY ./vanilla/uid2_token/login.html ./vanilla/uid2_token/login.html
 COPY ./react/dist/ ./react/dist/
 COPY ./index.html ./index.html
 COPY ./index-nocookies.html ./index-nocookies.html
