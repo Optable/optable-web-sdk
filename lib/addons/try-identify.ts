@@ -14,9 +14,10 @@ OptableSDK.prototype.tryIdentifyFromParams = function (paramKey?: string) {
   const qstr = new URLSearchParams(window.location.search);
   const keys = qstr.keys();
   var eid: string | null = "";
+  var searchedParam = /^${paramKey || 'oeid'}$/i;
 
   for (const key of keys) {
-    if (key.match(new RegExp('^' + (paramKey || 'oeid') + '$', 'i'))) {
+    if (key.match(searchedParam)) {
       eid = qstr.get(key);
       break;
     }
