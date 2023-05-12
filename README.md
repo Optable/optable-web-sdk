@@ -586,8 +586,9 @@ The above example uses various personalization tags as documented in [Braze's us
 
 ### Call tryIdentifyFromParams SDK API
 
-On your website destination page, you can call a helper method provided by the SDK which will attempt to parse and validate any **oeid** parameters passed to the page via query string and, when found, automatically trigger a call to Optable's **identify** API. For example:
+On your website destination page, you can call a helper method provided by the SDK which will attempt to parse and validate a given query string parameter as EID (defaults to **oeid**), when found, it will automatically trigger a call to Optable's **identify** API.
 
+For example:
 ```html
 <!-- Optable SDK async load: -->
 <script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
@@ -595,7 +596,13 @@ On your website destination page, you can call a helper method provided by the S
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
     optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
+
+    // Identify using a valid EID (email SHA256) "oeid" query string parameter.
     optable.instance.tryIdentifyFromParams();
+
+    // Or if the EID is being passed through a "email_sha" query string
+    // like https://www.mysite.com?origin=newsletter&email_sha=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789&foo=bar
+    // optable.instance.tryIdentifyFromParams("email_sha");
   });
 </script>
 ```
