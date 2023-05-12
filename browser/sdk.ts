@@ -1,7 +1,7 @@
 import Commands from "./commands";
 
 import OptableSDK from "../lib/sdk";
-import "../lib/addons/gpt-events";
+import "../lib/addons/gpt";
 import "../lib/addons/try-identify";
 
 type OptableGlobal = {

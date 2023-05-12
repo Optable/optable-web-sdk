@@ -9,7 +9,8 @@ import {
   Targeting,
   TargetingFromCache,
   TargetingClearCache,
-  PrebidORTB2
+  PrebidORTB2,
+  LmpidFromCache
 } from "./edge/targeting";
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
@@ -43,6 +44,10 @@ class OptableSDK {
 
   targetingClearCache() {
     TargetingClearCache(this.dcn);
+  }
+
+  lmpidFromCache(): string | null {
+    return LmpidFromCache(this.dcn)
   }
 
   async prebidORTB2(): Promise<PrebidORTB2> {

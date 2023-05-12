@@ -20,7 +20,7 @@ deps:
 	npm ci
 
 export SDK_URI ?= http://localhost:8181/sdk.js
-export SANDBOX_HOST ?= node1.cloud.test
+export SANDBOX_HOST ?= sandbox.optable.co
 export SANDBOX_INSECURE ?= false
 export UID2_BASE_URL ?= https://operator-integ.uidapi.com
 
@@ -41,6 +41,8 @@ demo-html:
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL} ' < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL} ' < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
 

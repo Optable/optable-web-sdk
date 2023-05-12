@@ -1,5 +1,6 @@
 import type { OptableConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
+import { lmpidProvider } from "../edge/targeting";
 
 function toBinary(str: string): string {
   const codeUnits = new Uint16Array(str.length);
@@ -13,6 +14,7 @@ class LocalStorage {
   private passportKey: string;
   private targetingV1Key: string;
   private targetingKey: string;
+  private lmpidKey: string;
 
   constructor(private Config: OptableConfig) {
     const sfx = btoa(toBinary(`${this.Config.host}/${this.Config.site}`));
@@ -21,6 +23,7 @@ class LocalStorage {
 
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
+    this.lmpidKey = "__lmpid"
   }
 
   getPassport(): string | null {
@@ -65,10 +68,29 @@ class LocalStorage {
     }
   }
 
-  setTargeting(targeting: TargetingResponse) {
-    if (targeting) {
-      window.localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
+  setTargeting(targeting?: TargetingResponse | null) {
+    if (!targeting) {
+      return
     }
+
+    window.localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
+    this.setLmpid(targeting)
+  }
+
+  // setLmpid conditionally set the Lmpid in local storage
+  // based on the provider being present in the targeting response
+  setLmpid(targeting: TargetingResponse) {
+    const provider = targeting.user?.find((userIds) => userIds.provider === lmpidProvider);
+    // Don't touch local storage if the provider is not enabled
+    if (!provider) {
+      return
+    }
+
+    window.localStorage.setItem(this.lmpidKey, provider.ids?.[0]?.id ?? "");
+  }
+
+  getLmpid(): string | null {
+    return window.localStorage.getItem(this.lmpidKey) ?? null;
   }
 
   clearPassport() {
@@ -80,5 +102,5 @@ class LocalStorage {
   }
 }
 
-export { LocalStorage };
+export { LocalStorage, lmpidProvider };
 export default LocalStorage;
