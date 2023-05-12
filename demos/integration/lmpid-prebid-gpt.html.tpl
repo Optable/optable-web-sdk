@@ -66,7 +66,7 @@
 
             <pre><code style="padding: 20px">// Setup Optable, Prebid.js and GPT SDKs.
 window.optable = window.optable || { cmd: [] };
-window.googletag = window.googletag || { cmd: []};
+window.googletag = window.googletag || { cmd: [] };
 window.pbjs = window.pbjs || { que: [] };
 
 optable.cmd.push(function () {

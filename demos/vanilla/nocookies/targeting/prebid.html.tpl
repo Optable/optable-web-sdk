@@ -156,7 +156,7 @@
           const ortb2 = optable.instance.prebidORTB2FromCache();
 
           pbjs.setConfig({
-            ortb2: ortb2,
+            ortb2,
             priceGranularity: "low",
             userSync: {
               iframeEnabled: true,
