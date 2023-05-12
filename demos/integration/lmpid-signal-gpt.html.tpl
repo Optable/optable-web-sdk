@@ -89,11 +89,8 @@ googletag.cmd.push(function() {
 
 // Display
 googletag.cmd.push(function() {
-    googletag.display('div-gpt-ad-1682350431454-0'); });
+  googletag.display('ad'); });
 })
-
-googletag.cmd.push(function() { googletag.display('div-gpt-ad-1682350702718-0'); });
-googletag.cmd.push(function() { googletag.display('div-gpt-ad-1682350744052-0'); });
 </code></pre>
           </p>
           <h4>Try it!</h4>
