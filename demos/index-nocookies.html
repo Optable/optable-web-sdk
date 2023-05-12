@@ -26,34 +26,35 @@
             To learn about optable-web-sdk integration on your web site or application, see the latest releases, or
             report an issue, please check out the
             <a href="https://github.com/Optable/optable-web-sdk">web-sdk GitHub README</a>. If you're looking for more
-            information on Optable itself, visit <a href="https://optable.co/">our company site</a>.
+            information on Optable, head over to <a href="https://optable.co/">Optable.co</a>
           </p>
           <p>
-            In all examples below, the Optable demo environment is used. Data stored by the demo environment is
-            periodically deleted.
+            In all demo pages, the Optable demo environment is used. Data stored by the demo environment is periodically
+            deleted.
           </p>
           <p>
             <strong>
-              Note that the examples below initialize the OptableSDK with cookies=false, so all ID storage is done
-              using browser LocalStorage.
+              Note that the examples below initialize the OptableSDK with cookies=false, so all ID storage is done using
+              browser LocalStorage.
             </strong>
             <br />
             Generally, it is preferable to use secure first party HTTP-only cookies for transporting IDs from
             OptableSDK. However, when the integrating website does not share the same top-level domain name with the
-            Optable DCN, then first party cookies are not reliable, and the LocalStorage method is suggested. To enable
-            it, simply initialize the OptableSDK object with the <code>cookies</code> option set to <code>false</code>,
-            and the SDK will do the rest. Click <a href="/index.html">here</a> to visit
-            the examples using cookies.
+            Optable DCN, then first party cookies are not reliable, and the LocalStorage method should be used. To
+            enable it, simply initialize the OptableSDK object with the <code>cookies</code> option set to
+            <code>false</code>, and the SDK will do the rest. <br /><br /><strong
+              >Click <a href="/index.html">here</a> to visit the examples using cookies.</strong
+            >
           </p>
         </div>
       </div>
       <div class="row">
         <div class="twelve column">
-          <h5>Examples</h5>
+          <h5>Source APIs</h5>
           <table class="u-full-width">
             <thead>
               <tr>
-                <th>API</th>
+                <th>Example</th>
                 <th>Description</th>
               </tr>
             </thead>
@@ -73,6 +74,21 @@
                 <td><a href="/vanilla/nocookies/profile.html">profile</a></td>
                 <td>Shows how to set visitor traits (e.g., <code>age=45</code>) and sync them to your DCN.</td>
               </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="twelve column">
+          <h5>Audience Targeting</h5>
+          <table class="u-full-width">
+            <thead>
+              <tr>
+                <th>Example</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
               <tr>
                 <td><a href="/vanilla/nocookies/targeting/gam360.html">targeting: GAM360</a></td>
                 <td>
@@ -103,25 +119,48 @@
                   >.
                 </td>
               </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="row">
+        <div class="twelve column">
+          <h5>ID Resolution</h5>
+          <table class="u-full-width">
+            <thead>
               <tr>
-                <td><a href="/integration/lmpid-prebid-gpt.html?cookies=no">integration: Loblaw Media Private ID through prebid.js and GPT</a></td>
+                <th>Example</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
                 <td>
-                  Integrate your DCN with Loblaw Media Private ID through prebid.js and GPT
+                  <a href="/integration/lmpid-prebid-gpt.html?cookies=no">LM PID with Prebid.js and GPT</a>
+                </td>
+                <td>
+                  Shows a deployment of the Loblaw Media Private ID via Prebid.js and GPT Secure Signals.
                 </td>
               </tr>
               <tr>
-                <td><a href="/integration/lmpid-signal-gpt.html?cookies=no">integration: Loblaw Media Private ID through GPT secure signals</a></td>
                 <td>
-                  Integrate your DCN with Loblaw Media Private ID through GPT secure signals
+                  <a href="/integration/lmpid-signal-gpt.html?cookies=no">LM PID with GPT</a>
+                </td>
+                <td>
+                  Shows a deployment of the Loblaw Media Private ID via GPT Secure Signals only.
                 </td>
               </tr>
               <tr>
-                <td><a href="/vanilla/uid2_token/">uid2 integration</a></td>
+                <td><a href="/vanilla/uid2_token/">UID2 integration</a></td>
                 <td>
                   Shows how the
-                  <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/guides/publisher-client-side.md">standard UID2 integration workflow</a>
+                  <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/guides/publisher-client-side.md"
+                    >standard UID2 integration workflow</a
+                  >
                   for publishers can be implemented using the UID2 services operated by Optable and the
-                  <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/sdks/client-side-identity.md">UID2 SDK</a>.
+                  <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/sdks/client-side-identity.md"
+                    >UID2 SDK</a
+                  >.
                 </td>
               </tr>
             </tbody>
@@ -132,7 +171,7 @@
         <div class="twelve column" style="padding: 10px;">
           <center>
             <a href="https://www.optable.co/">Home</a> | <a href="https://www.optable.co/company/contact">Contact</a> |
-	    <a href="https://docs.optable.co/">Documentation</a> |
+            <a href="https://docs.optable.co/">Documentation</a> |
             <a href="https://www.optable.co/privacy/products-and-services-privacy-policy">Privacy</a> |
             <a href="https://www.linkedin.com/company/optableco/">LinkedIn</a> |
             <a href="https://twitter.com/optable_co">Twitter</a>
