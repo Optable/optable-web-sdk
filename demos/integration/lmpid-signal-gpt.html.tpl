@@ -62,52 +62,58 @@
 window.optable = window.optable || { cmd: [] };
 window.googletag = window.googletag || { cmd: [] };
 
-// When optable SDK is loaded, initialize it, update targeting data, and install its GPT Secure Signals provider.
+// When optable SDK is loaded, initialize it and install GPT Secure Signals provider.
 optable.cmd.push(function () {
   optable.instance = new optable.SDK({
-    host: "{MY_NODE_HOST}",
-    site: "{MY_NODE_ORIGIN}"
+    host: "{OPTABLE_DCN_HOST}",
+    site: "{OPTABLE_DCN_SOURCE_SLUG}",
   });
 
-  // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
-  optable.instance.targeting().then(() => {
-    optable.instance.installGPTSecureSignals();
-  });
+  optable.instance.installGPTSecureSignals();
+  optable.instance.targeting()
 });
 
-// Define some Ad slots and request bids through Prebid.js.
+// When GPT SDK is loaded, define and prepare an ad slot.
+// Note that we disableInitialLoad() in order to defer the first ad request
+// until secure signals are installed.
 googletag.cmd.push(function() {
+  googletag.pubads().disableInitialLoad();
+
   googletag
     .defineSlot('/my/slot', [[728, 90]], "ad")
     .addService(googletag.pubads());
 
   googletag.pubads().enableSingleRequest();
   googletag.enableServices();
+  googletag.display("ad");
 });
 
-...
-
-// Display
-googletag.cmd.push(function() {
-  googletag.display('ad'); });
-})
+// Explicitly refresh ads when everything is loaded and the above setup is done.
+googletag.cmd.push(function () {
+  optable.cmd.push(function () {
+    googletag.pubads().refresh();
+  });
+});
 </code></pre>
           </p>
           <h4>Try it!</h4>
           <p>
             This demo page is setup so that the following random emails are generating Private ID requests.
-            <br/>Make sure to <a target="_blank" id="identify-link">Identify</a> using one of the following identifiers.
+          </p>
+          <p>
+            To trigger LM PID insertion in ad requests, you must first
+            <a target="_blank" id="identify-link">identify</a> using one of the following test email identifiers:
 
-            <pre><code style="padding: 20px">e:da1fead79be2dd0fc0450bc6e8157cb42f5289261b3d829108395dd8454056d6
-e:a14918ffa4c3e90b81153fa78eae2175161ac6741bf0ce91e529a22c18d309c3
-e:0336cbdb1a44e26276b48fee0c70d25bf0f6adeca86642a4d0b084190de7027a
-e:76ee2b2bd51c3fad442f5355f26e0224c7c5a96cee8272aa87830da347db1313
-e:31d6da0fbac2e5039646b8817ea50a3dae26537de7cb833b6e759eba779fcc5d
-e:58e9f67ed2711bf874bfc19615d2d0cb9aca9200515513495f0d70475e9dc590
-e:0bd4d8d8de86dd6bca2e096fbdd111c1ad87046b1df3240eb0eb8bf41c6d98a1
-e:06e91979bf00a1a3b69d93f36d9488336689e769632346b853ca9f8a00f423b7
-e:26283d3669f4edf35f17b98f5031277842ffb7547af81b7546d279b0934913ba
-e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
+            <pre><code style="padding: 20px">john.doe@acme.test
+emily.smith@acme.test
+alexander.wilson@acme.test
+sarah.johnson@acme.test
+david.thompson@acme.test
+lisa.brown@acme.test
+jason.miller@acme.test
+jessica.wright@acme.test
+matthew.harris@acme.test
+olivia.anderson@acme.test</code></pre>
           </p>
         </div>
       </div>
@@ -160,12 +166,14 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
             insecure: JSON.parse("${SANDBOX_INSECURE}"),
             cookies: (new URLSearchParams(window.location.search)).get("cookies") === "yes",
           });
-          optable.instance.targeting().then(() => {
-            optable.instance.installGPTSecureSignals();
-          });
-        });
 
-        googletag.cmd.push(function() {
+          optable.instance.installGPTSecureSignals();
+          optable.instance.targeting();
+        })
+
+        googletag.cmd.push(function () {
+          googletag.pubads().disableInitialLoad();
+
           googletag
             .defineSlot('/22081946781/web-sdk-demo-securesignals/header-ad', [728, 90], 'div-gpt-ad-1682350431454-0')
             .addService(googletag.pubads());
@@ -184,7 +192,13 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
           googletag.display('div-gpt-ad-1682350431454-0');
           googletag.display('div-gpt-ad-1682350702718-0');
           googletag.display('div-gpt-ad-1682350744052-0');
-        });
+        })
+
+        googletag.cmd.push(function () {
+          optable.cmd.push(function () {
+            googletag.pubads().refresh();
+          })
+        })
       </script>
     </div>
   </body>

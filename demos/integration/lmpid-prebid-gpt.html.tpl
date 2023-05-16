@@ -26,72 +26,140 @@
       </div>
       <div class="row">
         <div class="twelve column">
-          <h4>integration: Loblaw Media Private ID using Prebid.js</h4>
+          <h4>Loblaw Media Private ID (LM PID) with Prebid.js and GPT</h4>
         </div>
       </div>
       <div class="row">
         <div class="twelve column">
           <h4>Publisher Setup</h4>
           <p>
-            As a publisher, integrating your DCN with Loblaw Media Private ID is a simple way to activate your inventory
-            with higher accuracy than traditional cohort-based targeting while preserving your users' privacy.
-            This guide shows how to setup your Optable DCN in order to send Private ID data to Loblaw Media.
-          </p>
-
-          <h5>Step 1</h5>
-          <p>
-            Contact your Optable account manager to request access to the Loblaw Media integration on your node.
-            <br/>
-            Once setup, the Loblaw Media partner will appear in the connected partners list.
-          </p>
-
-          <h5>Step 2</h5>
-          <p>
-            Create a Web SDK source in your node. <br/>
-            Unlike normal cohort based targeting that you need to activate explicitly, Loblaw Media Private ID is enabled by default on all matched users with your Loblaw Media partner.
-          </p>
-
-          <h5>Step 3</h5>
-          <p>
-            In order to communicate Private ID's to Loblaw Media from your Web SDK source, depending on how you generated your Prebid.js distribution, you may need to update it to include <code>mabidder</code> bidder. See <a target="_blank" rel="noopener" href="https://docs.prebid.org/download.html">https://docs.prebid.org/download.html</a>.<br/>
-
-            Make sure to include the <code>mabidder</code> bidder your <code>addAdUnits()</code> Prebid.js's call, and to enable the <code>lmpid</code> user ID module. See <a target="_blank" rel="noopener" href="https://docs.prebid.org/dev-docs/modules/userId.html#user-id-sub-modules">https://docs.prebid.org/dev-docs/modules/userId.html</a>.<br/>
-
-            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources and cached for consumption by other libraries.
+            The Optable web SDK enables easy deployment of the Loblaw Media Private ID (LM PID).
+            The LM PID is generated automatically by the Optable Data Collaboration Platform for all
+            identified users successfully matched with Loblaw Media.
           </p>
           <p>
-          Example of a full integration snippet which configures Prebid.js and GPT. <br/>
-          While the userId module is responsible of passing the user's Private ID to Loblaw Media bidder (mabidder), it's also being passed to GAM through secure signals by using <code>installGPTSecureSignals</code>.<br/>
-          Note that this function uses targeting cache internally, which is why in the following example we propose to install the secure signal provider only once targeting cache as been populated.
+            This demo page shows an integration of LM PID deployed via Optable, with both Prebid.js
+            with Loblaw Media's bidder adapter and user ID modules, as well as with
+            Google Publisher Tag (GPT) and Google Ad Manager (GAM) Secure Signals. Whenever possible,
+            it is recommended that both methods are enabled as shown in this demo page, such that
+            the likelihood of Loblaw Media DSP (MediaAisle) bidding is maximised.
+          </p>
 
+          <h5>Step 1: Request access</h5>
+          <p>
+            Contact your Optable account manager to request access to the Loblaw Media Private ID
+            framework integration. Once configured and enabled, the Loblaw Media <strong>partner</strong>
+            will appear connected in the <strong>Partnerships</strong> section of the Optable user interface.
+            Additionally, you may start to see <i>incoming</i> activation clean rooms appear in the
+            <strong>Clean Rooms</strong> section of the UI.
+          </p>
+          <p>
+            Please note that Steps 2-4 below should be repeated for each web site that you would like to enable
+            LM PID on.
+          </p>
+
+          <h5>Step 2: Create a Javascript SDK source</h5>
+          <p>
+            If your web site is not already represented by a <strong>source</strong> in your Optable
+            Data Collaboration Node (DCN), create a <strong>Javascript SDK source</strong> and note its
+            unique <i>slug</i> identifier, as well as the hostname of your DCN, as these will be required
+            for Optable SDK integration (see Step 3).
+          </p>
+          <p>
+            Loblaw Media Private ID will be returned by your Optable DCN for all users associated with
+            activation clean room match results originating from the Loblaw Media partner.
+          </p>
+
+          <h5>Step 3: Deploy Optable's Javascript SDK to your site</h5>
+          <p>
+            If you haven't already deployed the Optable Javascript SDK to your web site, have a look at the
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#installing">Optable Javascript SDK README</a>. There are two SDK APIs which you must deploy in order to integrate LM PID:
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#identify-api">identify</a>
+            and
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#targeting-api">targeting</a>.
+          </p>
+          <p>
+            The <code>identify</code> API enables you to associate a user's browser with a known identifier, such
+            as an email address or an assigned user ID. Since Loblaw Media activation matches operate on a
+            combination of email address, phone number, and mobile advertising IDs, it is recommended that you
+            <code>identify</code> consenting users with all of that user's known and consented ad IDs.
+            You can do this by calling
+            <code>identify</code> with additional identifiers directly from your web site, or by calling
+            it with a single known user ID, and separately loading identity mappings (associated with the
+            known user ID) via any
+            <a target="_blank" rel="noopener" href="https://docs.optable.co/optable-documentation/integrations/sources">supported sources</a>.
+          </p>
+          <p>
+            The <code>targeting</code> API retrieves targeting data, including the LM PID when available,
+            and stores it in browser local storage for subsequent retrieval.
+          </p>
+
+          <h5>Step 4: Prebid.js and GPT integrations</h5>
+          <p>
+            For Prebid.js installations, you must make sure to include the <code>mabidder</code> bidder adapter and
+            the <code>lmpid</code> user ID module. Note that you must include <code>mabidder</code> in the
+            <code>addAdUnits()</code> call.
+            See
+            <a target="_blank" rel="noopener" href="https://docs.prebid.org/download.html">Prebid.js download instructions</a>
+            and
+            <a target="_blank" rel="noopener" href="https://docs.prebid.org/dev-docs/modules/userId.html#user-id-sub-modules">Prebid.js user ID modules</a>
+            for details.
+          </p>
+          <p>
+            For Google Publisher Tag (GPT), you must call the <code>installGPTSecureSignals()</code> API
+            shortly after Optable SDK instantiation. This API will configure GPT to pass <code>lmpid</code>
+            to Google Ad Manager (GAM), when it is available in browser local storage.
+          </p>
+          <p>
+            Try to call the Optable SDK <code>targeting()</code> API as early as possible. This API will
+            retrieve the latest <code>lmpid</code>, when it is enabled and available for the current user,
+            and store it in browser local storage for retrieval by both Prebid.js and GPT as previously described.
+          </p>
+
+          <h5>Prebid.js and GPT integration example</h5>
+          <p>
+            While the <code>lmpid</code> user ID module passes the Loblaw Media Private ID to the
+            Loblaw Media bidder (mabidder), the <code>installGPTSecureSignals()</code> API in Optable's
+            Javascript SDK exposes it to Google Ad Manager via
+            <a href="https://support.google.com/admanager/answer/10488752?hl=en">Secure Signals</a>.
+            Please make sure to follow Google's instructions for enabling Secure Signals sharing on your websites.
+          </p>
+          <p>
+            The code snippet below shows an example integration with both Prebid.js and GPT on page. Note
+            that <code>{OPTABLE_DCN_HOST}</code> and <code>{OPTABLE_DCN_SOURCE_SLUG}</code> must be replaced
+            with your Optable Data Collaboration Node (DCN) hostname and Javascript SDK source slug, respectively.
+          </p>
+          <p>
             <pre><code style="padding: 20px">// Setup Optable, Prebid.js and GPT SDKs.
 window.optable = window.optable || { cmd: [] };
 window.googletag = window.googletag || { cmd: [] };
 window.pbjs = window.pbjs || { que: [] };
 
+// When optable SDK is loaded, initialize it and install GPT Secure Signals provider.
 optable.cmd.push(function () {
   optable.instance = new optable.SDK({
-    host: "{MY_NODE_HOST}",
-    site: "{MY_NODE_ORIGIN}",
+    host: "{OPTABLE_DCN_HOST}",
+    site: "{OPTABLE_DCN_SOURCE_SLUG}",
   });
 
-  // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
-  optable.instance.targeting().then(() => {
-    optable.instance.installGPTSecureSignals();
-  });
+  optable.instance.installGPTSecureSignals();
+  optable.instance.targeting();
 });
 
-// Disable initial GPT load
+// Disable initial GPT load, required for Prebid.js
 googletag.cmd.push(function () {
   googletag.pubads().disableInitialLoad();
 });
 
+// When prebid SDK is loaded, configure it to use LMPID user ID module and
+// request bids for the defined ad units.
+
 pbjs.que.push(function () {
-  // Enable Loblaw Media Private ID user ID module
+  // Enable Loblaw Media Private ID user ID module (lmpid):
   pbjs.setConfig({ userSync: { userIds: [{ name: "lmpid" }] } })
 
   // Configure some ad units.
-  // Note that while it's not relevant for Private ID integration,
+  // Note that while it's not relevant for LMPID integration,
   // Loblaw Media's prebid ad server currently requires passing a ppid.
   pbjs.addAdUnits([{
     code: "/my/slot", // must match the defined ad slots below
@@ -99,7 +167,7 @@ pbjs.que.push(function () {
     bids: [{ bidder: "mabidder", params: { ppid: "{MY_PPID}" }}],
   }]);
 
-  // Define some slots and request bids through Prebid.js.
+  // Define some slots
   googletag.cmd.push(function() {
     googletag
       .defineSlot("/my/slot", [[728, 90]], "ad")
@@ -110,9 +178,13 @@ pbjs.que.push(function () {
 
     googletag.display("ad");
 
+    // Request bids through Prebid.js.
     pbjs.requestBids({
       bidsBackHandler: function() {
+        // Set targeting in matching GPT ad slots
         pbjs.setTargetingForGPTAsync();
+
+        // Request ads
         googletag.pubads().refresh();
       },
     });
@@ -120,21 +192,25 @@ pbjs.que.push(function () {
 });
 </code></pre>
           </p>
+
           <h4>Try it!</h4>
           <p>
             This demo page is setup so that the following random emails are generating Private ID requests.
-            <br/>Make sure to <a target="_blank" id="identify-link">Identify</a> using one of the following identifiers.
+          </p>
+          <p>
+            To trigger LM PID insertion in ad requests, you must first
+            <a target="_blank" id="identify-link">identify</a> using one of the following test email identifiers:
 
-            <pre><code style="padding: 20px">e:da1fead79be2dd0fc0450bc6e8157cb42f5289261b3d829108395dd8454056d6
-e:a14918ffa4c3e90b81153fa78eae2175161ac6741bf0ce91e529a22c18d309c3
-e:0336cbdb1a44e26276b48fee0c70d25bf0f6adeca86642a4d0b084190de7027a
-e:76ee2b2bd51c3fad442f5355f26e0224c7c5a96cee8272aa87830da347db1313
-e:31d6da0fbac2e5039646b8817ea50a3dae26537de7cb833b6e759eba779fcc5d
-e:58e9f67ed2711bf874bfc19615d2d0cb9aca9200515513495f0d70475e9dc590
-e:0bd4d8d8de86dd6bca2e096fbdd111c1ad87046b1df3240eb0eb8bf41c6d98a1
-e:06e91979bf00a1a3b69d93f36d9488336689e769632346b853ca9f8a00f423b7
-e:26283d3669f4edf35f17b98f5031277842ffb7547af81b7546d279b0934913ba
-e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
+            <pre><code style="padding: 20px">john.doe@acme.test
+emily.smith@acme.test
+alexander.wilson@acme.test
+sarah.johnson@acme.test
+david.thompson@acme.test
+lisa.brown@acme.test
+jason.miller@acme.test
+jessica.wright@acme.test
+matthew.harris@acme.test
+olivia.anderson@acme.test</code></pre>
           </p>
         </div>
       </div>
@@ -193,9 +269,8 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
           cookies: cookiesTransport,
         });
 
-        optable.instance.targeting().then(() => {
-          optable.instance.installGPTSecureSignals();
-        });
+        optable.instance.installGPTSecureSignals();
+        optable.instance.targeting();
       });
 
       googletag.cmd.push(function () {
@@ -205,7 +280,7 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
       pbjs.que.push(function () {
         pbjs.setConfig({
           userSync: { userIds: [{ name: "lmpid" }] },
-        })
+        });
 
         pbjs.addAdUnits([
           {
