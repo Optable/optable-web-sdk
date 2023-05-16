@@ -69,29 +69,33 @@ window.optable = window.optable || { cmd: [] };
 window.googletag = window.googletag || { cmd: [] };
 window.pbjs = window.pbjs || { que: [] };
 
+// When optable SDK is loaded, initialize it and install GPT Secure Signals provider.
 optable.cmd.push(function () {
   optable.instance = new optable.SDK({
     host: "{MY_NODE_HOST}",
     site: "{MY_NODE_ORIGIN}",
   });
 
-  // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
-  optable.instance.targeting().then(() => {
-    optable.instance.installGPTSecureSignals();
-  });
+  // Install all secure signal providers (including LMPID).
+  optable.instance.installGPTSecureSignals();
+  // Refresh targeting page cache
+  optable.instance.targeting()
 });
 
-// Disable initial GPT load
+// Disable initial GPT load to give a chance to prebid to inject targeting key values.
 googletag.cmd.push(function () {
   googletag.pubads().disableInitialLoad();
 });
 
+// When prebid SDK is loaded, configure it to use LMPID user ID module and
+// request bids for the defined ad units.
+
 pbjs.que.push(function () {
-  // Enable Loblaw Media Private ID user ID module
+  // Enable LMPID user ID module
   pbjs.setConfig({ userSync: { userIds: [{ name: "lmpid" }] } })
 
   // Configure some ad units.
-  // Note that while it's not relevant for Private ID integration,
+  // Note that while it's not relevant for LMPID integration,
   // Loblaw Media's prebid ad server currently requires passing a ppid.
   pbjs.addAdUnits([{
     code: "/my/slot", // must match the defined ad slots below
@@ -99,7 +103,7 @@ pbjs.que.push(function () {
     bids: [{ bidder: "mabidder", params: { ppid: "{MY_PPID}" }}],
   }]);
 
-  // Define some slots and request bids through Prebid.js.
+  // Define some slots
   googletag.cmd.push(function() {
     googletag
       .defineSlot("/my/slot", [[728, 90]], "ad")
@@ -110,9 +114,13 @@ pbjs.que.push(function () {
 
     googletag.display("ad");
 
+    // Request bids through Prebid.js.
     pbjs.requestBids({
       bidsBackHandler: function() {
+        // Set targeting in matching GPT ad slots
         pbjs.setTargetingForGPTAsync();
+
+        // Request ads
         googletag.pubads().refresh();
       },
     });

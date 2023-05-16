@@ -62,35 +62,42 @@
 window.optable = window.optable || { cmd: [] };
 window.googletag = window.googletag || { cmd: [] };
 
-// When optable SDK is loaded, initialize it, update targeting data, and install its GPT Secure Signals provider.
+// When optable SDK is loaded, initialize it and install GPT Secure Signals provider.
 optable.cmd.push(function () {
   optable.instance = new optable.SDK({
     host: "{MY_NODE_HOST}",
     site: "{MY_NODE_ORIGIN}"
   });
 
-  // Update cached targeting, then install Loblaw Media Private ID secure signal provider.
-  optable.instance.targeting().then(() => {
-    optable.instance.installGPTSecureSignals();
-  });
+  // Install all secure signal providers (including LMPID).
+  optable.instance.installGPTSecureSignals();
+  // Refresh targeting page cache
+  optable.instance.targeting()
 });
 
-// Define some Ad slots and request bids through Prebid.js.
+// When GPT SDK is loaded, define and prepare an ad slot.
+// Note that we disableInitialLoad() in order to defer the first ad request
+// until secure signals are installed that we guarantee targeting cache is populated.
 googletag.cmd.push(function() {
+  googletag.pubads().disableInitialLoad();
+
   googletag
     .defineSlot('/my/slot', [[728, 90]], "ad")
     .addService(googletag.pubads());
 
   googletag.pubads().enableSingleRequest();
   googletag.enableServices();
+  googletag.display("ad");
 });
 
-...
-
-// Display
-googletag.cmd.push(function() {
-  googletag.display('ad'); });
-})
+// Explicitly refresh ads when everything is loaded and the above setup is done.
+googletag.cmd.push(function () {
+  optable.cmd.push(function () {
+    // Optionally we could move the targeting page cache refresh here,
+    // and `then()` refresh to guarantee that the first ad call includes fresh targeting data.
+    googletag.pubads().refresh();
+  });
+});
 </code></pre>
           </p>
           <h4>Try it!</h4>
@@ -160,12 +167,12 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
             insecure: JSON.parse("${SANDBOX_INSECURE}"),
             cookies: (new URLSearchParams(window.location.search)).get("cookies") === "yes",
           });
-          optable.instance.targeting().then(() => {
-            optable.instance.installGPTSecureSignals();
-          });
-        });
+          optable.instance.installGPTSecureSignals();
+        })
 
-        googletag.cmd.push(function() {
+        googletag.cmd.push(function () {
+          googletag.pubads().disableInitialLoad();
+
           googletag
             .defineSlot('/22081946781/web-sdk-demo-securesignals/header-ad', [728, 90], 'div-gpt-ad-1682350431454-0')
             .addService(googletag.pubads());
@@ -184,7 +191,15 @@ e:5d6d6ed5354f68d7523b7b39330145346209d20b06f5ed32373583823bac8d1a</code></pre>
           googletag.display('div-gpt-ad-1682350431454-0');
           googletag.display('div-gpt-ad-1682350702718-0');
           googletag.display('div-gpt-ad-1682350744052-0');
-        });
+        })
+
+        googletag.cmd.push(function () {
+          optable.cmd.push(function () {
+            optable.instance.targeting().then(function() {
+              googletag.pubads().refresh();
+            })
+          })
+        })
       </script>
     </div>
   </body>
