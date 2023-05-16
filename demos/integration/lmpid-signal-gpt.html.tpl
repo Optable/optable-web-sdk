@@ -24,40 +24,100 @@
       </div>
       <div class="row">
         <div class="twelve column">
-          <h4>integration: Loblaw Media Private ID using GPT Secure Signals</h4>
+          <h4>Loblaw Media Private ID (LM PID) with GPT Secure Signals</h4>
         </div>
       </div>
       <div class="row">
         <div class="twelve column">
-          <h4>Publisher Setup</h4>
           <p>
-            As a publisher, integrating your DCN with Loblaw Media Private ID is a simple way to activate your inventory
-            with higher accuracy than traditional cohort-based targeting while preserving your users' privacy.
-            This guide shows how to setup your Optable DCN in order to send Private ID data to Loblaw Media.
-          </p>
-
-          <h5>Step 1</h5>
-          <p>
-            Contact your Optable account manager to request access to the Loblaw Media integration on your node.
-            <br/>
-            Once setup, the Loblaw Media partner will appear in the connected partners list.
-          </p>
-
-          <h5>Step 2</h5>
-          <p>
-            Create a Web SDK source in your node. <br/>
-            Unlike normal cohort based targeting that you need to activate explicitly, Loblaw Media Private ID is enabled by default on all matched users with your Loblaw Media partner.
-          </p>
-
-          <h5>Step 3</h5>
-          <p>
-            In order to communicate Private ID's to Loblaw Media from your Web SDK source.<br/>
-            Similarly to audience targeting, Private IDs are automatically passed down in edge targeting responses for all SDK sources.<br/> A convenience function <code>installGPTSecureSignals</code> must be used on the web SDK to install all secure signal sources handled by Optable's SDK.<br/>
-            Note that this function uses targeting cache internally, which is why in the following example we propose to install the secure signal provider only once targeting cache as been populated.
+            The
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk">Optable SDK</a>
+            enables easy deployment of the
+            <a target="_blank" rel="noopener" href="https://www.loblawmedia.ca/">Loblaw Media</a>
+            Private ID (LM PID).
+            The LM PID is generated automatically for all identified users successfully matched with
+            Loblaw Media. LM PID is a secure token that contains information on matched users
+            that is computed within the Optable data clean room environment. It enables the
+            <a target="_blank" rel="noopener" href="https://www.loblawmedia.ca/discover-mediaaisle">Loblaw Media DSP (MediaAisle)</a>
+            to target, control ad exposure frequency, and measure the
+            effectiveness of Loblaw Media advertisements to identified, authenticated, and consented publisher users.
           </p>
           <p>
-          Example of a full integration snippet which configures GPT to send requests to GAM including Loblaw Media Private IDs as secure signal:
+            This demo page shows an integration of LM PID deployed via Optable, with the
+            <a href="https://developers.google.com/publisher-tag/guides/get-started">Google Publisher Tag (GPT)</a>
+            and
+            <a href="https://admanager.google.com/home/">Google Ad Manager (GAM)</a>
+            <a href="https://support.google.com/admanager/answer/10488752?hl=en">Secure Signals</a>.
+          </p>
 
+          <h5>Step 1: Request access</h5>
+          <p>
+            Contact your Optable account manager to request access to the Loblaw Media Private ID
+            framework integration. Once configured and enabled, the Loblaw Media partner
+            will appear connected in the <strong>partnerships</strong> section of the Optable user interface.
+          </p>
+          <p>
+            Please note that Steps 2-4 below should be repeated for each web site that you would like to enable
+            LM PID on.
+          </p>
+
+          <h5>Step 2: Create a Javascript SDK source</h5>
+          <p>
+            If your web site is not already represented by a <strong>source</strong> in your Optable
+            Data Collaboration Node (DCN), create a
+            <a target="_blank" rel="noopener" href="https://docs.optable.co/optable-documentation/integrations/sources/sdk-sources/javascript-sdk">Javascript SDK source</a>
+            and note its
+            unique <i>slug</i> identifier, as well as the hostname of your DCN, as these will be required
+            for Optable SDK integration (see Step 3).
+          </p>
+          <p>
+            LM PID will be returned by your Optable DCN for all matched users associated with
+            activation clean rooms originating from the Loblaw Media partner.
+          </p>
+
+          <h5>Step 3: Deploy the Optable SDK to your site</h5>
+          <p>
+            If you haven't already deployed the Optable SDK to your web site, have a look at the
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#installing">Optable SDK README</a>. There are two SDK APIs which you must deploy in order to integrate LM PID:
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#identify-api">identify</a>
+            and
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#targeting-api">targeting</a>.
+          </p>
+          <p>
+            The <code>identify</code> API enables you to associate a user's browser with a known identifier, such
+            as an email address or a publisher assigned user ID. Since Loblaw Media activation matches operate on a
+            combination of email address, phone number, and mobile advertising IDs, it is recommended that you
+            <code>identify</code> consenting users with all of that user's known and consented ad IDs.
+            You can do this by calling
+            <code>identify</code> with additional identifiers directly from your web site, or by calling
+            it with a single publisher assigned user ID, and then separately loading identity mappings
+            (associated with the publisher assigned user ID) via any
+            <a target="_blank" rel="noopener" href="https://docs.optable.co/optable-documentation/integrations/sources">supported sources</a>.
+          </p>
+          <p>
+            The <code>targeting</code> API retrieves targeting data, including the LM PID when available,
+            and stores it in browser local storage for subsequent retrieval.
+          </p>
+
+          <h5>Step 4: GPT integration</h5>
+          <p>
+            You must call the <code>installGPTSecureSignals()</code> SDK API
+            shortly after Optable SDK instantiation. This API will configure GPT to pass <code>lmpid</code>
+            to Google Ad Manager (GAM), when it is available in browser local storage.
+          </p>
+          <p>
+            Try to call the Optable SDK <code>targeting()</code> API as early as possible. This API will
+            retrieve the latest <code>lmpid</code>, when it is enabled and available for the current user,
+            and store it in browser local storage for retrieval by GPT as previously described.
+          </p>
+
+          <h5>Prebid.js and GPT integration example</h5>
+          <p>
+            The code snippet below shows an example integration with GPT on page. Note
+            that <code>{OPTABLE_DCN_HOST}</code> and <code>{OPTABLE_DCN_SOURCE_SLUG}</code> must be replaced
+            with your Optable Data Collaboration Node (DCN) hostname and Javascript SDK source slug, respectively.
+          </p>
+          <p>
             <pre><code style="padding: 20px">// Setup both Optable and GPT SDKs.
 window.optable = window.optable || { cmd: [] };
 window.googletag = window.googletag || { cmd: [] };
@@ -98,7 +158,7 @@ googletag.cmd.push(function () {
           </p>
           <h4>Try it!</h4>
           <p>
-            This demo page is setup so that the following random emails are generating Private ID requests.
+            This demo page is setup so that the following random emails are generating LM PID requests.
           </p>
           <p>
             To trigger LM PID insertion in ad requests, you must first
