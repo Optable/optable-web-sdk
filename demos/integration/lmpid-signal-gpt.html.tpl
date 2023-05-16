@@ -65,19 +65,17 @@ window.googletag = window.googletag || { cmd: [] };
 // When optable SDK is loaded, initialize it and install GPT Secure Signals provider.
 optable.cmd.push(function () {
   optable.instance = new optable.SDK({
-    host: "{MY_NODE_HOST}",
-    site: "{MY_NODE_ORIGIN}"
+    host: "{OPTABLE_DCN_HOST}",
+    site: "{OPTABLE_DCN_SOURCE_SLUG}",
   });
 
-  // Install all secure signal providers (including LMPID).
   optable.instance.installGPTSecureSignals();
-  // Refresh targeting page cache
   optable.instance.targeting()
 });
 
 // When GPT SDK is loaded, define and prepare an ad slot.
 // Note that we disableInitialLoad() in order to defer the first ad request
-// until secure signals are installed that we guarantee targeting cache is populated.
+// until secure signals are installed.
 googletag.cmd.push(function() {
   googletag.pubads().disableInitialLoad();
 
@@ -93,8 +91,6 @@ googletag.cmd.push(function() {
 // Explicitly refresh ads when everything is loaded and the above setup is done.
 googletag.cmd.push(function () {
   optable.cmd.push(function () {
-    // Optionally we could move the targeting page cache refresh here,
-    // and `then()` refresh to guarantee that the first ad call includes fresh targeting data.
     googletag.pubads().refresh();
   });
 });
@@ -103,7 +99,10 @@ googletag.cmd.push(function () {
           <h4>Try it!</h4>
           <p>
             This demo page is setup so that the following random emails are generating Private ID requests.
-            <br/>Make sure to <a target="_blank" id="identify-link">Identify</a> using one of the following email identifier.
+          </p>
+          <p>
+            To trigger LM PID insertion in ad requests, you must first
+            <a target="_blank" id="identify-link">identify</a> using one of the following test email identifiers:
 
             <pre><code style="padding: 20px">john.doe@acme.test
 emily.smith@acme.test
@@ -167,7 +166,9 @@ olivia.anderson@acme.test</code></pre>
             insecure: JSON.parse("${SANDBOX_INSECURE}"),
             cookies: (new URLSearchParams(window.location.search)).get("cookies") === "yes",
           });
+
           optable.instance.installGPTSecureSignals();
+          optable.instance.targeting();
         })
 
         googletag.cmd.push(function () {
@@ -195,9 +196,7 @@ olivia.anderson@acme.test</code></pre>
 
         googletag.cmd.push(function () {
           optable.cmd.push(function () {
-            optable.instance.targeting().then(function() {
-              googletag.pubads().refresh();
-            })
+            googletag.pubads().refresh();
           })
         })
       </script>
