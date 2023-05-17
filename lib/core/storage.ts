@@ -86,6 +86,13 @@ class LocalStorage {
       return
     }
 
+    // Invalidate the secure signals provider cache as it's unclear
+    // for how long the secure signals are cached and while LMPID have a 45 days lifetime receivers
+    // may decide to implement short PID lifetimes.
+    //
+    // HACK: Delete GPT secure signals cache directly for lmpidProvider, this is undocumented and could
+    // break in the future.
+    window.localStorage.removeItem(`_GESPSK-${lmpidProvider}`);
     window.localStorage.setItem(this.lmpidKey, provider.ids?.[0]?.id ?? "");
   }
 
