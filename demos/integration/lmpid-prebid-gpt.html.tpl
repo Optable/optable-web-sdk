@@ -26,32 +26,41 @@
       </div>
       <div class="row">
         <div class="twelve column">
-          <h4>Loblaw Media Private ID (LM PID) with Prebid.js and GPT</h4>
+          <h4>Loblaw Media Private ID (LM PID) with Prebid.js and GPT Secure Signals</h4>
         </div>
       </div>
       <div class="row">
         <div class="twelve column">
-          <h4>Publisher Setup</h4>
           <p>
-            The Optable web SDK enables easy deployment of the Loblaw Media Private ID (LM PID).
-            The LM PID is generated automatically by the Optable Data Collaboration Platform for all
-            identified users successfully matched with Loblaw Media.
+            The
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk">Optable SDK</a>
+            enables easy deployment of the
+            <a target="_blank" rel="noopener" href="https://www.loblawmedia.ca/">Loblaw Media</a>
+            Private ID (LM PID).
+            The LM PID is generated automatically for all identified users successfully matched with
+            Loblaw Media. LM PID is a secure token that contains information on matched users
+            that is computed within the Optable data clean room environment. It enables the
+            <a target="_blank" rel="noopener" href="https://www.loblawmedia.ca/discover-mediaaisle">Loblaw Media DSP (MediaAisle)</a>
+            to target, control ad exposure frequency, and measure the
+            effectiveness of Loblaw Media advertisements to identified, authenticated, and consented publisher users.
           </p>
           <p>
             This demo page shows an integration of LM PID deployed via Optable, with both Prebid.js
-            with Loblaw Media's bidder adapter and user ID modules, as well as with
-            Google Publisher Tag (GPT) and Google Ad Manager (GAM) Secure Signals. Whenever possible,
-            it is recommended that both methods are enabled as shown in this demo page, such that
-            the likelihood of Loblaw Media DSP (MediaAisle) bidding is maximised.
+            (including Loblaw Media's bidder adapter and user ID modules), and with
+            <a href="https://developers.google.com/publisher-tag/guides/get-started">Google Publisher Tag (GPT)</a>
+            and
+            <a href="https://admanager.google.com/home/">Google Ad Manager (GAM)</a>
+            <a href="https://support.google.com/admanager/answer/10488752?hl=en">Secure Signals</a>.
+            Whenever possible,
+            it is recommended that both methods are enabled together as shown in this demo page, such that
+            the likelihood of MediaAisle bidding is maximised.
           </p>
 
           <h5>Step 1: Request access</h5>
           <p>
             Contact your Optable account manager to request access to the Loblaw Media Private ID
-            framework integration. Once configured and enabled, the Loblaw Media <strong>partner</strong>
-            will appear connected in the <strong>Partnerships</strong> section of the Optable user interface.
-            Additionally, you may start to see <i>incoming</i> activation clean rooms appear in the
-            <strong>Clean Rooms</strong> section of the UI.
+            framework integration. Once configured and enabled, the Loblaw Media partner
+            will appear connected in the <strong>partnerships</strong> section of the Optable user interface.
           </p>
           <p>
             Please note that Steps 2-4 below should be repeated for each web site that you would like to enable
@@ -61,32 +70,34 @@
           <h5>Step 2: Create a Javascript SDK source</h5>
           <p>
             If your web site is not already represented by a <strong>source</strong> in your Optable
-            Data Collaboration Node (DCN), create a <strong>Javascript SDK source</strong> and note its
+            Data Collaboration Node (DCN), create a
+            <a target="_blank" rel="noopener" href="https://docs.optable.co/optable-documentation/integrations/sources/sdk-sources/javascript-sdk">Javascript SDK source</a>
+            and note its
             unique <i>slug</i> identifier, as well as the hostname of your DCN, as these will be required
             for Optable SDK integration (see Step 3).
           </p>
           <p>
-            Loblaw Media Private ID will be returned by your Optable DCN for all users associated with
-            activation clean room match results originating from the Loblaw Media partner.
+            LM PID will be returned by your Optable DCN for all matched users associated with
+            activation clean rooms originating from the Loblaw Media partner.
           </p>
 
-          <h5>Step 3: Deploy Optable's Javascript SDK to your site</h5>
+          <h5>Step 3: Deploy the Optable SDK to your site</h5>
           <p>
-            If you haven't already deployed the Optable Javascript SDK to your web site, have a look at the
-            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#installing">Optable Javascript SDK README</a>. There are two SDK APIs which you must deploy in order to integrate LM PID:
+            If you haven't already deployed the Optable SDK to your web site, have a look at the
+            <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#installing">Optable SDK README</a>. There are two SDK APIs which you must deploy in order to integrate LM PID:
             <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#identify-api">identify</a>
             and
             <a target="_blank" rel="noopener" href="https://github.com/Optable/optable-web-sdk#targeting-api">targeting</a>.
           </p>
           <p>
             The <code>identify</code> API enables you to associate a user's browser with a known identifier, such
-            as an email address or an assigned user ID. Since Loblaw Media activation matches operate on a
+            as an email address or a publisher assigned user ID. Since Loblaw Media activation matches operate on a
             combination of email address, phone number, and mobile advertising IDs, it is recommended that you
             <code>identify</code> consenting users with all of that user's known and consented ad IDs.
             You can do this by calling
             <code>identify</code> with additional identifiers directly from your web site, or by calling
-            it with a single known user ID, and separately loading identity mappings (associated with the
-            known user ID) via any
+            it with a single publisher assigned user ID, and then separately loading identity mappings
+            (associated with the publisher assigned user ID) via any
             <a target="_blank" rel="noopener" href="https://docs.optable.co/optable-documentation/integrations/sources">supported sources</a>.
           </p>
           <p>
@@ -195,7 +206,7 @@ pbjs.que.push(function () {
 
           <h4>Try it!</h4>
           <p>
-            This demo page is setup so that the following random emails are generating Private ID requests.
+            This demo page is setup so that the following random emails are generating LM PID requests.
           </p>
           <p>
             To trigger LM PID insertion in ad requests, you must first
@@ -256,7 +267,8 @@ olivia.anderson@acme.test</code></pre>
       const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
       document.getElementById("identify-link").href = cookiesTransport ?
         "/vanilla/identify.html" : "/vanilla/nocookies/identify.html";
-
+    </script>
+    <script type="text/javascript">
       window.optable = window.optable || { cmd: [] };
       window.googletag = window.googletag || { cmd: []};
       window.pbjs = window.pbjs || { que: [] };
