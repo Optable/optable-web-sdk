@@ -3,6 +3,7 @@ import Commands from "./commands";
 import OptableSDK from "../lib/sdk";
 import "../lib/addons/gpt";
 import "../lib/addons/try-identify";
+import "../lib/addons/join-ad-interest-group";
 
 type OptableGlobal = {
   cmd: Commands | Function[];

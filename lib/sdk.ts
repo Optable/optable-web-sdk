@@ -3,6 +3,7 @@ import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import { Uid2Token } from "./edge/uid2_token";
+import { Site, SiteResponse } from "./edge/site";
 import {
   TargetingKeyValues,
   TargetingResponse,
@@ -52,6 +53,10 @@ class OptableSDK {
 
   async prebidORTB2(): Promise<PrebidORTB2> {
     return PrebidORTB2(await this.targeting())
+  }
+
+  async site(): Promise<SiteResponse> {
+    return Site(this.dcn)
   }
 
   prebidORTB2FromCache(): PrebidORTB2 {
