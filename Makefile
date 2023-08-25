@@ -19,9 +19,10 @@ build: build-web build-lib
 deps:
 	npm ci
 
-export SDK_URI ?= http://localhost:8181/sdk.js
+export SDK_URI ?= https://localhost:8181/sdk.js
 export SANDBOX_HOST ?= sandbox.optable.co
 export SANDBOX_INSECURE ?= false
+export ADS_HOST ?= ads.optable.co
 export UID2_BASE_URL ?= https://operator-integ.uidapi.com
 
 .PHONY: demo-html
@@ -43,8 +44,10 @@ demo-html:
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
-	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL} ' < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
-	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL} ' < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE}' < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
+	envsubst '$${ADS_HOST}' < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL}' < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
+	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${UID2_BASE_URL}' < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
 
 .PHONY: demo-react
 demo-react: build-lib
@@ -56,4 +59,16 @@ demo-npm:
 	npm --prefix demos/npm ci
 	npm --prefix demos/npm run build
 
-all: test build demos
+.PHONY: certs
+certs:
+	mkcert -install
+	mkcert -cert-file nginx/tls/cert.pem -key-file nginx/tls/key.pem localhost
+
+.PHONY: asdf
+asdf:
+	-asdf plugin add nodejs
+	-asdf plugin add semver
+	-asdf plugin add mkcert
+	asdf install
+
+all: asdf certs test build demos

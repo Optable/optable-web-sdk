@@ -24,6 +24,7 @@ jobs:
       - run: if [ ! -d ~/.asdf ]; then git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.10.0; fi
       - run:
           <<: *setup_env
+      - run: asdf plugin add mkcert || true
       - run: asdf plugin add nodejs || true
       - run: asdf plugin add semver || true
       - run: asdf install
