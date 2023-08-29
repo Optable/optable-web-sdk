@@ -2,6 +2,9 @@ node_modules
 lib/dist/
 demos/react/dist
 demos/npm/dist
+nginx/tls
+!nginx/tls/.gitkeep
+
 browser/dist/
 
 demos/vanilla/nocookies/targeting/*.html
@@ -10,3 +13,4 @@ demos/vanilla/targeting/*.html
 demos/vanilla/*.html
 demos/integration/*.html
 demos/vanilla/uid2_token/*.html
+demos/ads/protected-audience/*.html

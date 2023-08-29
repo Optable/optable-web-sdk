@@ -23,5 +23,6 @@ COPY --chmod=0444 ./vanilla/uid2_token/login.html ./vanilla/uid2_token/login.htm
 COPY --chmod=0444 ./react/dist/ ./react/dist/
 COPY --chmod=0444 ./index.html ./index.html
 COPY --chmod=0444 ./index-nocookies.html ./index-nocookies.html
+COPY --chmod=0444 ./ads/protected-audience/ ./ads/protected-audience/
 COPY --chmod=0444 ./css/ ./css/
 COPY --chmod=0444 ./images/ ./images/

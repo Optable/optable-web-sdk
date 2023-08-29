@@ -3,13 +3,17 @@ services:
   web-sdk:
     image: nginx:1.20
     volumes:
-      - ./browser/dist:/usr/share/nginx/html:ro,delegated
+      - ./browser/dist:/etc/nginx/html:ro,delegated
+      - ./nginx/templates:/etc/nginx/templates:ro,delegated
+      - ./nginx/tls:/etc/nginx/tls:ro,delegated
     ports:
-      - "8181:80"
+      - "8181:443"
 
   web-demo:
     image: nginx:1.20
     volumes:
-      - ./demos:/usr/share/nginx/html:ro,delegated
+      - ./demos:/etc/nginx/html:ro,delegated
+      - ./nginx/templates:/etc/nginx/templates:ro,delegated
+      - ./nginx/tls:/etc/nginx/tls:ro,delegated
     ports:
-      - "8180:80"
+      - "8180:443"
