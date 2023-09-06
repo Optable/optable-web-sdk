@@ -30,7 +30,7 @@
               navigator.runAdAuction({
                 seller: window.location.origin,
                 decisionLogicURL: window.location.origin + "/ads/protected-audiences/decision-logic.js",
-                interestGroupBuyers: ["${ADS_OWNER}"],
+                interestGroupBuyers: ["https://${ADS_HOST}"],
                 resolveToConfig: true
               })
               .then(function(config) {
