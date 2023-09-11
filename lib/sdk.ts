@@ -3,6 +3,7 @@ import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import { Uid2Token } from "./edge/uid2_token";
+import { Init } from "./edge/init";
 import { Site, SiteResponse } from "./edge/site";
 import {
   TargetingKeyValues,
@@ -20,8 +21,15 @@ import { sha256 } from "js-sha256";
 class OptableSDK {
   public sandbox: OptableConfig; // legacy
 
-  constructor(public dcn: OptableConfig) {
+  constructor(public dcn: OptableConfig, writePassport: boolean = true) {
     this.sandbox = dcn; // legacy
+    writePassport && Init(dcn);
+  }
+
+  init() {
+    return Init(
+      this.dcn,
+    );
   }
 
   identify(...ids: string[]) {
