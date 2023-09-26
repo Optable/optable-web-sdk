@@ -17,8 +17,10 @@ OptableSDK.prototype.joinAdInterestGroup = async function() {
   if (!siteConfig.interestGroupPixel) {
     throw ("origin not enabled for protected audience apis");
   }
+  const pixelURL = new URL(siteConfig.interestGroupPixel);
 
-  pixel.src = siteConfig.interestGroupPixel;
+  pixel.src = pixelURL.toString()
+  pixel.allow = "join-ad-interest-group " + pixelURL.origin;
   pixel.style.display = "none";
   document.body.appendChild(pixel);
 };
