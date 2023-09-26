@@ -29,7 +29,7 @@
             <script>
               navigator.runAdAuction({
                 seller: window.location.origin,
-                decisionLogicURL: window.location.origin + "/ads/protected-audiences/decision-logic.js",
+                decisionLogicURL: window.location.origin + "/ads/protected-audience/decision-logic.js",
                 interestGroupBuyers: ["https://${ADS_HOST}"],
                 resolveToConfig: true
               })
