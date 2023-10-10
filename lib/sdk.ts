@@ -24,7 +24,7 @@ class OptableSDK {
 
   constructor(public dcn: OptableConfig, writePassport: boolean = true) {
     this.sandbox = dcn; // legacy
-    this.init = writePassport ? Init(dcn).catch(()=>{}) : undefined;
+    this.init = writePassport ? Init(dcn).catch(()=>{}) : Promise.resolve();
   }
 
   async identify(...ids: string[]) {
