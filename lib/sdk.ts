@@ -3,6 +3,7 @@ import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import { Uid2Token } from "./edge/uid2_token";
+import { Init } from "./edge/init";
 import { Site, SiteResponse } from "./edge/site";
 import {
   TargetingKeyValues,
@@ -19,23 +20,28 @@ import { sha256 } from "js-sha256";
 
 class OptableSDK {
   public sandbox: OptableConfig; // legacy
+  private init: any
 
-  constructor(public dcn: OptableConfig) {
+  constructor(public dcn: OptableConfig, writePassport: boolean = true) {
     this.sandbox = dcn; // legacy
+    this.init = writePassport ? Init(dcn).catch(()=>{}) : Promise.resolve();
   }
 
-  identify(...ids: string[]) {
+  async identify(...ids: string[]) {
+    await this.init;
     return Identify(
       this.dcn,
       ids.filter((id) => id)
     );
   }
 
-  uid2Token(id: string) {
+  async uid2Token(id: string) {
+    await this.init;
     return Uid2Token(this.dcn, id);
   }
 
-  targeting(): Promise<TargetingResponse> {
+  async targeting(): Promise<TargetingResponse> {
+    await this.init;
     return Targeting(this.dcn);
   }
 
@@ -73,11 +79,13 @@ class OptableSDK {
     return TargetingKeyValues(tdata);
   }
 
-  witness(event: string, properties: WitnessProperties = {}): Promise<void> {
+  async witness(event: string, properties: WitnessProperties = {}): Promise<void> {
+    await this.init;
     return Witness(this.dcn, event, properties);
   }
 
-  profile(traits: ProfileTraits): Promise<void> {
+  async profile(traits: ProfileTraits): Promise<void> {
+    await this.init;
     return Profile(this.dcn, traits);
   }
 
