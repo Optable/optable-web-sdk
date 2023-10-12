@@ -5,7 +5,7 @@ type SiteResponse = {
   interestGroupPixel: string;
 };
 
-async function Site(config: OptableConfig): Promise<SiteResponse> {
+async function Site(config: Required<OptableConfig>): Promise<SiteResponse> {
   return await fetch("/config", config, {
     method: "GET",
     headers: { "Content-Type": "application/json" },

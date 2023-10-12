@@ -26,7 +26,7 @@ type TargetingResponse = {
 
 const lmpidProvider = "loblawmedia.ca"
 
-async function Targeting(config: OptableConfig): Promise<TargetingResponse> {
+async function Targeting(config: Required<OptableConfig>): Promise<TargetingResponse> {
   const response: TargetingResponse = await fetch("/v2/targeting", config, {
     method: "GET",
     headers: {
@@ -42,17 +42,17 @@ async function Targeting(config: OptableConfig): Promise<TargetingResponse> {
   return response;
 }
 
-function LmpidFromCache(config: OptableConfig): string | null {
+function LmpidFromCache(config: Required<OptableConfig>): string | null {
   const ls = new LocalStorage(config);
   return ls.getLmpid();
 }
 
-function TargetingFromCache(config: OptableConfig): TargetingResponse | null {
+function TargetingFromCache(config: Required<OptableConfig>): TargetingResponse | null {
   const ls = new LocalStorage(config);
   return ls.getTargeting();
 }
 
-function TargetingClearCache(config: OptableConfig) {
+function TargetingClearCache(config: Required<OptableConfig>) {
   const ls = new LocalStorage(config);
   ls.clearTargeting();
 }

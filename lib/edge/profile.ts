@@ -5,7 +5,7 @@ type ProfileTraits = {
   [key: string]: string | number | boolean;
 };
 
-function Profile(config: OptableConfig, traits: ProfileTraits): Promise<void> {
+function Profile(config: Required<OptableConfig>, traits: ProfileTraits): Promise<void> {
   const profile = {
     traits: traits,
   };

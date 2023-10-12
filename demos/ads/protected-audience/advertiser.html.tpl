@@ -34,6 +34,7 @@ window.optable = window.optable || { cmd: [] };
 optable.cmd.push(() => {
   optable.instance = new optable.SDK({
     host: "${SANDBOX_HOST}",
+    initPassport: JSON.parse("${SANDBOX_INIT}"),
     site: "web-sdk-demo",
     insecure: ${SANDBOX_INSECURE},
     cookies: cookiesTransport,
@@ -52,6 +53,7 @@ optable.cmd.push(() => {
       optable.cmd.push(() => {
         optable.instance = new optable.SDK({
           host: "${SANDBOX_HOST}",
+          initPassport: JSON.parse("${SANDBOX_INIT}"),
           site: "web-sdk-demo",
           insecure: JSON.parse("${SANDBOX_INSECURE}"),
           cookies: cookiesTransport,

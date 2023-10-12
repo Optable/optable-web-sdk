@@ -1,4 +1,5 @@
 import type { OptableConfig } from "./config";
+import { getConfig } from "./config";
 import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
@@ -19,12 +20,12 @@ import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 
 class OptableSDK {
-  public sandbox: OptableConfig; // legacy
+  public dcn: Required<OptableConfig>;
   private init: any
 
-  constructor(public dcn: OptableConfig, writePassport: boolean = true) {
-    this.sandbox = dcn; // legacy
-    this.init = writePassport ? Init(dcn).catch(()=>{}) : Promise.resolve();
+  constructor(dcn: OptableConfig) {
+    this.dcn = getConfig(dcn);
+    this.init = this.dcn.initPassport ? Init(this.dcn).catch(()=>{}) : Promise.resolve();
   }
 
   async identify(...ids: string[]) {

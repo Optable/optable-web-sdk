@@ -1,10 +1,9 @@
 import type { OptableConfig } from "../config";
-import { getConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
-function buildRequest(path: string, config: OptableConfig, init?: RequestInit): Request {
-  const { site, host, insecure, cookies } = getConfig(config);
+function buildRequest(path: string, config: Required<OptableConfig>, init?: RequestInit): Request {
+  const { site, host, insecure, cookies } = config;
 
   const proto = insecure ? "http" : "https";
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
@@ -32,7 +31,7 @@ function buildRequest(path: string, config: OptableConfig, init?: RequestInit): 
   return request;
 }
 
-async function fetch<T>(path: string, config: OptableConfig, init?: RequestInit): Promise<T> {
+async function fetch<T>(path: string, config: Required<OptableConfig>, init?: RequestInit): Promise<T> {
   const response = await window.fetch(buildRequest(path, config, init));
 
   const contentType = response.headers.get("Content-Type");

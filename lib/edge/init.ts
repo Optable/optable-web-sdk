@@ -1,7 +1,7 @@
 import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 
-function Init(config: OptableConfig): Promise<void> {
+function Init(config: Required<OptableConfig>): Promise<void> {
   return fetch("/init", config, {
     method: "POST",
     headers: {

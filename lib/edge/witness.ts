@@ -5,7 +5,7 @@ type WitnessProperties = {
   [key: string]: string | number | boolean;
 };
 
-function Witness(config: OptableConfig, event: string, properties: WitnessProperties): Promise<void> {
+function Witness(config: Required<OptableConfig>, event: string, properties: WitnessProperties): Promise<void> {
   const evt = {
     event: event,
     properties: properties,
