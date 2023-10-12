@@ -24,6 +24,7 @@
       optable.cmd.push(function () {
         optable.instance = new optable.SDK({
           host: "${SANDBOX_HOST}",
+          initPassport: JSON.parse("${SANDBOX_INIT}"),
           site: "web-sdk-demo",
           insecure: JSON.parse("${SANDBOX_INSECURE}"),
         });

@@ -27,6 +27,7 @@ module.exports = {
     new webpack.DefinePlugin({
       SANDBOX_CONFIG: JSON.stringify({
         host: process.env.SANDBOX_HOST,
+        initPassport: process.env.SANDBOX_INIT === "true",
         site: "web-sdk-demo",
         insecure: process.env.SANDBOX_INSECURE === "true",
       }),
