@@ -54,6 +54,7 @@ jobs:
       - run: ./scripts/patch-version.sh "${CIRCLE_TAG:-v0.0.0-${CIRCLE_SHA::7}}"
       - run: |
           export SDK_URI="https://cdn.optable.co/web-sdk/${CIRCLE_TAG}/sdk.js"
+          export ADS_HOST="ads.optable.co"
           export SANDBOX_HOST="sandbox.optable.co"
           export SANDBOX_INSECURE="false"
           export SANDBOX_INIT="true"
