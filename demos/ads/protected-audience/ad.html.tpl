@@ -2,7 +2,7 @@
 <html>
   <head>
   </head>
-  <body>
+  <body style="margin: 0; padding: 0">
     <script>
       const params = new URLSearchParams(window.location.search);
 
