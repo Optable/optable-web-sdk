@@ -24,24 +24,10 @@
         <div class="twelve column">
           <h4>Join Ad Interest Group</h4>
         </div>
-      </div>
-      <div class="row">
-        <div class="twelve column">
-
-          <pre><code style="padding: 20px">const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
-window.optable = window.optable || { cmd: [] };
-
-optable.cmd.push(() => {
-  optable.instance = new optable.SDK({
-    host: "${SANDBOX_HOST}",
-    initPassport: JSON.parse("${SANDBOX_INIT}"),
-    site: "web-sdk-demo",
-    insecure: ${SANDBOX_INSECURE},
-    cookies: cookiesTransport,
-  });
-
-  optable.instance.joinAdInterestGroup();
-})</code></pre>
+        <div class="row">
+          <div class="twelve column">
+            <button onclick="joinAdInterestGroup()">Join Ad Interest Group</button>
+          </div>
         </div>
       </div>
     </div>
@@ -49,6 +35,12 @@ optable.cmd.push(() => {
     <script type="text/javascript">
       const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
       window.optable = window.optable || { cmd: [] };
+
+      function joinAdInterestGroup() {
+        optable.cmd.push(() => {
+          optable.instance.joinAdInterestGroup();
+        })
+      }
 
       optable.cmd.push(() => {
         optable.instance = new optable.SDK({
@@ -58,8 +50,6 @@ optable.cmd.push(() => {
           insecure: JSON.parse("${SANDBOX_INSECURE}"),
           cookies: cookiesTransport,
         });
-
-        optable.instance.joinAdInterestGroup();
       })
     </script>
   </body>
