@@ -8,24 +8,26 @@
     <link rel="stylesheet" href="/css/skeleton.css" />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
 
+    <script async src="${SDK_URI}"></script>
+
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
     <script>
+      const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
       window.googletag = window.googletag || {cmd: []};
+      window.optable = window.optable || { cmd: [] };
+
+      optable.cmd.push(() => {
+        optable.instance = new optable.SDK({
+          host: "${SANDBOX_HOST}",
+          initPassport: JSON.parse("${SANDBOX_INIT}"),
+          site: "web-sdk-demo",
+          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+          cookies: cookiesTransport,
+        });
+      })
+
       googletag.cmd.push(function() {
-        const slot = googletag.defineUnit("/22657645226/multiseller-demo", [300, 250], "div-ad-fledge").addService(googletag.pubads());
-
-        slot.setConfig({
-          componentAuction: [{
-            configKey: "https://${ADS_HOST}",
-            auctionConfig: {
-              decisionLogicURL: "https://${ADS_HOST}/${ADS_REGION}/paapi/v1/ssp/decision-logic.js",
-              interestGroupBuyers: ["https://${ADS_HOST}"],
-              requestedSize: { width: "300px", height: "250px" },
-              seller: "https://${ADS_HOST}",
-            }
-          }],
-        })
-
+        googletag.defineSlot("/22657645226/multiseller-demo", [[300, 250]], "div-ad-fledge").addService(googletag.pubads());
         googletag.pubads().enableSingleRequest();
         googletag.enableServices();
       });
@@ -48,7 +50,11 @@
       <div id='div-ad-fledge' style='width: 300px; height: 250px; border: 1px dotted black;'>
         <script>
           googletag.cmd.push(function() {
-            googletag.display('div-ad-fledge');
+            optable.cmd.push(() => {
+              optable.instance.installGPTSlotAuctionConfig("div-ad-fledge").then(() => {
+                googletag.display("div-ad-fledge");
+              });
+            })
           });
         </script>
       </div>

@@ -8,6 +8,29 @@
     <link rel="stylesheet" href="/css/normalize.css" />
     <link rel="stylesheet" href="/css/skeleton.css" />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
+
+    <script async src="${SDK_URI}"></script>
+
+    <script type="text/javascript">
+      const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
+      window.optable = window.optable || { cmd: [] };
+
+      function runAdAuction(spotID) {
+        optable.cmd.push(() => {
+          optable.instance.runAdAuction(spotID)
+        })
+      }
+
+      optable.cmd.push(() => {
+        optable.instance = new optable.SDK({
+          host: "${SANDBOX_HOST}",
+          initPassport: JSON.parse("${SANDBOX_INIT}"),
+          site: "web-sdk-demo",
+          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+          cookies: cookiesTransport,
+        });
+      })
+    </script>
   </head>
 
   <body>
@@ -36,34 +59,6 @@
             <button onclick="runAdAuction('medium')">Run Ad Auction for Medium Rectangle</button>
             <button onclick="runAdAuction('leaderboard')">Run Ad Auction for Leaderboard</button>
           </div>
-
-          <script>
-            function runAdAuction(spotID) {
-              const spot = document.getElementById(spotID);
-              const box = spot.getBoundingClientRect();
-              const width = Math.round(box.width) - 2;
-              const height = Math.round(box.height) - 2;
-
-              navigator.runAdAuction({
-                seller: "https://${ADS_HOST}",
-                decisionLogicURL: "https://${ADS_HOST}/${ADS_REGION}/paapi/v1/ssp/decision-logic.js",
-                requestedSize: { width: width + "px", height: height + "px" },
-                interestGroupBuyers: ["https://${ADS_HOST}"],
-                resolveToConfig: true
-              })
-              .then(function(config) {
-                if (config) {
-                  const adFrame = document.createElement("fencedframe")
-                  adFrame.config = config
-                  adFrame.style.border = "none"
-                  adFrame.style.overflow = "hidden"
-                  spot.replaceChildren(adFrame)
-                } else {
-                  alert("No ad returned or auction error.")
-                }
-              })
-            }
-          </script>
         </div>
       </div>
     </div>
