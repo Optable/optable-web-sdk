@@ -46,7 +46,6 @@
           <h4>GPT</h4>
         </div>
       </div>
-      <!-- /22081946781/web-sdk-demo-gam360/box-ad -->
       <div id='div-ad-fledge' style='width: 300px; height: 250px; border: 1px dotted black;'>
         <script>
           googletag.cmd.push(function() {
