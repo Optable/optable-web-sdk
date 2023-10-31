@@ -29,6 +29,8 @@
     </div>
 
     <script>
+        const searchParams = new URLSearchParams(window.location.search);
+        const slotID = searchParams.get("slot") ?? "/22081946781/web-sdk-demo-gam360"
         var bannerSizes = [[300, 250]];
 
         var googletag = googletag || {};
@@ -57,7 +59,7 @@
 
           pbjs.addAdUnits(
             {
-              code: "/22657645226/multiseller-demo",
+              code: slotID,
               mediaTypes: { banner: { sizes: bannerSizes } },
               bids: [{ bidder: "optable", params: { site: "web-sdk-demo" } }]
             },
@@ -65,7 +67,7 @@
 
           googletag.cmd.push(function() {
             googletag.pubads().disableInitialLoad();
-            googletag.defineSlot("/22657645226/multiseller-demo", bannerSizes, "div-ad-fledge").addService(googletag.pubads());
+            googletag.defineSlot(slotID, bannerSizes, "div-ad-fledge").addService(googletag.pubads());
             googletag.pubads().enableSingleRequest();
             googletag.enableServices();
 

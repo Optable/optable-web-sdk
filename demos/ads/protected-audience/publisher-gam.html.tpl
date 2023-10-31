@@ -12,7 +12,9 @@
 
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
     <script>
-      const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
+      const searchParams = new URLSearchParams(window.location.search);
+      const cookiesTransport = searchParams.get("cookies") === "yes"
+      const slotID = searchParams.get("slot") ?? "/22081946781/web-sdk-demo-gam360"
       window.googletag = window.googletag || {cmd: []};
       window.optable = window.optable || { cmd: [] };
 
@@ -27,7 +29,7 @@
       })
 
       googletag.cmd.push(function() {
-        googletag.defineSlot("/22657645226/multiseller-demo", [[300, 250]], "div-ad-fledge").addService(googletag.pubads());
+        googletag.defineSlot(slotID, [[300, 250]], "div-ad-fledge").addService(googletag.pubads());
         googletag.pubads().enableSingleRequest();
         googletag.enableServices();
       });
