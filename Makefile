@@ -24,6 +24,7 @@ export SANDBOX_HOST ?= sandbox.optable.co
 export SANDBOX_INSECURE ?= false
 export SANDBOX_INIT ?= true
 export ADS_HOST ?= ads.optable.co
+export ADS_REGION ?= ca
 export UID2_BASE_URL ?= https://operator-integ.uidapi.com
 
 .PHONY: demo-html
@@ -46,7 +47,9 @@ demo-html:
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${SANDBOX_INIT}' < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${SANDBOX_INIT}' < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${SANDBOX_INIT}' < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
-	envsubst '$${ADS_HOST}' < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
+	envsubst '$${ADS_HOST} $${ADS_REGION}' < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
+	envsubst '$${ADS_HOST} $${ADS_REGION}' < demos/ads/protected-audience/publisher-prebid.html.tpl > demos/ads/protected-audience/publisher-prebid.html
+	envsubst '$${ADS_HOST} $${ADS_REGION}' < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${SANDBOX_INIT}' < demos/ads/protected-audience/ad.html.tpl > demos/ads/protected-audience/ad.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${SANDBOX_INIT} $${UID2_BASE_URL}' < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 	envsubst '$${SDK_URI} $${SANDBOX_HOST} $${SANDBOX_INSECURE} $${SANDBOX_INIT} $${UID2_BASE_URL}' < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html

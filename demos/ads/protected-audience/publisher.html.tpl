@@ -45,8 +45,8 @@
               const height = Math.round(box.height) - 2;
 
               navigator.runAdAuction({
-                seller: window.location.origin,
-                decisionLogicURL: window.location.origin + "/ads/protected-audience/decision-logic.js",
+                seller: "https://${ADS_HOST}",
+                decisionLogicURL: "https://${ADS_HOST}/${ADS_REGION}/paapi/v1/ssp/decision-logic.js",
                 requestedSize: { width: width + "px", height: height + "px" },
                 interestGroupBuyers: ["https://${ADS_HOST}"],
                 resolveToConfig: true
