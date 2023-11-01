@@ -32,7 +32,7 @@ function buildRequest(path: string, config: Required<OptableConfig>, init?: Requ
 }
 
 async function fetch<T>(path: string, config: Required<OptableConfig>, init?: RequestInit): Promise<T> {
-  const response = await window.fetch(buildRequest(path, config, init));
+  const response = await globalThis.fetch(buildRequest(path, config, init));
 
   const contentType = response.headers.get("Content-Type");
   const data = contentType?.startsWith("application/json") ? await response.json() : await response.text();

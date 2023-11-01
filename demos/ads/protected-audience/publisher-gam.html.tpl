@@ -1,4 +1,3 @@
-<!doctype html>
 <html>
   <head>
     <meta name="description" content="Optable Web SDK Demos" />
@@ -11,15 +10,13 @@
 
     <script async src="${SDK_URI}"></script>
 
-    <script type="text/javascript">
-      const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
+    <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+    <script>
+      const searchParams = new URLSearchParams(window.location.search);
+      const cookiesTransport = searchParams.get("cookies") === "yes"
+      const slotID = searchParams.get("slot") ?? "/22081946781/web-sdk-demo-gam360"
+      window.googletag = window.googletag || {cmd: []};
       window.optable = window.optable || { cmd: [] };
-
-      function runAdAuction(spotID) {
-        optable.cmd.push(() => {
-          optable.instance.runAdAuction(spotID)
-        })
-      }
 
       optable.cmd.push(() => {
         optable.instance = new optable.SDK({
@@ -30,9 +27,14 @@
           cookies: cookiesTransport,
         });
       })
+
+      googletag.cmd.push(function() {
+        googletag.defineSlot(slotID, [[300, 250]], "div-ad-fledge").addService(googletag.pubads());
+        googletag.pubads().enableSingleRequest();
+        googletag.enableServices();
+      });
     </script>
   </head>
-
   <body>
     <div class="container">
       <div class="row">
@@ -43,25 +45,20 @@
       </div>
       <div class="row">
         <div class="twelve column">
-          <h4>Run Ad Auction</h4>
+          <h4>GPT</h4>
         </div>
       </div>
-      <div class="row">
-        <div class="twelve column" style="display: flex; flex-direction: column; gap: 30px">
-          <div id="medium" style="text-align: center; width: 300px; height: 250px; border: 1px dotted gray">
-            Medium Rectangle goes here
-          </div>
-          <div id="leaderboard" style="text-align: center; width: 728px; height: 90px; border: 1px dotted gray">
-            Leaderboard goes here
-          </div>
-
-          <div>
-            <button onclick="runAdAuction('medium')">Run Ad Auction for Medium Rectangle</button>
-            <button onclick="runAdAuction('leaderboard')">Run Ad Auction for Leaderboard</button>
-          </div>
-        </div>
+      <div id='div-ad-fledge' style='width: 300px; height: 250px; border: 1px dotted black;'>
+        <script>
+          googletag.cmd.push(function() {
+            optable.cmd.push(() => {
+              optable.instance.installGPTSlotAuctionConfig("div-ad-fledge").then(() => {
+                googletag.display("div-ad-fledge");
+              });
+            })
+          });
+        </script>
       </div>
     </div>
   </body>
 </html>
-
