@@ -41,9 +41,9 @@ jobs:
     <<: *defaults
     environment:
       SDK_URI: https://cdn.optable.co/web-sdk/latest/sdk.js
-      SANDBOX_HOST: sandbox.optable.co
-      SANDBOX_INSECURE: "false"
-      SANDBOX_INIT: "true"
+      DCN_HOST: sandbox.optable.co
+      DCN_INSECURE: "false"
+      DCN_INIT: "true"
       UID2_BASE_URL: https://prod.uidapi.com
     steps:
       - checkout
@@ -55,9 +55,12 @@ jobs:
       - run: |
           export SDK_URI="https://cdn.optable.co/web-sdk/${CIRCLE_TAG}/sdk.js"
           export ADS_HOST="ads.optable.co"
-          export SANDBOX_HOST="sandbox.optable.co"
-          export SANDBOX_INSECURE="false"
-          export SANDBOX_INIT="true"
+          export ADS_REGION="ca"
+          export DCN_HOST="sandbox.optable.co"
+          export DCN_SITE="web-sdk-demo"
+          export DCN_ID="optable"
+          export DCN_INSECURE="false"
+          export DCN_INIT="true"
           export UID2_BASE_URL="https://prod.uidapi.com"
           make -j --output-sync
       - persist_to_workspace:
