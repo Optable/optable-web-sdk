@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/css/skeleton.css" />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
 
-    <script src="https://prod.uidapi.com/static/js/uid2-sdk-2.0.0.js" type="text/javascript"></script> 
+    <script src="https://prod.uidapi.com/static/js/uid2-sdk-2.0.0.js" type="text/javascript"></script>
 
     <!-- Optable web-sdk loader start -->
     <script type="text/javascript">
@@ -19,10 +19,10 @@
 
       optable.cmd.push(function () {
         optable.instance = new optable.SDK({
-          host: "${SANDBOX_HOST}",
-          initPassport: JSON.parse("${SANDBOX_INIT}"),
+          host: "${SDK_HOST}",
+          initPassport: JSON.parse("${SDK_INIT}"),
           site: "web-sdk-demo",
-          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+          insecure: JSON.parse("${SDK_INSECURE}"),
         });
 
         optable.instance.tryIdentifyFromParams();
@@ -69,7 +69,7 @@
             which can be used for targeted advertising.<br/>
             The <code>__uid2.init</code> function from the <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/sdks/client-side-identity.md">UID2 SDK</a>
             is used to store the UID2 identity in a first-party cookie for use on subsequent page loads.<br/>
-            In the background, the <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/sdks/client-side-identity.md">UID2 SDK</a> 
+            In the background, the <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/sdks/client-side-identity.md">UID2 SDK</a>
             will continuously validate if the advertising token needs to be refreshed, if the refresh token expired or if the user opted out.
           </p>
         </div>

@@ -6,7 +6,7 @@ const OptableContext = createContext<OptableSDK | null>(null);
 
 // Sandbox configuration injected by webpack based on build environment (see demos/react/webpack.config.js)
 declare global {
-  const SANDBOX_CONFIG: OptableConfig;
+  const SDK_CONFIG: OptableConfig;
 }
 
 // Provide a global SDK instance across the application
@@ -15,7 +15,7 @@ declare global {
 //
 // Obviously overkill in our case since we only have one component.
 function OptableProvider({ children }: { children: React.ReactNode }) {
-  const sdk = new OptableSDK(SANDBOX_CONFIG);
+  const sdk = new OptableSDK(SDK_CONFIG);
   return <OptableContext.Provider value={sdk}>{children}</OptableContext.Provider>;
 }
 

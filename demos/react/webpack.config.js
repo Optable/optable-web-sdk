@@ -25,11 +25,11 @@ module.exports = {
   },
   plugins: [
     new webpack.DefinePlugin({
-      SANDBOX_CONFIG: JSON.stringify({
-        host: process.env.SANDBOX_HOST,
-        initPassport: process.env.SANDBOX_INIT === "true",
+      SDK_CONFIG: JSON.stringify({
+        host: process.env.SDK_HOST,
+        initPassport: process.env.SDK_INIT === "true",
         site: "web-sdk-demo",
-        insecure: process.env.SANDBOX_INSECURE === "true",
+        insecure: process.env.SDK_INSECURE === "true",
       }),
     }),
     new HtmlWebpackPlugin({

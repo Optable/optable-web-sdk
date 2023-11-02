@@ -17,10 +17,10 @@
 
       optable.cmd.push(function () {
         optable.instance = new optable.SDK({
-          host: "${SANDBOX_HOST}",
-          initPassport: JSON.parse("${SANDBOX_INIT}"),
+          host: "${SDK_HOST}",
+          initPassport: JSON.parse("${SDK_INIT}"),
           site: "web-sdk-demo",
-          insecure: JSON.parse("${SANDBOX_INSECURE}"),
+          insecure: JSON.parse("${SDK_INSECURE}"),
           cookies: false,
         });
 
