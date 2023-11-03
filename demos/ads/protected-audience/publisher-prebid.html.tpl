@@ -61,7 +61,7 @@
             {
               code: slotID,
               mediaTypes: { banner: { sizes: bannerSizes } },
-              bids: [{ bidder: "optable", params: { site: "optable/web-sdk-demo" } }]
+              bids: [{ bidder: "optable", params: { site: "${DCN_ID}/${DCN_SITE}" } }]
             },
           );
 

@@ -221,10 +221,10 @@ olivia.anderson@acme.test</code></pre>
 
         optable.cmd.push(function () {
           optable.instance = new optable.SDK({
-            host: "${SANDBOX_HOST}",
-            initPassport: JSON.parse("${SANDBOX_INIT}"),
-            site: "web-sdk-demo",
-            insecure: JSON.parse("${SANDBOX_INSECURE}"),
+            host: "${DCN_HOST}",
+            initPassport: JSON.parse("${DCN_INIT}"),
+            site: "${DCN_SITE}",
+            insecure: JSON.parse("${DCN_INSECURE}"),
             cookies: (new URLSearchParams(window.location.search)).get("cookies") === "yes",
           });
 

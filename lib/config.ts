@@ -6,14 +6,14 @@ type OptableConfig = {
   initPassport?: boolean;
 };
 
-const SANDBOX_DEFAULTS = {
+const DCN_DEFAULTS = {
   insecure: false,
   cookies: true,
   initPassport: true,
 };
 
 function getConfig(config: OptableConfig): Required<OptableConfig> {
-  return { ...SANDBOX_DEFAULTS, ...config };
+  return { ...DCN_DEFAULTS, ...config };
 }
 
 export { OptableConfig, getConfig };

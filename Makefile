@@ -20,9 +20,11 @@ deps:
 	npm ci
 
 export SDK_URI ?= https://localhost:8181/sdk.js
-export SANDBOX_HOST ?= sandbox.optable.co
-export SANDBOX_INSECURE ?= false
-export SANDBOX_INIT ?= true
+export DCN_HOST ?= sandbox.optable.co
+export DCN_SITE ?= web-sdk-demo
+export DCN_INSECURE ?= false
+export DCN_INIT ?= true
+export DCN_ID ?= optable
 export ADS_HOST ?= ads.optable.co
 export ADS_REGION ?= ca
 export UID2_BASE_URL ?= https://operator-integ.uidapi.com
@@ -32,9 +34,11 @@ demos: demo-html demo-react demo-npm
 
 DEMO_VARS:='\
 	SDK_URI=$${SDK_URI} \
-	SANDBOX_HOST=$${SANDBOX_HOST} \
-	SANDBOX_INSECURE=$${SANDBOX_INSECURE} \
-	SANDBOX_INIT=$${SANDBOX_INIT} \
+	DCN_HOST=$${DCN_HOST} \
+	DCN_SITE=$${DCN_SITE} \
+	DCN_ID=$${DCN_ID} \
+	DCN_INSECURE=$${DCN_INSECURE} \
+	DCN_INIT=$${DCN_INIT} \
 	ADS_HOST=$${ADS_HOST} \
 	ADS_REGION=$${ADS_REGION} \
 	UID2_BASE_URL=$${UID2_BASE_URL} \
