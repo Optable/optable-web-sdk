@@ -107,7 +107,7 @@ OptableSDK.prototype.runAdAuction = async function(domID: string, defaults: Part
   };
   const fencedFrameConfig = await navigator.runAdAuction(auctionConfig)
   if (!fencedFrameConfig) {
-    throw ("no auction config returned");
+    return
   }
 
   const fencedFrame = document.createElement("fencedframe") as HTMLFencedFrameElement;
