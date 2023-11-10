@@ -44,7 +44,7 @@ jobs:
       DCN_HOST: sandbox.optable.co
       DCN_INSECURE: "false"
       DCN_INIT: "true"
-      UID2_BASE_URL: https://prod.uidapi.com
+      UID2_BASE_URL: https://operator-integ.uidapi.com
     steps:
       - checkout
       - attach_workspace:
@@ -61,7 +61,7 @@ jobs:
           export DCN_ID="optable"
           export DCN_INSECURE="false"
           export DCN_INIT="true"
-          export UID2_BASE_URL="https://prod.uidapi.com"
+          export UID2_BASE_URL="https://operator-integ.uidapi.com"
           make -j --output-sync
       - persist_to_workspace:
           root: "~"
