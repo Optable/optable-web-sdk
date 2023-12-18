@@ -26,7 +26,7 @@
         </div>
         <div class="row">
           <div class="twelve column">
-            <button onclick="joinAdInterestGroup()">Join Ad Interest Group</button>
+            <button onclick="joinAdInterestGroups()">Join Ad Interest Groups</button>
           </div>
         </div>
       </div>
@@ -36,9 +36,11 @@
       const cookiesTransport = (new URLSearchParams(window.location.search)).get("cookies") === "yes"
       window.optable = window.optable || { cmd: [] };
 
-      function joinAdInterestGroup() {
+      function joinAdInterestGroups() {
         optable.cmd.push(() => {
-          optable.instance.joinAdInterestGroup();
+          optable.instance.joinAdInterestGroups()
+            .then(() => { alert("Interest groups successfully joined."); })
+            .catch(() => { alert("An error occurred while joining interest groups."); })
         })
       }
 

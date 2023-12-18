@@ -28,7 +28,7 @@ declare global {
 
 declare module "../sdk" {
   export interface OptableSDK {
-    joinAdInterestGroup: () => Promise<void>;
+    joinAdInterestGroups: () => Promise<void>;
     auctionConfig: () => Promise<AuctionConfig>;
     runAdAuction: (domID: string, params?: Partial<AuctionConfig>) => Promise<unknown>;
     installGPTSlotAuctionConfig: (domID: string, params?: Partial<AuctionConfig>) => Promise<void>;
@@ -117,9 +117,9 @@ OptableSDK.prototype.runAdAuction = async function(domID: string, defaults: Part
 }
 
 /*
- * joinAdInterestGroup injects an iframe into the page that tags the device into the site's interest group.
+ * joinAdInterestGroups injects an iframe into the page that tags the device into the matching audiences interest group.
  */
-OptableSDK.prototype.joinAdInterestGroup = async function() {
+OptableSDK.prototype.joinAdInterestGroups = async function() {
   const siteConfig = await this.site();
   const pixel = document.createElement("iframe");
   if (!siteConfig.interestGroupPixel) {
@@ -130,5 +130,21 @@ OptableSDK.prototype.joinAdInterestGroup = async function() {
   pixel.src = pixelURL.toString()
   pixel.allow = "join-ad-interest-group " + pixelURL.origin;
   pixel.style.display = "none";
+
+  const joinPromise = new Promise<void>((resolve, reject) => {
+    window.addEventListener("message", (event: any) => {
+      if (event.source !== pixel.contentWindow) {
+        return
+      }
+
+      if (event.data.result === "success") {
+        resolve()
+        return
+      }
+      reject()
+    })
+  })
+
   document.body.appendChild(pixel);
+  return joinPromise;
 };
