@@ -107,6 +107,7 @@ OptableSDK.prototype.runAdAuction = async function(domID: string, defaults: Part
   };
   const fencedFrameConfig = await navigator.runAdAuction(auctionConfig)
   if (!fencedFrameConfig) {
+    spot.replaceChildren();
     return
   }
 
