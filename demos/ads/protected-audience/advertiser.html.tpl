@@ -28,7 +28,7 @@
           <select id="interests-select" multiple style="margin-bottom: 6px; width: 400px; height: 100px;">
             <option value="luxury">Luxury</option>
             <option value="travel">Travel</option>
-            <option value="Fashion">Fashion</option>
+            <option value="fashion">Fashion</option>
           </select>
         </div>
         <div class="row">
