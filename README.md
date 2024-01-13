@@ -26,6 +26,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
+- [Fetching Google Privacy Sandbox Topics](#fetching-google-privacy-sandbox-topics)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -603,6 +604,22 @@ For example:
     // Or if the EID is being passed through a "email_sha" query string
     // like https://www.mysite.com?origin=newsletter&email_sha=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789&foo=bar
     // optable.instance.tryIdentifyFromParams("email_sha");
+  });
+</script>
+```
+
+## Fetching Google Privacy Sandbox topics
+
+To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `tryTopicsAPI` method. This method asynchronously retrieves topics from the browser and sends them to the Optable DCN. It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
+```javascript
+// Optable SDK async load:
+<script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
+<script>
+  window.optable = window.optable || { cmd: [] };
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
+    // Fetch Google Privacy Sandbox topics and send them to the Optable DCN
+    optable.instance.tryTopicsAPI();
   });
 </script>
 ```
