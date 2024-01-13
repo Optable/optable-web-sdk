@@ -11,7 +11,7 @@ function maybeValidEID(eid: string): boolean {
   return eidRegexp.test(eid);
 }
 
-OptableSDK.prototype.tryIdentifyFromParams = function (key?: string) {
+OptableSDK.prototype.tryIdentifyFromParams = function (key?: string, prefix?: string) {
   const keyRegexp = new RegExp(`^${key || "oeid"}$`, "i");
   const searchParams = new URLSearchParams(window.location.search);
   let eid = "";
@@ -22,10 +22,9 @@ OptableSDK.prototype.tryIdentifyFromParams = function (key?: string) {
     }
   }
 
-  if (!maybeValidEID(eid)) {
+  if (!prefix && !maybeValidEID(eid)) {
     return
   }
 
-
-  this.identify("e:" + eid.toLowerCase());
+  this.identify((prefix || "e") + ":" + eid.toLowerCase());
 };
