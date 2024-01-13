@@ -22,7 +22,7 @@ OptableSDK.prototype.tryIdentifyFromParams = function (key?: string, prefix?: st
     }
   }
 
-  if (!prefix && !maybeValidEID(eid)) {
+  if (eid == "" || (!prefix && !maybeValidEID(eid))) {
     return
   }
 
