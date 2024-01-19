@@ -1,9 +1,5 @@
 import OptableSDK from "../sdk";
 
-interface document {
-    browsingTopics?: () => Promise<any[]>;
-}
-
 declare module "../sdk" {
     export interface OptableSDK {
         tryTopicsAPI: () => void;
@@ -12,8 +8,8 @@ declare module "../sdk" {
 }
 
 OptableSDK.prototype.tryTopicsAPI = async function () {
-    if (!sessionStorage.topics_fetched && document && typeof document.browsingTopics == 'function') {
-        const topicsArray = await document.browsingTopics();
+    if (!sessionStorage.topics_fetched && window.document && typeof window.document.browsingTopics == 'function') {
+        const topicsArray = await window.document.browsingTopics();
         if (topicsArray.length > 0) {
             const topics: string[] = [];
             for (let topic of topicsArray) {
