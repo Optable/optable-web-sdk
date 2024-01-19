@@ -8,7 +8,7 @@ declare module "../sdk" {
 }
 
 OptableSDK.prototype.tryTopicsAPI = async function () {
-    if (!sessionStorage.topics_fetched && window.document && typeof window.document.browsingTopics == 'function') {
+    if (!sessionStorage.topics_fetched && 'browsingTopics' in document && document.featurePolicy.allowsFeature('browsing-topics')) {
         const topicsArray = await window.document.browsingTopics();
         if (topicsArray.length > 0) {
             const topics: string[] = [];
