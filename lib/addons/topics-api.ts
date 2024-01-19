@@ -1,14 +1,18 @@
 import OptableSDK from "../sdk";
 
+interface Document {
+    browsingTopics?: () => Promise<any[]>;
+}
+
 declare module "../sdk" {
     export interface OptableSDK {
         tryTopicsAPI: () => void;
+        getTopics: () => Promise<void>;
     }
 }
 
-if (!sessionStorage.topics_fetched && document && typeof document.browsingTopics == 'function') {
-    (async function getTopics() {
-        sessionStorage.topics_fetched = true;
+OptableSDK.prototype.tryTopicsAPI = async function () {
+    if (!sessionStorage.topics_fetched && document && typeof document.browsingTopics == 'function') {
         const topicsArray = await document.browsingTopics();
         if (topicsArray.length > 0) {
             const topics: string[] = [];
@@ -17,12 +21,13 @@ if (!sessionStorage.topics_fetched && document && typeof document.browsingTopics
             }
 
             if (topics.length > 0) {
-                optable.instance.profile({
+                this.profile({
                     topics_api: topics.join('|')
                 });
             }
         }
 
         return;
-    })();
+    }
+    sessionStorage.topics_fetched = true;
 }
