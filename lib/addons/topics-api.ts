@@ -1,6 +1,6 @@
 import OptableSDK from "../sdk";
 
-interface Document {
+interface document {
     browsingTopics?: () => Promise<any[]>;
 }
 
