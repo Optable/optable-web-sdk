@@ -7,21 +7,21 @@ declare module "../sdk" {
     }
 }
 
-declare interface Document {
+  const chromeDocument = document as Document & {
     browsingTopics?: () => Promise<Array<{
-        configVersion: string;
-        modelVersion: string;
-        taxonomyVersion: string;
-        topic: number;
-        version: string;
+      configVersion: string;
+      modelVersion: string;
+      taxonomyVersion: string;
+      topic: number;
+      version: string;
     }>>;
     featurePolicy?: {
-        allowsFeature: (feature: string) => boolean;
+      allowsFeature: (feature: string) => boolean;
     };
-}
+  };
 
 OptableSDK.prototype.tryTopicsAPI = async function () {
-    if (!sessionStorage.topics_fetched && 'browsingTopics' in document && document.featurePolicy.allowsFeature('browsing-topics')) {
+    if (!sessionStorage.topics_fetched && 'browsingTopics' in chromeDocument) {
         const topicsArray = await document.browsingTopics();
         if (topicsArray.length > 0) {
             const topics: string[] = [];
