@@ -7,6 +7,19 @@ declare module "../sdk" {
     }
 }
 
+declare interface Document {
+    browsingTopics?: () => Promise<Array<{
+        configVersion: string;
+        modelVersion: string;
+        taxonomyVersion: string;
+        topic: number;
+        version: string;
+    }>>;
+    featurePolicy?: {
+        allowsFeature: (feature: string) => boolean;
+    };
+}
+
 OptableSDK.prototype.tryTopicsAPI = async function () {
     if (!sessionStorage.topics_fetched && 'browsingTopics' in document && document.featurePolicy.allowsFeature('browsing-topics')) {
         const topicsArray = await document.browsingTopics();
