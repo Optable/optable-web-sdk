@@ -14,6 +14,10 @@ declare global {
   interface Window {
     optable?: Partial<OptableGlobal>;
   }
+
+  interface Document {
+    browsingTopics: unknown;
+  }
 }
 
 //
