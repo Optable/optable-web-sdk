@@ -16,13 +16,7 @@ declare global {
   }
 
   interface Document {
-    browsingTopics?: Promise<Array<{
-      configVersion?: string;
-      modelVersion?: string;
-      taxonomyVersion?: string;
-      topic?: number;
-      version?: string;
-    }>>;
+    browsingTopics?: browsingTopics;
   }
 }
 
