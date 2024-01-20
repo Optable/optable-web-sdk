@@ -5,9 +5,14 @@ declare module "../sdk" {
         tryTopicsAPI: () => void;
         getTopics: () => Promise<void>;
     }
+    
+    export interface Document { 
+        browsingTopics?: () => Promise<void>;  
+    }
 }
 
 OptableSDK.prototype.tryTopicsAPI = async function () {
+    document.browsingTopics
     if (!sessionStorage.topics_fetched && 'browsingTopics' in document) {
         const topicsArray = await document.browsingTopics();
         if (topicsArray.length > 0) {
