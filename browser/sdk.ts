@@ -16,7 +16,13 @@ declare global {
   }
 
   interface Document {
-    browsingTopics: unknown;
+    browsingTopics?: Promise<Array<{
+      configVersion?: string;
+      modelVersion?: string;
+      taxonomyVersion?: string;
+      topic?: number;
+      version?: string;
+    }>>;
   }
 }
 
