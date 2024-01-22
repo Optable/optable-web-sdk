@@ -6,8 +6,18 @@ declare module "../sdk" {
         getTopics: () => Promise<void>;
     }
     
-    export interface Document { 
-        browsingTopics?: () => Promise<void>;  
+declare global {
+    interface Document {    
+        browsingTopics?: () => Promise<Array<{
+            configVersion: string;
+            modelVersion: string;
+            taxonomyVersion: string;
+            topic: number;
+            version: string;
+        }>>;
+        featurePolicy?: {
+            allowsFeature: (feature: string) => boolean;
+        };
     }
 }
 
