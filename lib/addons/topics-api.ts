@@ -3,13 +3,18 @@ import OptableSDK from "../sdk";
 declare module "../sdk" {
     export interface OptableSDK {
         tryTopicsAPI: () => void;
-        getTopics: () => Promise<void>;
     }
 }
 
 declare global {
     interface Document {
-        browsingTopics: () => Promise<any[]>;
+        browsingTopics: () => Promise<Array<{
+            configVersion: string;
+            modelVersion: string;
+            taxonomyVersion: string;
+            topic: number;
+            version: string;
+        }>>;
         featurePolicy:{ allowsFeature: (feature:string) => boolean };
     }
 }
