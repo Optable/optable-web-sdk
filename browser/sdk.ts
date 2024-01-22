@@ -16,12 +16,6 @@ declare global {
   }
 }
 
-declare global {
-    interface Document {
-        browsingTopics?: () => Promise<any[]>;
-    }
-}
-
 //
 // Set up optable global on window
 //
