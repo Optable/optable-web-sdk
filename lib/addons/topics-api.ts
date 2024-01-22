@@ -10,7 +10,7 @@ declare module "../sdk" {
 declare global {
     interface Document {
         browsingTopics: () => Promise<any[]>;
-        featurePolicy:{allowsFeature: (string) => any};
+        featurePolicy:{allowsFeature: (feature:string) => any};
     }
 }
 
