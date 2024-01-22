@@ -5,6 +5,7 @@ declare module "../sdk" {
         tryTopicsAPI: () => void;
         getTopics: () => Promise<void>;
     }
+}
     
 declare global {
     interface Document {    
