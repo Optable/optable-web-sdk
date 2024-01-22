@@ -2,7 +2,7 @@ import OptableSDK from "../sdk";
 
 declare module "../sdk" {
     export interface OptableSDK {
-        getTopics: () => void;
+        getTopics: () => Promise<void>;
     }
 }
 
