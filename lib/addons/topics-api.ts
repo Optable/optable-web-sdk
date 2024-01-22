@@ -23,7 +23,6 @@ OptableSDK.prototype.getTopics = async function () {
     if (!sessionStorage.topics_fetched &&
         typeof document.browsingTopics === 'function' &&
         typeof document.featurePolicy === 'object' &&
-        document.featurePolicy.allowsFeature === 'function' &&
         document.featurePolicy.allowsFeature('browsing-topics')) {
         const topics = (await document.browsingTopics()).map(topic => `taxonomy version ${topic.taxonomyVersion}, topic ${topic.topic}`);
         if (topics.length > 0) {
