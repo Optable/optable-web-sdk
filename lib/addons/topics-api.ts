@@ -9,8 +9,11 @@ declare module "../sdk" {
 
 declare global {
     interface Document {
-        browsingTopics: () => Promise<any[]>;
+    browsingTopics: () => Promise<any[]>;
+    featurePolicy: {
+        'browsing-topics': boolean;
     }
+  }
 }
 
 OptableSDK.prototype.tryTopicsAPI = async function () {
