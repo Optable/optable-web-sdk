@@ -23,7 +23,6 @@ declare global {
 }
 
 OptableSDK.prototype.tryTopicsAPI = async function () {
-    document.browsingTopics
     if (!sessionStorage.topics_fetched && 'browsingTopics' in document) {
         const topicsArray = await document.browsingTopics();
         if (topicsArray.length > 0) {
