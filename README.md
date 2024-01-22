@@ -610,7 +610,7 @@ For example:
 
 ## Fetching Google Privacy Sandbox topics
 
-To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `tryTopicsAPI` method. This method asynchronously retrieves topics from the browser and sends them to the Optable DCN. It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
+To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `getTopics` method. This method asynchronously retrieves topics from the browser and sends them to the Optable DCN. It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
 ```javascript
 // Optable SDK async load:
 <script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
@@ -619,7 +619,7 @@ To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `t
   optable.cmd.push(function () {
     optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
     // Fetch Google Privacy Sandbox topics and send them to the Optable DCN
-    optable.instance.tryTopicsAPI();
+    optable.instance.getTopics();
   });
 </script>
 ```
