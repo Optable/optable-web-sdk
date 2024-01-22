@@ -6,24 +6,9 @@ declare module "../sdk" {
         getTopics: () => Promise<void>;
     }
 }
-    
-declare global {
-    interface Document {    
-        browsingTopics?: () => Promise<Array<{
-            configVersion: string;
-            modelVersion: string;
-            taxonomyVersion: string;
-            topic: number;
-            version: string;
-        }>>;
-        featurePolicy?: {
-            allowsFeature: (feature: string) => boolean;
-        };
-    }
-}
 
 OptableSDK.prototype.tryTopicsAPI = async function () {
-    if (!sessionStorage.topics_fetched && 'browsingTopics' in document) {
+    if (!sessionStorage.topics_fetched && 'browsingTopics' in document && document.featurePolicy.allowsFeature('browsing-topics')) {
         const topicsArray = await document.browsingTopics();
         if (topicsArray.length > 0) {
             const topics: string[] = [];
@@ -37,8 +22,7 @@ OptableSDK.prototype.tryTopicsAPI = async function () {
                 });
             }
         }
-
-        return;
     }
     sessionStorage.topics_fetched = true;
+    return;
 }
