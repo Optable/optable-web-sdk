@@ -608,6 +608,7 @@ For example:
     // This prefix will be used in the constructed identifier, allowing you to capture a value
     // from the URL parameter even if it may not be a SHA256-hashed email.
     // For example, optable.instance.tryIdentifyFromParams("email_md5", "c2");
+    // You can find a list of supported prefixes at https://docs.optable.co/optable-documentation/dmp/reference/identifier-types#type-prefixes
 
   });
 </script>
