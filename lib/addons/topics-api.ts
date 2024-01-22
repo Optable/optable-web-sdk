@@ -20,10 +20,7 @@ declare global {
 }
 
 OptableSDK.prototype.getTopics = async function () {
-    if (!sessionStorage.topics_fetched &&
-        typeof document.browsingTopics === 'function' &&
-        typeof document.featurePolicy === 'object' &&
-        document.featurePolicy.allowsFeature('browsing-topics')) {
+    if (typeof document.browsingTopics === 'function' && typeof document.featurePolicy === 'object' && document.featurePolicy.allowsFeature('browsing-topics')) {
         const topics = (await document.browsingTopics()).map(topic => `taxonomy version ${topic.taxonomyVersion}, topic ${topic.topic}`);
         if (topics.length > 0) {
             this.profile({
@@ -31,7 +28,5 @@ OptableSDK.prototype.getTopics = async function () {
             });
         }
     }
-
-    sessionStorage.topics_fetched = true;
     return;
 }
