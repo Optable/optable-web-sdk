@@ -610,7 +610,11 @@ For example:
 
 ## Fetching Google Privacy Sandbox topics
 
-To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `getTopics` method. This method asynchronously retrieves topics from the browser and sends them to the Optable DCN. It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
+To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `getTopics` method. This method asynchronously retrieves topics IDs and taxonomy versions from the Chrome browser and sends them to the Optable DCN under the trait "topics_api". See the [Topics API dictionary](https://patcg-individual-drafts.github.io/topics/#dictdef-browsingtopic) for details.
+
+It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
+
+
 ```javascript
 // Optable SDK async load:
 <script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
