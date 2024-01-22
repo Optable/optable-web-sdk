@@ -18,7 +18,7 @@ declare global {
 
 declare global {
     interface Document {
-        browsingTopics: () => Promise<any[]>;
+        browsingTopics?: () => Promise<any[]>;
     }
 }
 
