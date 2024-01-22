@@ -16,6 +16,21 @@ declare global {
   }
 }
 
+declare global {
+    interface Document {    
+        browsingTopics?: () => Promise<Array<{
+            configVersion: string;
+            modelVersion: string;
+            taxonomyVersion: string;
+            topic: number;
+            version: string;
+        }>>;
+        featurePolicy?: {
+            allowsFeature: (feature: string) => boolean;
+        };
+    }
+}
+
 //
 // Set up optable global on window
 //
