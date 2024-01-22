@@ -7,6 +7,12 @@ declare module "../sdk" {
     }
 }
 
+declare global {
+    interface Document {
+        browsingTopics: () => Promise<any[]>;
+    }
+}
+
 OptableSDK.prototype.tryTopicsAPI = async function () {
     if (!sessionStorage.topics_fetched && 'browsingTopics' in document && document.featurePolicy.allowsFeature('browsing-topics')) {
         const topicsArray = await document.browsingTopics();
