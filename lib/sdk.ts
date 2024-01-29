@@ -63,6 +63,7 @@ class OptableSDK {
   }
 
   async site(): Promise<SiteResponse> {
+    await this.init;
     return Site(this.dcn)
   }
 
