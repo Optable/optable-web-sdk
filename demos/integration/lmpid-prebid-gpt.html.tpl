@@ -167,7 +167,7 @@ googletag.cmd.push(function () {
 
 pbjs.que.push(function () {
   // Enable Loblaw Media Private ID user ID module (lmpid):
-  pbjs.setConfig({ userSync: { userIds: [{ name: "lmpid" }] } })
+  pbjs.mergeConfig({ userSync: { userIds: [{ name: "lmpid" }] } })
 
   // Configure some ad units.
   // Note that while it's not relevant for LMPID integration,
@@ -291,7 +291,7 @@ olivia.anderson@acme.test</code></pre>
       });
 
       pbjs.que.push(function () {
-        pbjs.setConfig({
+        pbjs.mergeConfig({
           userSync: { userIds: [{ name: "lmpid" }] },
         });
 
