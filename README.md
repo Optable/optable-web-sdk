@@ -559,7 +559,7 @@ For bidder adapters that do not support SDA, but that do support targeting priva
         }
       }
 
-      pbjs.setConfig({
+      pbjs.mergeConfig({
         ix: {
           firstPartyData: fpd,
         },

@@ -40,7 +40,7 @@
         pbjs.que = pbjs.que || [];
 
         pbjs.que.push(function() {
-          pbjs.setConfig({
+          pbjs.mergeConfig({
             optableOrtbUrl: "https://${ADS_HOST}/${ADS_REGION}/ortb2/v1/ssp/bid",
             fledgeForGpt: {
               enabled: true,

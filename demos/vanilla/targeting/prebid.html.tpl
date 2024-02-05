@@ -155,7 +155,7 @@
         optable.cmd.push(function () {
           const ortb2 = optable.instance.prebidORTB2FromCache();
 
-          pbjs.setConfig({
+          pbjs.mergeConfig({
             ortb2: ortb2,
             priceGranularity: "low",
             userSync: {
