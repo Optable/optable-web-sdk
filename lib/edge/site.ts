@@ -4,6 +4,7 @@ import { fetch } from "../core/network";
 type SiteResponse = {
   interestGroupPixel: string;
   auctionConfigURL: string;
+  getTopicsURL: string;
 };
 
 async function Site(config: Required<OptableConfig>): Promise<SiteResponse> {

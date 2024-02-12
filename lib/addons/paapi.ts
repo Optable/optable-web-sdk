@@ -122,12 +122,11 @@ OptableSDK.prototype.runAdAuction = async function(domID: string, defaults: Part
  */
 OptableSDK.prototype.joinAdInterestGroups = async function() {
   const siteConfig = await this.site();
-  const pixel = document.createElement("iframe");
   if (!siteConfig.interestGroupPixel) {
     throw ("origin not enabled for protected audience apis");
   }
   const pixelURL = new URL(siteConfig.interestGroupPixel);
-
+  const pixel = document.createElement("iframe");
   pixel.src = pixelURL.toString()
   pixel.allow = "join-ad-interest-group " + pixelURL.origin;
   pixel.style.display = "none";
