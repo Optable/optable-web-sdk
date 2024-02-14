@@ -54,7 +54,7 @@ OptableSDK.prototype.ingestTopics = async function (): Promise<void> {
     const topics = await this.getTopics().catch(() => {});
     if (topics && topics.length > 0) {
         this.profile({
-            topics_api: topics.join('|')
+            topics_api: topics.map(topic => JSON.stringify(topic)).join('|');
         });
     }
     return;
