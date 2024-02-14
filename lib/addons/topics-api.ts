@@ -15,7 +15,7 @@ declare module "../sdk" {
 
 declare module "../sdk" {
   export interface OptableSDK {
-    ingestTopics: () => => void;
+    ingestTopics: () => void;
   }
 }
 
