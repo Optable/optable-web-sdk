@@ -18,7 +18,6 @@ import {
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
-import { Topics } from "./lib/addons/topics-api";
 
 class OptableSDK {
   public dcn: Required<OptableConfig>;
