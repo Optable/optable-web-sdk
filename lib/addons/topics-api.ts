@@ -10,11 +10,6 @@ interface BrowsingTopic {
 declare module "../sdk" {
   export interface OptableSDK {
     getTopics: () => Promise<BrowsingTopic[]>;
-  }
-}
-
-declare module "../sdk" {
-  export interface OptableSDK {
     ingestTopics: () => void;
   }
 }
@@ -56,7 +51,7 @@ OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
  * ingestTopics invokes getTopics then makes a profile() call with the resulting topics, if any.
  */
 OptableSDK.prototype.ingestTopics = async function (): Promise<void> {
-    const topics = await optable.instance.getTopics().catch(() => {});
+    const topics = await this.getTopics().catch(() => {});
     if (topics && topics.length > 0) {
         this.profile({
             topics_api: topics.join('|')
