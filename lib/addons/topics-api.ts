@@ -7,14 +7,6 @@ interface BrowsingTopic {
   version: string;
 }
 
-declare module "../sdk" {
-
-  export interface OptableSDK {
-    getTopics: () => Promise<BrowsingTopic[]>;
-    ingestTopics: () => void;
-  }
-}
-
 /*
  * getTopics injects an iframe into the page that obtains the browsingTopics observed by optable.
  */
