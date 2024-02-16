@@ -24,7 +24,7 @@ OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
   }
   const getTopicsURL = new URL(siteConfig.getTopicsURL);
   const topicsFrame = document.createElement("iframe");
-  topicsFrame.src = getTopicsURL.toString()
+  topicsFrame.src = getTopicsURL.toString();
   topicsFrame.allow = "browsing-topics " + getTopicsURL.origin;
   topicsFrame.style.display = "none";
 
@@ -35,13 +35,13 @@ OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
       }
 
       if (event.data.error) {
-        reject(new Error(event.data.error.toString()))
+        reject(new Error(event.data.error.toString()));
         return
       }
 
-      resolve(event.data.result)
-    })
-  })
+      resolve(event.data.result);
+    });
+  });
 
   document.body.appendChild(topicsFrame);
   return topicsPromise;
@@ -54,8 +54,8 @@ OptableSDK.prototype.ingestTopics = function() {
   this.getTopics()
     .then((topics) => {
       if (!topics.length) { return }
-      const topics_api = topics.map(topic => JSON.stringify(topic)).join('|')
-      this.profile({ topics_api })
+      const topics_api = topics.map(topic => `taxonomy version ${topic.taxonomyVersion}, topic ${topic.topic}`).join('|');
+      this.profile({ topics_api });
     })
-    .catch(() => { })
+    .catch(() => { });
 }
