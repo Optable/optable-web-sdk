@@ -29,13 +29,13 @@ OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
   topicsFrame.style.display = "none";
 
   const topicsPromise = new Promise<BrowsingTopic[]>((resolve, reject) => {
-    window.addEventListener("message", (event: MessageEvent<{ error?: Error, result: BrowsingTopic[] }>) => {
+    window.addEventListener("message", (event: MessageEvent<{ error?: Error | string, result: BrowsingTopic[] }>) => {
       if (event.source !== topicsFrame.contentWindow) {
         return
       }
 
       if (event.data.error) {
-        reject(event.data.error)
+        reject(new Error(event.data.error.toString()))
         return
       }
 
