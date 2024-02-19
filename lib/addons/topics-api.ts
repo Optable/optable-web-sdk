@@ -56,7 +56,7 @@ OptableSDK.prototype.ingestTopics = function() {
       if (!topics.length) { return }
 
       const traits = topics.reduce((acc, topic) => {
-        const traitKey = "topics_v" + topic.taxonomyVersion;
+        const traitKey = `topics_v${topic.taxonomyVersion}`;
         if (acc[traitKey]) {
           acc[traitKey] += ",";
         } else {
