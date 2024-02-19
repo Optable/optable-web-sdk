@@ -65,6 +65,7 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
 	envsubst $(DEMO_VARS) < demos/ads/protected-audience/publisher-prebid.html.tpl > demos/ads/protected-audience/publisher-prebid.html
 	envsubst $(DEMO_VARS) < demos/ads/protected-audience/ad.html.tpl > demos/ads/protected-audience/ad.html
+	envsubst $(DEMO_VARS) < demos/ads/topics/publisher.html.tpl > demos/ads/topics/publisher.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
 
