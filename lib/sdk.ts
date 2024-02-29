@@ -4,7 +4,6 @@ import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import { Uid2Token } from "./edge/uid2_token";
-import { Init } from "./edge/init";
 import { Site, SiteResponse } from "./edge/site";
 import {
   TargetingKeyValues,
@@ -21,11 +20,17 @@ import { sha256 } from "js-sha256";
 
 class OptableSDK {
   public dcn: Required<OptableConfig>;
-  private init: any
+  public site: Promise<SiteResponse>;
+  private init: Promise<void>;
 
   constructor(dcn: OptableConfig) {
     this.dcn = getConfig(dcn);
-    this.init = this.dcn.initPassport ? Init(this.dcn).catch(()=>{}) : Promise.resolve();
+    // Obtain site config and cache it.
+    this.site = Site(this.dcn)
+
+    // If initPassport, wait for site config to be loaded, as it also assign a passport
+    const noop = () => { };
+    this.init = this.dcn.initPassport ? this.site.then(noop).catch(noop) : Promise.resolve();
   }
 
   async identify(...ids: string[]) {
@@ -60,11 +65,6 @@ class OptableSDK {
 
   async prebidORTB2(): Promise<PrebidORTB2> {
     return PrebidORTB2(await this.targeting())
-  }
-
-  async site(): Promise<SiteResponse> {
-    await this.init;
-    return Site(this.dcn)
   }
 
   prebidORTB2FromCache(): PrebidORTB2 {

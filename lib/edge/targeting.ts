@@ -1,7 +1,7 @@
 import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
-import {UIDAgentType, User as RTB2User} from "./rtb2";
+import { UIDAgentType, User as RTB2User } from "./rtb2";
 
 type Identifier = {
   id: string;
@@ -29,9 +29,7 @@ const lmpidProvider = "loblawmedia.ca"
 async function Targeting(config: Required<OptableConfig>): Promise<TargetingResponse> {
   const response: TargetingResponse = await fetch("/v2/targeting", config, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Accept": "application/json" },
   });
 
   if (response) {
@@ -57,7 +55,7 @@ function TargetingClearCache(config: Required<OptableConfig>) {
   ls.clearTargeting();
 }
 
-type PrebidORTB2 = {user?: RTB2User}
+type PrebidORTB2 = { user?: RTB2User }
 
 /*
  * Prebid.js supports passing seller-defined audiences to compatible

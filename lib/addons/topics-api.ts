@@ -18,7 +18,7 @@ declare module "../sdk" {
  * getTopics injects an iframe into the page that obtains the browsingTopics observed by optable.
  */
 OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
-  const siteConfig = await this.site();
+  const siteConfig = await this.site;
   if (!siteConfig.getTopicsURL) {
     throw ("origin not enabled for topics api");
   }
