@@ -56,6 +56,7 @@ jobs:
           export SDK_URI="https://cdn.optable.co/web-sdk/${CIRCLE_TAG}/sdk.js"
           export ADS_HOST="ads.optable.co"
           export ADS_REGION="ca"
+          export ADS_SITE="4fe7c1ce-7c7d-4718-a0b8-5195e489319f"
           export DCN_HOST="sandbox.optable.co"
           export DCN_SITE="web-sdk-demo"
           export DCN_ID="optable"
