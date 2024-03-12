@@ -15,23 +15,19 @@ interface AuctionConfig {
 }
 
 declare global {
-  interface Window {
-    googletag?: any;
-  }
-}
-
-declare global {
   interface Navigator {
     runAdAuction: (config: AuctionConfig) => Promise<any>;
   }
 }
+
+type GPTSlotFilter = (slot: googletag.Slot) => boolean;
 
 declare module "../sdk" {
   export interface OptableSDK {
     joinAdInterestGroups: () => Promise<void>;
     auctionConfig: () => Promise<AuctionConfig>;
     runAdAuction: (domID: string) => Promise<unknown>;
-    installGPTAuctionConfigs: (filters: { domIDs?: string[] }) => Promise<void>;
+    installGPTAuctionConfigs: (filter?: GPTSlotFilter) => Promise<void>;
   }
 }
 
@@ -61,33 +57,37 @@ function elementInnerSize(element: HTMLElement): Size {
  * installGPTAuctionConfigs obtains the auction configuration for the current origin
  * and installs it into the page GPT slots, optionally filtered to a given domID.
  */
-type GPTAuctionConfigsFilters = {
-  domIDs?: string[];
-}
 
-OptableSDK.prototype.installGPTAuctionConfigs = async function({ domIDs = [] }: GPTAuctionConfigsFilters = {}): Promise<void> {
+OptableSDK.prototype.installGPTAuctionConfigs = async function(filter?: GPTSlotFilter): Promise<void> {
   if (!window.googletag) {
     throw ("googletag not found");
   }
   let slots = window.googletag.pubads().getSlots()
-  if (domIDs.length) {
-    slots = slots.filter((s: any) => domIDs.includes(s.getSlotId().getDomId()))
+  if (filter) {
+    slots = slots.filter(filter)
   }
 
   const auctionConfig = await this.auctionConfig();
 
   for (const slot of slots) {
     const sizes = slot.getSizes();
+    const componentAuction = []
 
-    const componentAuction = sizes.map((size: { width: number; height: number }) => {
-      return {
-        configKey: auctionConfig.seller + "-" + size.width + "x" + size.height,
+    for (const size of sizes) {
+      if (size === "fluid") {
+        continue
+      }
+
+      componentAuction.push({
+        configKey: auctionConfig.seller + "-" + size.getWidth() + "x" + size.getHeight(),
         auctionConfig: {
           ...auctionConfig,
-          requestedSize: { width: size.width + "px", height: size.height + "px" },
+          requestedSize: { width: size.getWidth() + "px", height: size.getHeight() + "px" },
         },
-      }
-    })
+      })
+    }
+
+    // @ts-ignore // outdated typings for componentAuction expects some legacy field names
     slot.setConfig({ componentAuction })
   }
 }
