@@ -2,9 +2,25 @@ import type { OptableConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 
+type Size = {
+  width: string;
+  height: string;
+}
+
+
+type AuctionConfig = {
+  seller: string;
+  decisionLogicURL: string;
+  requestedSize?: Size;
+  interestGroupBuyers: string[];
+  resolveToConfig?: boolean;
+  auctionSignals?: any;
+}
+
+
 type SiteResponse = {
   interestGroupPixel: string;
-  auctionConfigURL: string;
+  auctionConfig?: AuctionConfig | null;
   getTopicsURL: string;
 };
 
@@ -26,5 +42,5 @@ function SiteFromCache(config: Required<OptableConfig>): SiteResponse | null {
   return ls.getSite();
 }
 
-export { Site, SiteResponse, SiteFromCache };
+export { Site, SiteResponse, SiteFromCache, Size, AuctionConfig };
 export default Site;

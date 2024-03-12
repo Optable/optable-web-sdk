@@ -32,6 +32,10 @@
         googletag.defineSlot(slotID, [[300, 250]], "div-ad-fledge").addService(googletag.pubads());
         googletag.pubads().enableSingleRequest();
         googletag.enableServices();
+
+        optable.cmd.push(() => {
+          optable.instance.installGPTAuctionConfigs();
+        })
       });
     </script>
   </head>
@@ -51,11 +55,7 @@
       <div id='div-ad-fledge' style='width: 300px; height: 250px; border: 1px dotted black;'>
         <script>
           googletag.cmd.push(function() {
-            optable.cmd.push(() => {
-              optable.instance.installGPTAuctionConfigs().then(() => {
-                googletag.display("div-ad-fledge");
-              });
-            })
+            googletag.display("div-ad-fledge");
           });
         </script>
       </div>
