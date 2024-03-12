@@ -52,7 +52,7 @@
         <script>
           googletag.cmd.push(function() {
             optable.cmd.push(() => {
-              optable.instance.installGPTSlotAuctionConfig("div-ad-fledge").then(() => {
+              optable.instance.installGPTAuctionConfigs().then(() => {
                 googletag.display("div-ad-fledge");
               });
             })
