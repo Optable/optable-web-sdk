@@ -55,7 +55,7 @@ function elementInnerSize(element: HTMLElement): Size {
 
 /*
  * installGPTAuctionConfigs obtains the auction configuration for the current origin
- * and installs it into the page GPT slots, optionally filtered to a given domID.
+ * and installs it into the page GPT slots, optionally filtered.
  */
 
 OptableSDK.prototype.installGPTAuctionConfigs = async function(filter?: GPTSlotFilter): Promise<void> {
