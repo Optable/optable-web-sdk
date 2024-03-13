@@ -4,7 +4,7 @@ import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import { Uid2Token } from "./edge/uid2_token";
-import { Site, SiteResponse } from "./edge/site";
+import { Site, SiteResponse, SiteFromCache } from "./edge/site";
 import {
   TargetingKeyValues,
   TargetingResponse,
@@ -20,17 +20,13 @@ import { sha256 } from "js-sha256";
 
 class OptableSDK {
   public dcn: Required<OptableConfig>;
-  public site: Promise<SiteResponse>;
   private init: Promise<void>;
 
   constructor(dcn: OptableConfig) {
     this.dcn = getConfig(dcn);
-    // Obtain site config and cache it.
-    this.site = Site(this.dcn)
-
-    // If initPassport, wait for site config to be loaded, as it also assign a passport
+    // If initPassport, prefetch site config and cache it, it assigns a passport as a side effect
     const noop = () => { };
-    this.init = this.dcn.initPassport ? this.site.then(noop).catch(noop) : Promise.resolve();
+    this.init = this.dcn.initPassport ? Site(this.dcn).then(noop).catch(noop) : Promise.resolve();
   }
 
   async identify(...ids: string[]) {
@@ -53,6 +49,14 @@ class OptableSDK {
 
   targetingFromCache(): TargetingResponse | null {
     return TargetingFromCache(this.dcn);
+  }
+
+  async site(): Promise<SiteResponse> {
+    return Site(this.dcn);
+  }
+
+  siteFromCache(): SiteResponse | null {
+    return SiteFromCache(this.dcn);
   }
 
   targetingClearCache() {

@@ -43,7 +43,7 @@ interface HTMLFencedFrameElement extends HTMLElement {
  * auctionConfig obtains the auction configuration for the current origin
  */
 OptableSDK.prototype.auctionConfig = async function(): Promise<AuctionConfig> {
-  const siteConfig = await this.site;
+  const siteConfig = await this.site();
   const res = await fetch(siteConfig.auctionConfigURL)
   const auctionConfig = await res.json()
   return auctionConfig
@@ -121,7 +121,7 @@ OptableSDK.prototype.runAdAuction = async function(domID: string, defaults: Part
  * joinAdInterestGroups injects an iframe into the page that tags the device into the matching audiences interest group.
  */
 OptableSDK.prototype.joinAdInterestGroups = async function() {
-  const siteConfig = await this.site;
+  const siteConfig = await this.site();
   if (!siteConfig.interestGroupPixel) {
     throw ("origin not enabled for protected audience apis");
   }
