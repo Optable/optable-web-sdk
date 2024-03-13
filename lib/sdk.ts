@@ -4,8 +4,7 @@ import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import { Uid2Token } from "./edge/uid2_token";
-import { Init } from "./edge/init";
-import { Site, SiteResponse } from "./edge/site";
+import { Site, SiteResponse, SiteFromCache } from "./edge/site";
 import {
   TargetingKeyValues,
   TargetingResponse,
@@ -21,11 +20,13 @@ import { sha256 } from "js-sha256";
 
 class OptableSDK {
   public dcn: Required<OptableConfig>;
-  private init: any
+  private init: Promise<void>;
 
   constructor(dcn: OptableConfig) {
     this.dcn = getConfig(dcn);
-    this.init = this.dcn.initPassport ? Init(this.dcn).catch(()=>{}) : Promise.resolve();
+    // If initPassport, prefetch site config and cache it, it assigns a passport as a side effect
+    const noop = () => { };
+    this.init = this.dcn.initPassport ? Site(this.dcn).then(noop).catch(noop) : Promise.resolve();
   }
 
   async identify(...ids: string[]) {
@@ -50,6 +51,14 @@ class OptableSDK {
     return TargetingFromCache(this.dcn);
   }
 
+  async site(): Promise<SiteResponse> {
+    return Site(this.dcn);
+  }
+
+  siteFromCache(): SiteResponse | null {
+    return SiteFromCache(this.dcn);
+  }
+
   targetingClearCache() {
     TargetingClearCache(this.dcn);
   }
@@ -60,11 +69,6 @@ class OptableSDK {
 
   async prebidORTB2(): Promise<PrebidORTB2> {
     return PrebidORTB2(await this.targeting())
-  }
-
-  async site(): Promise<SiteResponse> {
-    await this.init;
-    return Site(this.dcn)
   }
 
   prebidORTB2FromCache(): PrebidORTB2 {

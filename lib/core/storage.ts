@@ -1,3 +1,4 @@
+import { SiteResponse } from "../edge/site";
 import type { OptableConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { lmpidProvider } from "../edge/targeting";
@@ -15,6 +16,7 @@ class LocalStorage {
   private targetingV1Key: string;
   private targetingKey: string;
   private lmpidKey: string;
+  private siteKey: string;
 
   constructor(private Config: OptableConfig) {
     const sfx = btoa(toBinary(`${this.Config.host}/${this.Config.site}`));
@@ -24,6 +26,7 @@ class LocalStorage {
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
     this.lmpidKey = "__lmpid"
+    this.siteKey = "OPTABLE_SITE_" + sfx;
   }
 
   getPassport(): string | null {
@@ -77,6 +80,19 @@ class LocalStorage {
     this.setLmpid(targeting)
   }
 
+  setSite(site?: SiteResponse | null) {
+    if (!site) {
+      return
+    }
+    window.localStorage.setItem(this.siteKey, JSON.stringify(site));
+  }
+
+  getSite(): SiteResponse | null {
+    const raw = window.localStorage.getItem(this.siteKey);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed
+  }
+
   // setLmpid conditionally set the Lmpid in local storage
   // based on the provider being present in the targeting response
   setLmpid(targeting: TargetingResponse) {
@@ -99,6 +115,10 @@ class LocalStorage {
 
   clearTargeting() {
     window.localStorage.removeItem(this.targetingKey);
+  }
+
+  clearSite() {
+    window.localStorage.removeItem(this.siteKey);
   }
 }
 
