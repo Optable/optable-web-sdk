@@ -30,7 +30,7 @@ export ADS_REGION ?= ca
 export ADS_SITE ?= 4fe7c1ce-7c7d-4718-a0b8-5195e489319f
 export UID2_BASE_URL ?= https://operator-integ.uidapi.com
 
-.PHONY: demo-html
+.PHONY: demos
 demos: demo-html demo-react demo-npm
 
 DEMO_VARS:='\

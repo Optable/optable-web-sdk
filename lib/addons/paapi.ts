@@ -15,23 +15,19 @@ interface AuctionConfig {
 }
 
 declare global {
-  interface Window {
-    googletag?: any;
-  }
-}
-
-declare global {
   interface Navigator {
     runAdAuction: (config: AuctionConfig) => Promise<any>;
   }
 }
 
+type GPTSlotFilter = (slot: googletag.Slot) => boolean;
+
 declare module "../sdk" {
   export interface OptableSDK {
     joinAdInterestGroups: () => Promise<void>;
     auctionConfig: () => Promise<AuctionConfig>;
-    runAdAuction: (domID: string, params?: Partial<AuctionConfig>) => Promise<unknown>;
-    installGPTSlotAuctionConfig: (domID: string, params?: Partial<AuctionConfig>) => Promise<void>;
+    runAdAuction: (domID: string) => Promise<unknown>;
+    installGPTAuctionConfigs: (filter?: GPTSlotFilter) => Promise<void>;
   }
 }
 
@@ -58,51 +54,56 @@ function elementInnerSize(element: HTMLElement): Size {
 }
 
 /*
- * installGPTSlotAuctionConfig obtains the auction configuration for the current origin
- * and installs it into the given GPT slot.
+ * installGPTAuctionConfigs obtains the auction configuration for the current origin
+ * and installs it into the page GPT slots, optionally filtered.
  */
-OptableSDK.prototype.installGPTSlotAuctionConfig = async function(domID: string, defaults: Partial<AuctionConfig> = {}): Promise<void> {
+
+OptableSDK.prototype.installGPTAuctionConfigs = async function(filter?: GPTSlotFilter): Promise<void> {
   if (!window.googletag) {
     throw ("googletag not found");
   }
-
-  const slot = window.googletag.pubads()
-    .getSlots()
-    .find((s: any) => s.getSlotId().getDomId() === domID);
-
-  if (!slot) {
-    throw ("slot not found");
+  let slots = window.googletag.pubads().getSlots()
+  if (filter) {
+    slots = slots.filter(filter)
   }
 
   const auctionConfig = await this.auctionConfig();
-  const sizes = slot.getSizes();
-  const componentAuction = sizes.map((size: { width: number; height: number }) => {
-    return {
-      configKey: auctionConfig.seller + "-" + size.width + "x" + size.height,
-      auctionConfig: {
-        ...defaults,
-        ...auctionConfig,
-        requestedSize: { width: size.width + "px", height: size.height + "px" },
-      },
-    }
-  })
 
-  slot.setConfig({ componentAuction })
+  for (const slot of slots) {
+    const sizes = slot.getSizes();
+    const componentAuction = []
+
+    for (const size of sizes) {
+      if (size === "fluid") {
+        continue
+      }
+
+      componentAuction.push({
+        configKey: auctionConfig.seller + "-" + size.getWidth() + "x" + size.getHeight(),
+        auctionConfig: {
+          ...auctionConfig,
+          requestedSize: { width: size.getWidth() + "px", height: size.getHeight() + "px" },
+        },
+      })
+    }
+
+    // @ts-ignore // outdated typings for componentAuction expects some legacy field names
+    slot.setConfig({ componentAuction })
+  }
 }
 
 /*
  * runAdAuction runs an ad auction locally for a given spot dom ID.
  */
-OptableSDK.prototype.runAdAuction = async function(domID: string, defaults: Partial<AuctionConfig> = {}): Promise<void> {
+OptableSDK.prototype.runAdAuction = async function(domID: string): Promise<void> {
   const spot = document.getElementById(domID);
   if (!spot) {
     throw ("spot not found");
   }
   const requestedSize = elementInnerSize(spot);
   const auctionConfig = {
-    requestedSize,
-    ...defaults,
     ...(await this.auctionConfig()),
+    requestedSize,
     resolveToConfig: true,
   };
   const fencedFrameConfig = await navigator.runAdAuction(auctionConfig)
