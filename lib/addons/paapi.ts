@@ -1,18 +1,5 @@
 import OptableSDK from "../sdk";
-
-interface Size {
-  width: string;
-  height: string;
-}
-
-interface AuctionConfig {
-  seller: string;
-  decisionLogicURL: string;
-  requestedSize?: Size;
-  interestGroupBuyers: string[];
-  resolveToConfig?: boolean;
-  auctionSignals?: any;
-}
+import { AuctionConfig, Size } from "../edge/site";
 
 declare global {
   interface Navigator {
@@ -25,9 +12,9 @@ type GPTSlotFilter = (slot: googletag.Slot) => boolean;
 declare module "../sdk" {
   export interface OptableSDK {
     joinAdInterestGroups: () => Promise<void>;
-    auctionConfig: () => Promise<AuctionConfig>;
+    auctionConfigFromCache: () => AuctionConfig | null;
     runAdAuction: (domID: string) => Promise<unknown>;
-    installGPTAuctionConfigs: (filter?: GPTSlotFilter) => Promise<void>;
+    installGPTAuctionConfigs: (filter?: GPTSlotFilter) => void;
   }
 }
 
@@ -36,13 +23,15 @@ interface HTMLFencedFrameElement extends HTMLElement {
 }
 
 /*
- * auctionConfig obtains the auction configuration for the current origin
+ * auctionConfigFromCache obtains the cached auction configuration for the current origin
  */
-OptableSDK.prototype.auctionConfig = async function(): Promise<AuctionConfig> {
-  const siteConfig = await this.site();
-  const res = await fetch(siteConfig.auctionConfigURL)
-  const auctionConfig = await res.json()
-  return auctionConfig
+OptableSDK.prototype.auctionConfigFromCache = function(): AuctionConfig | null {
+  const siteConfig = this.siteFromCache();
+  if (!siteConfig) {
+    return null
+  }
+
+  return siteConfig.auctionConfig ?? null;
 }
 
 function elementInnerSize(element: HTMLElement): Size {
@@ -58,7 +47,7 @@ function elementInnerSize(element: HTMLElement): Size {
  * and installs it into the page GPT slots, optionally filtered.
  */
 
-OptableSDK.prototype.installGPTAuctionConfigs = async function(filter?: GPTSlotFilter): Promise<void> {
+OptableSDK.prototype.installGPTAuctionConfigs = function(filter?: GPTSlotFilter) {
   if (!window.googletag) {
     throw ("googletag not found");
   }
@@ -67,11 +56,14 @@ OptableSDK.prototype.installGPTAuctionConfigs = async function(filter?: GPTSlotF
     slots = slots.filter(filter)
   }
 
-  const auctionConfig = await this.auctionConfig();
+  const siteAuctionConfig = this.auctionConfigFromCache();
+  if (!siteAuctionConfig) {
+    return
+  }
 
   for (const slot of slots) {
     const sizes = slot.getSizes();
-    const componentAuction = []
+    const componentAuction = [];
 
     for (const size of sizes) {
       if (size === "fluid") {
@@ -79,12 +71,12 @@ OptableSDK.prototype.installGPTAuctionConfigs = async function(filter?: GPTSlotF
       }
 
       componentAuction.push({
-        configKey: auctionConfig.seller + "-" + size.getWidth() + "x" + size.getHeight(),
+        configKey: siteAuctionConfig.seller + "-" + size.getWidth() + "x" + size.getHeight(),
         auctionConfig: {
-          ...auctionConfig,
+          ...siteAuctionConfig,
           requestedSize: { width: size.getWidth() + "px", height: size.getHeight() + "px" },
         },
-      })
+      });
     }
 
     // @ts-ignore // outdated typings for componentAuction expects some legacy field names
@@ -101,8 +93,14 @@ OptableSDK.prototype.runAdAuction = async function(domID: string): Promise<void>
     throw ("spot not found");
   }
   const requestedSize = elementInnerSize(spot);
+
+  const siteAuctionConfig = this.auctionConfigFromCache();
+  if (!siteAuctionConfig) {
+    return
+  }
+
   const auctionConfig = {
-    ...(await this.auctionConfig()),
+    ...siteAuctionConfig,
     requestedSize,
     resolveToConfig: true,
   };
