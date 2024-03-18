@@ -2,12 +2,6 @@ import type { WitnessProperties } from "../edge/witness";
 import { lmpidProvider } from "../edge/targeting";
 import OptableSDK from "../sdk";
 
-declare global {
-  interface Window {
-    googletag?: any;
-  }
-}
-
 declare module "../sdk" {
   export interface OptableSDK {
     installGPTEventListeners: () => void;
@@ -61,19 +55,15 @@ OptableSDK.prototype.installGPTSecureSignals = function () {
   const sdk = this;
   sdk.installGPTSecureSignals = function () {};
 
-  window.googletag = window.googletag || { cmd: [] };
+  window.googletag = window.googletag || { cmd: [], secureSignalProviders: [] };
   const gpt = window.googletag;
 
   gpt.cmd.push(function () {
-    if (!gpt.secureSignalProviders) {
-      gpt.secureSignalProviders = [];
-    }
-
     // Install lmpid secure signal
     gpt.secureSignalProviders.push({
       id: lmpidProvider,
       collectorFunction: function () {
-        return Promise.resolve(sdk.lmpidFromCache());
+        return Promise.resolve(sdk.lmpidFromCache() ?? "");
       },
     });
   });
