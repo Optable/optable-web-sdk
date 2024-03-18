@@ -25,7 +25,7 @@ class LocalStorage {
 
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
-    this.lmpidKey = "__lmpid"
+    this.lmpidKey = "__lmpid";
     this.siteKey = "OPTABLE_SITE_" + sfx;
   }
 
@@ -37,7 +37,7 @@ class LocalStorage {
     const raw = window.localStorage.getItem(this.targetingV1Key);
     const parsed = raw ? JSON.parse(raw) : null;
     if (!parsed) {
-      return null
+      return null;
     }
 
     const audiences = Object.entries(parsed).map(([keyspace, values]) => {
@@ -50,19 +50,19 @@ class LocalStorage {
         // Starting v2 this is returned in the targeting payload directly
         rtb_segtax: 5001,
         ids: [].concat(...[values as any]).map((id: any) => ({ id: String(id) })),
-      }
-    })
+      };
+    });
 
     return {
       user: [],
       audience: audiences,
-    }
+    };
   }
 
   getTargeting(): TargetingResponse | null {
     const raw = window.localStorage.getItem(this.targetingKey);
     const parsed = raw ? JSON.parse(raw) : null;
-    return parsed ? parsed : this.getV1Targeting()
+    return parsed ? parsed : this.getV1Targeting();
   }
 
   setPassport(passport: string) {
@@ -73,16 +73,16 @@ class LocalStorage {
 
   setTargeting(targeting?: TargetingResponse | null) {
     if (!targeting) {
-      return
+      return;
     }
 
     window.localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
-    this.setLmpid(targeting)
+    this.setLmpid(targeting);
   }
 
   setSite(site?: SiteResponse | null) {
     if (!site) {
-      return
+      return;
     }
     window.localStorage.setItem(this.siteKey, JSON.stringify(site));
   }
@@ -90,7 +90,7 @@ class LocalStorage {
   getSite(): SiteResponse | null {
     const raw = window.localStorage.getItem(this.siteKey);
     const parsed = raw ? JSON.parse(raw) : null;
-    return parsed
+    return parsed;
   }
 
   // setLmpid conditionally set the Lmpid in local storage
@@ -99,7 +99,7 @@ class LocalStorage {
     const provider = targeting.user?.find((userIds) => userIds.provider === lmpidProvider);
     // Don't touch local storage if the provider is not enabled
     if (!provider) {
-      return
+      return;
     }
 
     window.localStorage.setItem(this.lmpidKey, provider.ids?.[0]?.id ?? "");

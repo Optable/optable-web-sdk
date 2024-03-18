@@ -173,8 +173,8 @@ To get the targeting information associated by the configured DCN with the user'
 sdk
   .targeting()
   .then((response) => {
-    console.log(`Audience targeting: ${targeting.audience}`)
-    console.log(`User targeting: ${targeting.user}`)
+    console.log(`Audience targeting: ${targeting.audience}`);
+    console.log(`User targeting: ${targeting.user}`);
   })
   .catch((err) => console.warn(`Targeting API Error: ${err.message}`));
 ```
@@ -590,6 +590,7 @@ The above example uses various personalization tags as documented in [Braze's us
 On your website destination page, you can call a helper method provided by the SDK which will attempt to parse and validate a given query string parameter as EID (defaults to **oeid**), when found, it will automatically trigger a call to Optable's **identify** API.
 
 For example:
+
 ```html
 <!-- Optable SDK async load: -->
 <script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
@@ -610,7 +611,6 @@ For example:
     // from the URL parameter even if it may not be a SHA256-hashed email.
     // For example, optable.instance.tryIdentifyFromParams("email_md5", "c2");
     // You can find a list of supported prefixes at https://docs.optable.co/optable-documentation/dmp/reference/identifier-types#type-prefixes
-
   });
 </script>
 ```
@@ -620,7 +620,6 @@ For example:
 To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `getTopics` method. This method asynchronously retrieves topics IDs and taxonomy versions from the Chrome browser. Alternatively, you can use the `ingestTopics` method. This method invokes `getTopics` and sends the retrieved topics to the Optable DCN under the trait "topics_api". See the [Topics API dictionary](https://patcg-individual-drafts.github.io/topics/#dictdef-browsingtopic) for details.
 
 It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
-
 
 ```javascript
 // Optable SDK async load:
@@ -644,11 +643,13 @@ You can browse a recent (but not necessarily the latest) released version of the
 Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described [here](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
 
 To build and run the demos locally, you will need [Docker](https://www.docker.com/), `docker-compose` and `make`:
+
 ```
 $ cd path/to/optable-web-sdk
 $ make
 $ docker-compose up
 ```
+
 Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.

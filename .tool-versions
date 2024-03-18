@@ -1,3 +1,4 @@
 nodejs 16.17.0
 semver 3.3.0
 mkcert 1.4.4
+pre-commit 3.6.2

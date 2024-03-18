@@ -27,6 +27,7 @@ jobs:
       - run: asdf plugin add mkcert || true
       - run: asdf plugin add nodejs || true
       - run: asdf plugin add semver || true
+      - run: asdf plugin add pre-commit || true
       - run: asdf install
       - save_cache:
           key: v1-asdf-{{ checksum ".tool-versions" }}
@@ -53,6 +54,8 @@ jobs:
           <<: *setup_env
       - run: ./scripts/patch-version.sh "${CIRCLE_TAG:-v0.0.0-${CIRCLE_SHA::7}}"
       - run: |
+          pre-commit run --all-files
+
           export SDK_URI="https://cdn.optable.co/web-sdk/${CIRCLE_TAG}/sdk.js"
           export ADS_HOST="ads.optable.co"
           export ADS_REGION="ca"

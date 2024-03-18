@@ -17,10 +17,10 @@ declare module "../sdk" {
 /*
  * getTopics injects an iframe into the page that obtains the browsingTopics observed by optable.
  */
-OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
+OptableSDK.prototype.getTopics = async function (): Promise<BrowsingTopic[]> {
   const siteConfig = await this.site();
   if (!siteConfig.getTopicsURL) {
-    throw ("origin not enabled for topics api");
+    throw "origin not enabled for topics api";
   }
   const getTopicsURL = new URL(siteConfig.getTopicsURL);
   const topicsFrame = document.createElement("iframe");
@@ -29,14 +29,14 @@ OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
   topicsFrame.style.display = "none";
 
   const topicsPromise = new Promise<BrowsingTopic[]>((resolve, reject) => {
-    window.addEventListener("message", (event: MessageEvent<{ error?: Error | string, result: BrowsingTopic[] }>) => {
+    window.addEventListener("message", (event: MessageEvent<{ error?: Error | string; result: BrowsingTopic[] }>) => {
       if (event.source !== topicsFrame.contentWindow) {
-        return
+        return;
       }
 
       if (event.data.error) {
         reject(new Error(event.data.error.toString()));
-        return
+        return;
       }
 
       resolve(event.data.result);
@@ -45,15 +45,17 @@ OptableSDK.prototype.getTopics = async function(): Promise<BrowsingTopic[]> {
 
   document.body.appendChild(topicsFrame);
   return topicsPromise;
-}
+};
 
 /*
  * ingestTopics invokes getTopics then makes a profile() call with the resulting topics, if any.
  */
-OptableSDK.prototype.ingestTopics = function() {
+OptableSDK.prototype.ingestTopics = function () {
   this.getTopics()
     .then((topics) => {
-      if (!topics.length) { return }
+      if (!topics.length) {
+        return;
+      }
 
       const traits = topics.reduce((acc, topic) => {
         const traitKey = `topics_v${topic.taxonomyVersion}`;
@@ -68,5 +70,5 @@ OptableSDK.prototype.ingestTopics = function() {
 
       this.profile(traits);
     })
-    .catch(() => { });
-}
+    .catch(() => {});
+};

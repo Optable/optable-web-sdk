@@ -11,25 +11,25 @@ type AudienceIdentifiers = {
   ids: Identifier[];
   provider: string;
   rtb_segtax: number; // taxonomy identifier for RTB UserSegments
-  keyspace?: string;  // targeting key for integrations allowing for key/values targeting
-}
+  keyspace?: string; // targeting key for integrations allowing for key/values targeting
+};
 
 type UserIdentifiers = {
   ids: Identifier[];
   provider: string;
-}
+};
 
 type TargetingResponse = {
   audience?: AudienceIdentifiers[];
   user?: UserIdentifiers[];
 };
 
-const lmpidProvider = "loblawmedia.ca"
+const lmpidProvider = "loblawmedia.ca";
 
 async function Targeting(config: Required<OptableConfig>): Promise<TargetingResponse> {
   const response: TargetingResponse = await fetch("/v2/targeting", config, {
     method: "GET",
-    headers: { "Accept": "application/json" },
+    headers: { Accept: "application/json" },
   });
 
   if (response) {
@@ -55,7 +55,7 @@ function TargetingClearCache(config: Required<OptableConfig>) {
   ls.clearTargeting();
 }
 
-type PrebidORTB2 = { user?: RTB2User }
+type PrebidORTB2 = { user?: RTB2User };
 
 /*
  * Prebid.js supports passing seller-defined audiences to compatible
@@ -82,25 +82,25 @@ function PrebidORTB2(tdata: TargetingResponse | null): PrebidORTB2 {
           source: identifiers.provider,
           uids: identifiers.ids.map(({ id }) => ({ id, atype: UIDAgentType.PersonID })),
         })),
-      }
-    }
-  }
+      },
+    },
+  };
 }
 
 type TargetingKeyValues = { [key: string]: string[] };
 function TargetingKeyValues(tdata: TargetingResponse | null): TargetingKeyValues {
-  const result: TargetingKeyValues = {}
+  const result: TargetingKeyValues = {};
 
   if (!tdata) {
     return result;
   }
 
-  for (const identifiers of (tdata.audience ?? [])) {
+  for (const identifiers of tdata.audience ?? []) {
     if (identifiers.keyspace) {
       if (!(identifiers.keyspace in result)) {
-        result[identifiers.keyspace] = []
+        result[identifiers.keyspace] = [];
       }
-      result[identifiers.keyspace].push(...identifiers.ids.map((el) => el.id))
+      result[identifiers.keyspace].push(...identifiers.ids.map((el) => el.id));
     }
   }
 
