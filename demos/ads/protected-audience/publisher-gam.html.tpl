@@ -28,14 +28,10 @@
         });
       })
 
-      googletag.cmd.push(function() {
+      googletag.cmd.push(() => {
         googletag.defineSlot(slotID, [[300, 250]], "div-ad-fledge").addService(googletag.pubads());
         googletag.pubads().enableSingleRequest();
         googletag.enableServices();
-
-        optable.cmd.push(() => {
-          optable.instance.installGPTAuctionConfigs();
-        })
       });
     </script>
   </head>
@@ -52,10 +48,14 @@
           <h4>GPT</h4>
         </div>
       </div>
-      <div id='div-ad-fledge' style='width: 300px; height: 250px; border: 1px dotted black;'>
+      <div id="div-ad-fledge" style="width: 300px; height: 250px; border: 1px dotted black;">
         <script>
-          googletag.cmd.push(function() {
-            googletag.display("div-ad-fledge");
+          optable.cmd.push(() => {
+            optable.instance.installGPTAuctionConfigs();
+
+            googletag.cmd.push(() => {
+              googletag.display("div-ad-fledge");
+            });
           });
         </script>
       </div>
