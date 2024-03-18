@@ -48,40 +48,45 @@ function elementInnerSize(element: HTMLElement): Size {
  */
 
 OptableSDK.prototype.installGPTAuctionConfigs = function (filter?: GPTSlotFilter) {
-  if (!window.googletag) {
-    throw "googletag not found";
-  }
-  let slots = window.googletag.pubads().getSlots();
-  if (filter) {
-    slots = slots.filter(filter);
-  }
+  const sdk = this;
+  sdk.installGPTAuctionConfigs = function () {};
 
-  const siteAuctionConfig = this.auctionConfigFromCache();
-  if (!siteAuctionConfig) {
-    return;
-  }
+  window.googletag = window.googletag || { cmd: [] };
+  const gpt = window.googletag;
 
-  for (const slot of slots) {
-    const sizes = slot.getSizes();
-    const componentAuction = [];
-
-    for (const size of sizes) {
-      if (size === "fluid") {
-        continue;
-      }
-
-      componentAuction.push({
-        configKey: siteAuctionConfig.seller + "-" + size.getWidth() + "x" + size.getHeight(),
-        auctionConfig: {
-          ...siteAuctionConfig,
-          requestedSize: { width: size.getWidth() + "px", height: size.getHeight() + "px" },
-        },
-      });
+  gpt.cmd.push(function () {
+    let slots = gpt.pubads().getSlots();
+    if (filter) {
+      slots = slots.filter(filter);
     }
 
-    // @ts-ignore // outdated typings for componentAuction expects some legacy field names
-    slot.setConfig({ componentAuction });
-  }
+    const siteAuctionConfig = sdk.auctionConfigFromCache();
+    if (!siteAuctionConfig) {
+      return;
+    }
+
+    for (const slot of slots) {
+      const sizes = slot.getSizes();
+      const componentAuction = [];
+
+      for (const size of sizes) {
+        if (size === "fluid") {
+          continue;
+        }
+
+        componentAuction.push({
+          configKey: siteAuctionConfig.seller + "-" + size.getWidth() + "x" + size.getHeight(),
+          auctionConfig: {
+            ...siteAuctionConfig,
+            requestedSize: { width: size.getWidth() + "px", height: size.getHeight() + "px" },
+          },
+        });
+      }
+
+      // @ts-ignore // outdated typings for componentAuction expects some legacy field names
+      slot.setConfig({ componentAuction });
+    }
+  });
 };
 
 /*
