@@ -1,7 +1,7 @@
-exclude: (demos\/publishers)
+exclude: (dist|\.svg|prebid.js)
 repos:
-  - repo: https://github.com/prettier/prettier
-    rev: 2.0.4
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v2.5.0
     hooks:
       - id: prettier
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -13,7 +13,3 @@ repos:
       - id: check-yaml
         args:
           - --allow-multiple-documents
-  - repo: https://github.com/detailyang/pre-commit-shell
-    rev: 1.0.5
-    hooks:
-      - id: shell-lint

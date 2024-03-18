@@ -5,8 +5,7 @@ import { LocalStorage } from "../core/storage";
 type Size = {
   width: string;
   height: string;
-}
-
+};
 
 type AuctionConfig = {
   seller: string;
@@ -15,8 +14,7 @@ type AuctionConfig = {
   interestGroupBuyers: string[];
   resolveToConfig?: boolean;
   auctionSignals?: any;
-}
-
+};
 
 type SiteResponse = {
   interestGroupPixel: string;
@@ -28,7 +26,7 @@ type SiteResponse = {
 async function Site(config: Required<OptableConfig>): Promise<SiteResponse> {
   const response: SiteResponse = await fetch("/config", config, {
     method: "GET",
-    headers: { "Accept": "application/json" },
+    headers: { Accept: "application/json" },
   });
 
   const ls = new LocalStorage(config);

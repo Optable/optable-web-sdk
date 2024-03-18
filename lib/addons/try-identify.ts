@@ -17,13 +17,13 @@ OptableSDK.prototype.tryIdentifyFromParams = function (key?: string, prefix?: st
   let eid = "";
   for (const [key, value] of searchParams) {
     if (keyRegexp.test(key)) {
-      eid = value
+      eid = value;
       break;
     }
   }
 
   if (eid == "" || (!prefix && !maybeValidEID(eid))) {
-    return
+    return;
   }
 
   this.identify((prefix || "e") + ":" + eid.toLowerCase());

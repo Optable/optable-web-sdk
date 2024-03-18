@@ -12,7 +12,7 @@ import {
   TargetingFromCache,
   TargetingClearCache,
   PrebidORTB2,
-  LmpidFromCache
+  LmpidFromCache,
 } from "./edge/targeting";
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
@@ -25,7 +25,7 @@ class OptableSDK {
   constructor(dcn: OptableConfig) {
     this.dcn = getConfig(dcn);
     // If initPassport, prefetch site config and cache it, it assigns a passport as a side effect
-    const noop = () => { };
+    const noop = () => {};
     this.init = this.dcn.initPassport ? Site(this.dcn).then(noop).catch(noop) : Promise.resolve();
   }
 
@@ -64,24 +64,24 @@ class OptableSDK {
   }
 
   lmpidFromCache(): string | null {
-    return LmpidFromCache(this.dcn)
+    return LmpidFromCache(this.dcn);
   }
 
   async prebidORTB2(): Promise<PrebidORTB2> {
-    return PrebidORTB2(await this.targeting())
+    return PrebidORTB2(await this.targeting());
   }
 
   prebidORTB2FromCache(): PrebidORTB2 {
-    const tdata = this.targetingFromCache()
+    const tdata = this.targetingFromCache();
     return PrebidORTB2(tdata);
   }
 
   async targetingKeyValues(): Promise<TargetingKeyValues> {
-    return TargetingKeyValues(await this.targeting())
+    return TargetingKeyValues(await this.targeting());
   }
 
   targetingKeyValuesFromCache(): TargetingKeyValues {
-    const tdata = this.targetingFromCache()
+    const tdata = this.targetingFromCache();
     return TargetingKeyValues(tdata);
   }
 
@@ -104,11 +104,11 @@ class OptableSDK {
   }
 
   static TargetingKeyValues(tdata: TargetingResponse): TargetingKeyValues {
-    return TargetingKeyValues(tdata)
+    return TargetingKeyValues(tdata);
   }
 
   static PrebidORTB2(tdata: TargetingResponse): PrebidORTB2 {
-    return PrebidORTB2(tdata)
+    return PrebidORTB2(tdata);
   }
 }
 

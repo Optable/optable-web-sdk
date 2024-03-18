@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/css/skeleton.css" />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
 
-    <script src="https://prod.uidapi.com/static/js/uid2-sdk-2.0.0.js" type="text/javascript"></script> 
+    <script src="https://prod.uidapi.com/static/js/uid2-sdk-2.0.0.js" type="text/javascript"></script>
 
     <style>
       #uid2_state {
@@ -69,8 +69,8 @@
             If the UID2 identity is missing, then the user needs to authenticates and authorizes its creation.<br/>
           </p>
           <p>
-            In the background, the <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/sdks/client-side-identity.md">UID2 SDK</a> 
-            will continuously validate if the advertising token needs to be refreshed and refreshes it automatically when needed 
+            In the background, the <a href="https://github.com/UnifiedID2/uid2docs/blob/main/api/v2/sdks/client-side-identity.md">UID2 SDK</a>
+            will continuously validate if the advertising token needs to be refreshed and refreshes it automatically when needed
             until the refresh token expires or the user opts out, at which point the UID2 identity is cleared and the user needs to
             authorizes the creation of a new UID2 identity.
           </p>
@@ -86,7 +86,7 @@
               <tr><th class="label">UID2 Identity Updated Counter:</th><td class="value"><pre id="update_counter"></pre></td></tr>
               <tr><th class="label">UID2 Identity Callback State:</th><td class="value"><pre id="identity_state"></pre></td></tr>
             </table>
-          
+
         </div>
       </div>
 
