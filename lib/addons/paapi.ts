@@ -13,7 +13,7 @@ declare module "../sdk" {
   export interface OptableSDK {
     joinAdInterestGroups: () => Promise<void>;
     auctionConfigFromCache: () => AuctionConfig | null;
-    runAdAuction: (domID: string) => Promise<unknown>;
+    runAdAuction: (domID: string) => Promise<boolean>;
     installGPTAuctionConfigs: (filter?: GPTSlotFilter) => void;
   }
 }
@@ -92,7 +92,7 @@ OptableSDK.prototype.installGPTAuctionConfigs = function (filter?: GPTSlotFilter
 /*
  * runAdAuction runs an ad auction locally for a given spot dom ID.
  */
-OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<void> {
+OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<boolean> {
   const spot = document.getElementById(domID);
   if (!spot) {
     throw "spot not found";
@@ -101,7 +101,7 @@ OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<void
 
   const siteAuctionConfig = this.auctionConfigFromCache();
   if (!siteAuctionConfig) {
-    return;
+    return false;
   }
 
   const auctionConfig = {
@@ -112,13 +112,15 @@ OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<void
   const fencedFrameConfig = await navigator.runAdAuction(auctionConfig);
   if (!fencedFrameConfig) {
     spot.replaceChildren();
-    return;
+    return false;
   }
 
   const fencedFrame = document.createElement("fencedframe") as HTMLFencedFrameElement;
   fencedFrame.config = fencedFrameConfig;
   fencedFrame.style.border = "none";
   spot.replaceChildren(fencedFrame);
+
+  return true;
 };
 
 /*
