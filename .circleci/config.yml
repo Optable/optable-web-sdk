@@ -1,6 +1,6 @@
 defaults: &defaults
   machine:
-    image: ubuntu-2004:202201-02
+    image: ubuntu-2204:2024.02.7
   resource_class: medium
 
 setup_env: &setup_env
