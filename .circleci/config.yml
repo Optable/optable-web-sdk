@@ -98,9 +98,19 @@ jobs:
       - run: npm publish --access public
 
       - run: scripts/gs-publish.sh gs://optable-web-sdk ./browser/dist/sdk.js "${CIRCLE_TAG}"
-      - run: DOCKER_BUILDKIT=1 docker build -t gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG} ./demos
+      - run:
+          name: Build web-sdk-demos
+          command: |
+            DOCKER_BUILDKIT=1 docker build \
+              -t gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG} \
+              -t us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${CIRCLE_TAG} \
+              ./demos
       - gcp-gcr/gcr-auth
-      - run: docker push gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG}
+      - run: |
+          name: Publish web-sdk-demos
+          command: |
+            docker push gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG}
+            docker push us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${CIRCLE_TAG}
 
 workflows:
   test:
