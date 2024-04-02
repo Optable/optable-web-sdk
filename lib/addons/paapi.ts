@@ -93,6 +93,11 @@ OptableSDK.prototype.installGPTAuctionConfigs = function (filter?: GPTSlotFilter
  * runAdAuction runs an ad auction locally for a given spot dom ID.
  */
 OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<boolean> {
+  const supported = "runAdAuction" in navigator;
+  if (!supported) {
+    throw "run-ad-auction not supported";
+  }
+
   const spot = document.getElementById(domID);
   if (!spot) {
     throw "spot not found";
@@ -127,6 +132,11 @@ OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<bool
  * joinAdInterestGroups injects an iframe into the page that tags the device into the matching audiences interest group.
  */
 OptableSDK.prototype.joinAdInterestGroups = async function () {
+  const supported = "joinAdInterestGroup" in navigator;
+  if (!supported) {
+    throw "join-ad-interest-group not supported";
+  }
+
   const siteConfig = await this.site();
   if (!siteConfig.interestGroupPixel) {
     throw "origin not enabled for protected audience apis";
