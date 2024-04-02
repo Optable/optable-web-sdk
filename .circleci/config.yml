@@ -101,15 +101,8 @@ jobs:
           name: Build web-sdk-demos
           command: |
             DOCKER_BUILDKIT=1 docker build \
-              -t gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG} \
               -t us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${CIRCLE_TAG} \
               ./demos
-      - gcp-gcr/gcr-auth:
-          registry-url: gcr.io
-      - run:
-          name: Publish web-sdk-demos to gcr.io
-          command: |
-            docker push gcr.io/optable-platform/optable-web-sdk-demos:${CIRCLE_TAG}
       - gcp-gcr/gcr-auth:
           registry-url: us-docker.pkg.dev
       - run:
