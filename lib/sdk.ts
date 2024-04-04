@@ -99,8 +99,22 @@ class OptableSDK {
     return email ? "e:" + sha256.hex(email.toLowerCase().trim()) : "";
   }
 
-  static cid(ppid: string): string {
-    return ppid ? "c:" + ppid.trim() : "";
+  static cid(ppid: string, variant: number = 0): string {
+    let prefix = "c:";
+
+    if (typeof ppid !== "string") {
+      throw new Error("Invalid ppid");
+    }
+
+    if (typeof variant !== "number" || isNaN(variant) || variant < 0 || variant > 9) {
+      throw new Error("Invalid variant");
+    }
+
+    if (variant > 0) {
+      prefix = `c${variant}:`;
+    }
+
+    return ppid ? prefix + ppid.trim() : "";
   }
 
   static TargetingKeyValues(tdata: TargetingResponse): TargetingKeyValues {
