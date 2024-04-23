@@ -57,13 +57,13 @@ OptableSDK.prototype.installGPTSecureSignals = function () {
   window.googletag = window.googletag || { cmd: [], secureSignalProviders: [] };
   const gpt = window.googletag;
 
-  const lmpid = await Promise.resolve(sdk.lmpidFromCache());
+  const lmpid = sdk.lmpidFromCache();
   if (lmpid) {
     gpt.cmd.push(function () {
       gpt.secureSignalProviders.push({
         id: lmpidProvider,
         collectorFunction: function () {
-          return Promise.resolve(lmpid);
+          return lmpid
         },
       });
     });
