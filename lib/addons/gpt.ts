@@ -63,7 +63,7 @@ OptableSDK.prototype.installGPTSecureSignals = function () {
       gpt.secureSignalProviders.push({
         id: lmpidProvider,
         collectorFunction: function () {
-          return lmpid;
+          return Promise.resolve(lmpid);
         },
       });
     });
