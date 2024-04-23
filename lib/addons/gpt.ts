@@ -51,20 +51,21 @@ OptableSDK.prototype.installGPTEventListeners = function () {
  * installGPTSecureSignals() sets up loblaw media private ID secure signals on GPT from targeting.
  */
 OptableSDK.prototype.installGPTSecureSignals = function () {
-  // Next time we get called is a no-op:
   const sdk = this;
   sdk.installGPTSecureSignals = function () {};
 
   window.googletag = window.googletag || { cmd: [], secureSignalProviders: [] };
   const gpt = window.googletag;
 
-  gpt.cmd.push(function () {
-    // Install lmpid secure signal
-    gpt.secureSignalProviders.push({
-      id: lmpidProvider,
-      collectorFunction: function () {
-        return Promise.resolve(sdk.lmpidFromCache() ?? "");
-      },
+  const lmpid = sdk.lmpidFromCache();
+  if (lmpid) {
+    gpt.cmd.push(function () {
+      gpt.secureSignalProviders.push({
+        id: lmpidProvider,
+        collectorFunction: function () {
+          return Promise.resolve(lmpid);
+        },
+      });
     });
-  });
+  }
 };
