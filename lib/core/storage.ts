@@ -11,6 +11,12 @@ function toBinary(str: string): string {
   return String.fromCharCode(...new Uint8Array(codeUnits.buffer));
 }
 
+declare global {
+  interface Window {
+    __lmpid?: string;
+  }
+}
+
 class LocalStorage {
   private passportKey: string;
   private targetingV1Key: string;
@@ -102,11 +108,13 @@ class LocalStorage {
       return;
     }
 
-    window.localStorage.setItem(this.lmpidKey, provider.ids?.[0]?.id ?? "");
+    const id = provider.ids?.[0]?.id ?? "";
+    window.localStorage.setItem(this.lmpidKey, id);
+    window.__lmpid = id;
   }
 
   getLmpid(): string | null {
-    return window.localStorage.getItem(this.lmpidKey) ?? null;
+    return window.__lmpid || window.localStorage.getItem(this.lmpidKey) || null;
   }
 
   clearPassport() {
