@@ -1,4 +1,5 @@
 import type { OptableConfig } from "./config";
+import { default as buildInfo } from "./build.json";
 import { getConfig } from "./config";
 import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
@@ -19,6 +20,8 @@ import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 
 class OptableSDK {
+  public static version = buildInfo.version;
+
   public dcn: Required<OptableConfig>;
   private init: Promise<void>;
 
