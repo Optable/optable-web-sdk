@@ -8,27 +8,21 @@ function buildRequest(path: string, config: Required<OptableConfig>, init?: Requ
   const proto = insecure ? "http" : "https";
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
 
+  const requestInit: RequestInit = { ...init };
+  const searchParams = new URLSearchParams();
+  searchParams.set("osdk", `web-${buildInfo.version}`);
+
   if (cookies) {
-    url.search = new URLSearchParams({
-      cookies: "yes",
-      osdk: `web-${buildInfo.version}`,
-    }).toString();
+    requestInit.credentials = "include";
+    searchParams.set("cookies", "yes");
   } else {
     const ls = new LocalStorage(config);
     const pass = ls.getPassport();
-    url.search = new URLSearchParams({
-      cookies: "no",
-      passport: pass ? pass : "",
-      osdk: `web-${buildInfo.version}`,
-    }).toString();
+    requestInit.headers = new Headers();
+    pass && requestInit.headers.set(config.identityHeaderName, pass);
   }
 
-  const requestInit: RequestInit = { ...init };
-  requestInit.credentials = "include";
-
-  const request = new Request(url.toString(), requestInit);
-
-  return request;
+  return new Request(url.toString(), requestInit);
 }
 
 async function fetch<T>(path: string, config: Required<OptableConfig>, init?: RequestInit): Promise<T> {
@@ -41,16 +35,9 @@ async function fetch<T>(path: string, config: Required<OptableConfig>, init?: Re
     throw new Error(data.error);
   }
 
-  if (data.passport) {
+  if (response.headers.has(config.identityHeaderName)) {
     const ls = new LocalStorage(config);
-    ls.setPassport(data.passport);
-
-    // We delete the passport attribute from the returned payload. This is because
-    // the targeting edge handler was initially made to return targeting data directly
-    // in the form of 'key values' on the returned JSON payload -- if we don't delete
-    // the `passport` attribute here, it may end up sent as targeting data to ad servers.
-    // Not the end of the world, but something we want to avoid due to passport size.
-    delete data.passport;
+    ls.setPassport(response.headers.get(config.identityHeaderName) || "");
   }
 
   return data;
