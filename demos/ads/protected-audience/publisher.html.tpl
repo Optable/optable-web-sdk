@@ -60,6 +60,11 @@
             <button onclick="runAdAuction('leaderboard')">Run Ad Auction for Leaderboard</button>
           </div>
         </div>
+        <div class="row">
+          <a href="advertiser.html">Advertiser</a> |
+          <a href="publisher-prebid.html">Publisher using Prebid</a> |
+          <a href="publisher-gam.html">Publisher using GAM</a>
+        </div>
       </div>
     </div>
   </body>

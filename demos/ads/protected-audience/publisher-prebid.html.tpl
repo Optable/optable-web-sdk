@@ -26,7 +26,13 @@
       </div>
       <div id="div-ad-fledge" style="width: 300px; height: 250px; border: 1px black dotted">
       </div>
+      <div class="row">
+        <a href="advertiser.html">Advertiser</a> |
+        <a href="publisher.html">Publisher</a> |
+        <a href="publisher-gam.html">Publisher using GAM</a>
+      </div>
     </div>
+
 
     <script>
         const searchParams = new URLSearchParams(window.location.search);

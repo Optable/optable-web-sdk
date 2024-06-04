@@ -59,6 +59,11 @@
           });
         </script>
       </div>
+      <div class="row">
+        <a href="advertiser.html">Advertiser</a> |
+        <a href="publisher.html">Publisher</a> |
+        <a href="publisher-prebid.html">Publisher using Prebid</a>
+      </div>
     </div>
   </body>
 </html>
