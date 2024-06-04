@@ -21,24 +21,27 @@
         </div>
       </div>
       <div class="row">
-        <div class="twelve column">
+        <div class="twelve column" style="display: flex; flex-direction: column; gap: 30px">
           <h4>Join Ad Interest Groups</h4>
         </div>
         <div class="row">
-          <select id="interests-select" multiple style="margin-bottom: 6px; width: 400px; height: 100px;">
+          <select id="interests-select" multiple style="width: 400px; height: 100px;">
             <option value="luxury">Luxury</option>
             <option value="travel">Travel</option>
             <option value="fashion">Fashion</option>
           </select>
         </div>
         <div class="row">
-          <button onclick="saveInterests()">Save interests</button>
-        </div>
+          <div id="status"></div>
         </div>
         <div class="row">
-          <div class="twelve column">
-            <button onclick="joinAdInterestGroups()">Join Ad Interest Groups</button>
-          </div>
+          <button onclick="saveInterests()">Save interests</button>
+          <button onclick="joinAdInterestGroups()">Join Ad Interest Groups</button>
+        </div>
+        <div class="row">
+          <a href="publisher.html">Publisher</a> |
+          <a href="publisher-prebid.html">Publisher using Prebid</a> |
+          <a href="publisher-gam.html">Publisher using GAM</a>
         </div>
       </div>
     </div>
@@ -49,21 +52,25 @@
 
 
       function saveInterests() {
+        const statusDiv = document.getElementById("status");
+        statusDiv.innerHTML = "Saving interests...";
         const interests = Array.from(document.getElementById("interests-select").selectedOptions)
           .map((option) => option.value);
 
         optable.cmd.push(() => {
           optable.instance.profile({ interests: interests.join(",") })
-            .then(() => { alert("Interests successfully saved."); })
-            .catch(() => { alert("An error occurred while saving interests."); })
+            .then(() => { statusDiv.innerHTML = "Interests successfully saved." })
+            .catch(() => { statusDiv.innerHTML = "An error occurred while saving interests." })
         })
       }
 
       function joinAdInterestGroups() {
+        const statusDiv = document.getElementById("status");
+        statusDiv.innerHTML = "Joining interest groups...";
         optable.cmd.push(() => {
           optable.instance.joinAdInterestGroups()
-            .then(() => { alert("Interest groups successfully joined."); })
-            .catch(() => { alert("An error occurred while joining interest groups."); })
+            .then(() => { statusDiv.innerHTML = "Interest groups successfully joined." })
+            .catch(() => { statusDiv.innerHTML = "An error occurred while joining interest groups." })
         })
       }
 
