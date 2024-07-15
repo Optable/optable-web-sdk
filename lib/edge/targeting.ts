@@ -26,8 +26,11 @@ type TargetingResponse = {
 
 const lmpidProvider = "loblawmedia.ca";
 
-async function Targeting(config: Required<OptableConfig>): Promise<TargetingResponse> {
-  const response: TargetingResponse = await fetch("/v2/targeting", config, {
+async function Targeting(config: Required<OptableConfig>, id: string): Promise<TargetingResponse> {
+  const searchParams = new URLSearchParams({ id });
+  const path = "/v2/targeting?" + searchParams.toString();
+
+  const response: TargetingResponse = await fetch(path, config, {
     method: "GET",
     headers: { Accept: "application/json" },
   });

@@ -45,9 +45,9 @@ class OptableSDK {
     return Uid2Token(this.dcn, id);
   }
 
-  async targeting(): Promise<TargetingResponse> {
+  async targeting(id: string = "__passport__"): Promise<TargetingResponse> {
     await this.init;
-    return Targeting(this.dcn);
+    return Targeting(this.dcn, id);
   }
 
   targetingFromCache(): TargetingResponse | null {
