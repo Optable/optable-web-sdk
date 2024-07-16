@@ -7,20 +7,15 @@ function buildRequest(path: string, config: Required<OptableConfig>, init?: Requ
 
   const proto = insecure ? "http" : "https";
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
+  url.searchParams.set("osdk", `web-${buildInfo.version}`);
 
   if (cookies) {
-    url.search = new URLSearchParams({
-      cookies: "yes",
-      osdk: `web-${buildInfo.version}`,
-    }).toString();
+    url.searchParams.set("cookies", "yes");
   } else {
     const ls = new LocalStorage(config);
     const pass = ls.getPassport();
-    url.search = new URLSearchParams({
-      cookies: "no",
-      passport: pass ? pass : "",
-      osdk: `web-${buildInfo.version}`,
-    }).toString();
+    url.searchParams.set("cookies", "no");
+    url.searchParams.set("pass", pass ? pass : "");
   }
 
   const requestInit: RequestInit = { ...init };
@@ -56,5 +51,5 @@ async function fetch<T>(path: string, config: Required<OptableConfig>, init?: Re
   return data;
 }
 
-export { fetch };
+export { fetch, buildRequest };
 export default fetch;
