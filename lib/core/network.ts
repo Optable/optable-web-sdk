@@ -15,7 +15,7 @@ function buildRequest(path: string, config: Required<OptableConfig>, init?: Requ
     const ls = new LocalStorage(config);
     const pass = ls.getPassport();
     url.searchParams.set("cookies", "no");
-    url.searchParams.set("pass", pass ? pass : "");
+    url.searchParams.set("passport", pass ? pass : "");
   }
 
   const requestInit: RequestInit = { ...init };
