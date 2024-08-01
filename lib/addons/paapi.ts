@@ -9,11 +9,15 @@ declare global {
 
 type GPTSlotFilter = (slot: googletag.Slot) => boolean;
 
+type RunAdAuctionOptions = {
+  iframe?: boolean;
+};
+
 declare module "../sdk" {
   export interface OptableSDK {
     joinAdInterestGroups: () => Promise<void>;
     auctionConfigFromCache: () => AuctionConfig | null;
-    runAdAuction: (domID: string) => Promise<boolean>;
+    runAdAuction: (domID: string, options?: RunAdAuctionOptions) => Promise<boolean>;
     installGPTAuctionConfigs: (filter?: GPTSlotFilter) => void;
   }
 }
@@ -92,7 +96,7 @@ OptableSDK.prototype.installGPTAuctionConfigs = function (filter?: GPTSlotFilter
 /*
  * runAdAuction runs an ad auction locally for a given spot dom ID.
  */
-OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<boolean> {
+OptableSDK.prototype.runAdAuction = async function (domID: string, options?: RunAdAuctionOptions): Promise<boolean> {
   const supported = "runAdAuction" in navigator;
   if (!supported) {
     throw "run-ad-auction not supported";
@@ -114,16 +118,32 @@ OptableSDK.prototype.runAdAuction = async function (domID: string): Promise<bool
     requestedSize,
     resolveToConfig: true,
   };
-  const fencedFrameConfig = await navigator.runAdAuction(auctionConfig);
-  if (!fencedFrameConfig) {
+
+  const useIframe = options?.iframe ?? false;
+
+  if (useIframe) {
+    auctionConfig.resolveToConfig = false;
+  }
+
+  const result = await navigator.runAdAuction(auctionConfig);
+  if (!result) {
     spot.replaceChildren();
     return false;
   }
 
-  const fencedFrame = document.createElement("fencedframe") as HTMLFencedFrameElement;
-  fencedFrame.config = fencedFrameConfig;
-  fencedFrame.style.border = "none";
-  spot.replaceChildren(fencedFrame);
+  if (useIframe) {
+    const iframe = document.createElement("iframe");
+    iframe.src = result;
+    iframe.style.border = "none";
+    iframe.style.width = requestedSize.width;
+    iframe.style.height = requestedSize.height;
+    spot.replaceChildren(iframe);
+  } else {
+    const fencedFrame = document.createElement("fencedframe") as HTMLFencedFrameElement;
+    fencedFrame.config = result;
+    fencedFrame.style.border = "none";
+    spot.replaceChildren(fencedFrame);
+  }
 
   return true;
 };
