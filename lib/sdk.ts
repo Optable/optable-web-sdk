@@ -18,6 +18,7 @@ import {
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
+import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 
 class OptableSDK {
   public static version = buildInfo.version;
@@ -96,6 +97,11 @@ class OptableSDK {
   async profile(traits: ProfileTraits): Promise<void> {
     await this.init;
     return Profile(this.dcn, traits);
+  }
+
+  async tokenize(id: string): Promise<TokenizeResponse> {
+    await this.init;
+    return Tokenize(this.dcn, id);
   }
 
   static eid(email: string): string {
