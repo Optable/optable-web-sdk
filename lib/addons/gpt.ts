@@ -48,23 +48,35 @@ OptableSDK.prototype.installGPTEventListeners = function () {
 };
 
 /*
- * installGPTSecureSignals() sets up loblaw media private ID secure signals on GPT from targeting.
+ * InstallGPTSecureSignals() sets up loblaw media private ID secure signals on GPT from targeting.
+ * Allow for user-defined signal passing. Currently requires specifying the provider name since most signals will be linked to custom ids.
  */
-OptableSDK.prototype.installGPTSecureSignals = function () {
+OptableSDK.prototype.installGPTSecureSignals = function(...signals) {
   const sdk = this;
-  sdk.installGPTSecureSignals = function () {};
-
-  window.googletag = window.googletag || { cmd: [], secureSignalProviders: [] };
-  const gpt = window.googletag;
-
+  const gpt = window.googletag ||= { cmd: [], secureSignalProviders: [] };
   const lmpid = sdk.lmpidFromCache();
-  if (lmpid) {
+  if (lmpid && !sdk._gptSecureSignalsInstalled) {
+    sdk._gptSecureSignalsInstalled = true;
     gpt.cmd.push(function () {
       gpt.secureSignalProviders.push({
         id: lmpidProvider,
         collectorFunction: function () {
           return Promise.resolve(lmpid);
         },
+      });
+    });
+  }
+  if (signals.length > 0) {
+    signals.forEach(signal => {
+      const [provider, idString] = signal;
+      const id = idString.split(':')[1];
+      gpt.cmd.push(function() {
+        gpt.secureSignalProviders.push({
+          id: providerName,
+          collectorFunction: function() {
+            return Promise.resolve(id);
+          },
+        });
       });
     });
   }
