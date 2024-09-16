@@ -4,14 +4,12 @@ type OptableConfig = {
   insecure?: boolean;
   cookies?: boolean;
   initPassport?: boolean;
-  identityHeaderName?: string;
 };
 
 const DCN_DEFAULTS = {
   insecure: false,
   cookies: true,
   initPassport: true,
-  identityHeaderName: "X-Optable-Visitor",
 };
 
 function getConfig(config: OptableConfig): Required<OptableConfig> {

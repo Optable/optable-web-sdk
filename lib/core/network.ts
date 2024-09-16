@@ -9,20 +9,21 @@ function buildRequest(path: string, config: Required<OptableConfig>, init?: Requ
   const url = new URL(`${site}${path}`, `${proto}://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
 
-  const requestInit: RequestInit = { ...init };
-
   if (cookies) {
-    requestInit.credentials = "include";
     url.searchParams.set("cookies", "yes");
   } else {
     const ls = new LocalStorage(config);
     const pass = ls.getPassport();
     url.searchParams.set("cookies", "no");
-    requestInit.headers = new Headers();
-    pass && requestInit.headers.set(config.identityHeaderName, pass);
+    url.searchParams.set("passport", pass ? pass : "");
   }
 
-  return new Request(url.toString(), requestInit);
+  const requestInit: RequestInit = { ...init };
+  requestInit.credentials = "include";
+
+  const request = new Request(url.toString(), requestInit);
+
+  return request;
 }
 
 async function fetch<T>(path: string, config: Required<OptableConfig>, init?: RequestInit): Promise<T> {
@@ -35,9 +36,16 @@ async function fetch<T>(path: string, config: Required<OptableConfig>, init?: Re
     throw new Error(data.error);
   }
 
-  if (response.headers.has(config.identityHeaderName)) {
+  if (data.passport) {
     const ls = new LocalStorage(config);
-    ls.setPassport(response.headers.get(config.identityHeaderName) || "");
+    ls.setPassport(data.passport);
+
+    // We delete the passport attribute from the returned payload. This is because
+    // the targeting edge handler was initially made to return targeting data directly
+    // in the form of 'key values' on the returned JSON payload -- if we don't delete
+    // the `passport` attribute here, it may end up sent as targeting data to ad servers.
+    // Not the end of the world, but something we want to avoid due to passport size.
+    delete data.passport;
   }
 
   return data;
