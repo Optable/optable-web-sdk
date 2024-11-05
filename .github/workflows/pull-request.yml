@@ -1,0 +1,198 @@
+name: CI to build the sdk
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Test
+        run: npm run test
+
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Run prettier
+        run: npm run format
+
+      - name: Check if prettier changed files
+        run: git diff --exit-code || (echo "ESLint fixed some files. Please commit the changes." && exit 1)
+
+  build-web-prod:
+    needs: [tests, prettier]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Build web production
+        run: npm run build-web -- --mode=production
+
+  transpile-lib:
+    needs: [tests, prettier]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Transpile lib
+        run: npm run build-lib
+
+  create-demo-html-templates:
+    needs: [tests, prettier]
+    runs-on: ubuntu-latest
+    env:
+      SDK_URI: https://cdn.optable.co/web-sdk/latest/sdk.js
+      ADS_HOST: ads.optable.co
+      ADS_REGION: ca
+      ADS_SITE: 4fe7c1ce-7c7d-4718-a0b8-5195e489319f
+      DCN_HOST: sandbox.optable.co
+      DCN_SITE: web-sdk-demo
+      DCN_ID: optable
+      DCN_INSECURE: "false"
+      DCN_INIT: "true"
+      UID2_BASE_URL: https://operator-integ.uidapi.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate templates
+        run: |
+          export SDK_URI=${{ env.SDK_URI }}
+          export DCN_HOST=${{ env.DCN_HOST }}
+          export DCN_SITE=${{ env.DCN_SITE }}
+          export DCN_ID=${{ env.DCN_ID }}
+          export DCN_INSECURE=${{ env.DCN_INSECURE }}
+          export DCN_INIT=${{ env.DCN_INIT }}
+          export ADS_SITE=${{ env.ADS_SITE }}
+          export ADS_HOST=${{ env.ADS_HOST }}
+          export ADS_REGION=${{ env.ADS_REGION }}
+          export UID2_BASE_URL=${{ env.UID2_BASE_URL }}
+
+          envsubst < demos/vanilla/identify.html.tpl > demos/vanilla/identify.html
+          envsubst < demos/vanilla/witness.html.tpl > demos/vanilla/witness.html
+          envsubst < demos/vanilla/profile.html.tpl > demos/vanilla/profile.html
+          envsubst < demos/vanilla/targeting/gam360.html.tpl > demos/vanilla/targeting/gam360.html
+          envsubst < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
+          envsubst < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
+          envsubst < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
+          envsubst < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
+          envsubst < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
+          envsubst < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
+          envsubst < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
+          envsubst < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
+          envsubst < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
+          envsubst < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
+          envsubst < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
+          envsubst < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
+          envsubst < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
+          envsubst < demos/ads/protected-audience/publisher-prebid.html.tpl > demos/ads/protected-audience/publisher-prebid.html
+          envsubst < demos/ads/protected-audience/ad.html.tpl > demos/ads/protected-audience/ad.html
+          envsubst < demos/ads/topics/publisher.html.tpl > demos/ads/topics/publisher.html
+          envsubst < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
+          envsubst < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
+
+  create-demo-react:
+    needs: [tests, prettier]
+    runs-on: ubuntu-latest
+    env:
+      DEMO_REACT_PATH: demos/npm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DEMO_REACT_PATH }}/node_modules
+          key: node-demo-react-${{ hashFiles('demos/react/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm --prefix ${{ env.DEMO_REACT_PATH }} ci
+
+      - name: Build react demo
+        run: npm --prefix ${{ env.DEMO_REACT_PATH }} run build
+
+  create-demo-npm:
+    needs: [tests, prettier]
+    runs-on: ubuntu-latest
+    env:
+      DEMO_NPM_PATH: demos/npm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DEMO_NPM_PATH }}/node_modules
+          key: node-demo-npm-${{ hashFiles('demos/npm/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm --prefix ${{ env.DEMO_NPM_PATH }} ci
+
+      - name: Build react demo
+        run: npm --prefix ${{ env.DEMO_NPM_PATH }} run build
