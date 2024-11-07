@@ -3,7 +3,10 @@
   "main": "./lib/dist/sdk.js",
   "types": "./lib/dist/sdk.d.ts",
   "browser": "./lib/dist/sdk.js",
-  "repository": "https://github.com/optable/optable-web-sdk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/optable/optable-web-sdk.git"
+  },
   "homepage": "https://optable.co",
   "license": "SEE LICENSE IN LICENSE",
   "version": "0.0.0-experimental",
