@@ -11,7 +11,7 @@ jobs:
   tests-prettier:
     uses: ./.github/workflows/reusable-lint-test.yml
 
-  publish-to-npm:
+  build-web:
     needs: [tests-prettier]
     runs-on: ubuntu-latest
     steps:
@@ -32,25 +32,45 @@ jobs:
       - name: Build web production
         run: npm run build-web -- --mode=production
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
+
+  build-lib:
+    needs: [tests-prettier]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
       - name: Transpile lib
         run: npm run build-lib
 
-      - name: Patch version
-        # run: ./scripts/patch-version.sh "${{ github.ref_name }}"
-        run: ./scripts/patch-version.sh v0.0.0-${{ github.run_number }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-lib
+          path: lib/dist
 
-      - name: Setup registry access
-        run: |
-          echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
-
-      - name: Publish to NPM
-        run: npm publish --dry-run
-        # run: npm publish --access public
-
-  deploy-demo:
-    needs: [tests-prettier, publish-to-npm]
+  build-vanilla-demo:
+    needs: [tests-prettier]
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demos
     env:
       SDK_URI: https://cdn.optable.co/web-sdk/${{ github.ref_name }}/sdk.js
       ADS_HOST: ads.optable.co
@@ -62,12 +82,6 @@ jobs:
       DCN_INSECURE: "false"
       DCN_INIT: "true"
       UID2_BASE_URL: https://operator-integ.uidapi.com
-
-      DEMO_REACT_PATH: demos/npm
-      DEMO_NPM_PATH: demos/npm
-    permissions:
-      packages: write
-      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,59 +99,239 @@ jobs:
           export ADS_REGION=${{ env.ADS_REGION }}
           export UID2_BASE_URL=${{ env.UID2_BASE_URL }}
 
-          envsubst < demos/vanilla/identify.html.tpl > demos/vanilla/identify.html
-          envsubst < demos/vanilla/witness.html.tpl > demos/vanilla/witness.html
-          envsubst < demos/vanilla/profile.html.tpl > demos/vanilla/profile.html
-          envsubst < demos/vanilla/targeting/gam360.html.tpl > demos/vanilla/targeting/gam360.html
-          envsubst < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
-          envsubst < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
-          envsubst < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
-          envsubst < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
-          envsubst < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
-          envsubst < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
-          envsubst < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
-          envsubst < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
-          envsubst < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
-          envsubst < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
-          envsubst < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
-          envsubst < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
-          envsubst < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
-          envsubst < demos/ads/protected-audience/publisher-prebid.html.tpl > demos/ads/protected-audience/publisher-prebid.html
-          envsubst < demos/ads/protected-audience/ad.html.tpl > demos/ads/protected-audience/ad.html
-          envsubst < demos/ads/topics/publisher.html.tpl > demos/ads/topics/publisher.html
-          envsubst < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
-          envsubst < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
+          envsubst < vanilla/identify.html.tpl > vanilla/identify.html
+          envsubst < vanilla/witness.html.tpl > vanilla/witness.html
+          envsubst < vanilla/profile.html.tpl > vanilla/profile.html
+          envsubst < vanilla/targeting/gam360.html.tpl > vanilla/targeting/gam360.html
+          envsubst < vanilla/targeting/gam360-cached.html.tpl > vanilla/targeting/gam360-cached.html
+          envsubst < vanilla/targeting/prebid.html.tpl > vanilla/targeting/prebid.html
+          envsubst < vanilla/nocookies/identify.html.tpl > vanilla/nocookies/identify.html
+          envsubst < vanilla/nocookies/witness.html.tpl > vanilla/nocookies/witness.html
+          envsubst < vanilla/nocookies/profile.html.tpl > vanilla/nocookies/profile.html
+          envsubst < vanilla/nocookies/targeting/gam360.html.tpl > vanilla/nocookies/targeting/gam360.html
+          envsubst < vanilla/nocookies/targeting/gam360-cached.html.tpl > vanilla/nocookies/targeting/gam360-cached.html
+          envsubst < vanilla/nocookies/targeting/prebid.html.tpl > vanilla/nocookies/targeting/prebid.html
+          envsubst < integration/lmpid-prebid-gpt.html.tpl > integration/lmpid-prebid-gpt.html
+          envsubst < integration/lmpid-signal-gpt.html.tpl > integration/lmpid-signal-gpt.html
+          envsubst < ads/protected-audience/advertiser.html.tpl > ads/protected-audience/advertiser.html
+          envsubst < ads/protected-audience/publisher.html.tpl > ads/protected-audience/publisher.html
+          envsubst < ads/protected-audience/publisher-gam.html.tpl > ads/protected-audience/publisher-gam.html
+          envsubst < ads/protected-audience/publisher-prebid.html.tpl > ads/protected-audience/publisher-prebid.html
+          envsubst < ads/protected-audience/ad.html.tpl > ads/protected-audience/ad.html
+          envsubst < ads/topics/publisher.html.tpl > ads/topics/publisher.html
+          envsubst < vanilla/uid2_token/login.html.tpl > vanilla/uid2_token/login.html
+          envsubst < vanilla/uid2_token/index.html.tpl > vanilla/uid2_token/index.html
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-demo-vanilla
+          path: demos/**/*.html
+
+  build-react-demo:
+    needs: [build-lib]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demos/react
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-lib
+          path: lib/dist
 
       - name: Cache dependencies
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: |
+          cd ../../
+          npm ci
+
+      - name: Cache react demo dependencies
         id: cache-node-modules-react-demo
         uses: actions/cache@v4
         with:
-          path: ${{ env.DEMO_REACT_PATH }}/node_modules
-          key: node-demo-react-${{ hashFiles('demos/react/package-lock.json') }}
+          path: demos/react/node_modules
+          key: node-react-demo-${{ hashFiles('demos/react/package-lock.json') }}
 
       - name: Install react demo dependencies
         if: steps.cache-node-modules-react-demo.outputs.cache-hit != 'true'
-        run: npm --prefix ${{ env.DEMO_REACT_PATH }} ci
+        run: npm ci
 
       - name: Build react demo
-        run: npm --prefix ${{ env.DEMO_REACT_PATH }} run build
+        run: npm run build
 
-      - name: Cache dependencies
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-react-demo
+          path: demos/react/dist/**/*
+
+  build-npm-demo:
+    needs: [tests-prettier]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demos/npm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache npm-demo dependencies
         id: cache-node-modules-npm-demo
         uses: actions/cache@v4
         with:
-          path: ${{ env.DEMO_NPM_PATH }}/node_modules
-          key: node-demo-npm-${{ hashFiles('demos/npm/package-lock.json') }}
+          path: demos/npm/node_modules
+          key: node-npm-demo-${{ hashFiles('demos/npm/package-lock.json') }}
 
-      - name: Install dependencies
+      - name: Install npm-demo dependencies
         if: steps.cache-node-modules-npm-demo.outputs.cache-hit != 'true'
-        run: npm --prefix ${{ env.DEMO_NPM_PATH }} ci
+        run: npm ci
 
-      - name: Build npm demo
-        run: npm --prefix ${{ env.DEMO_NPM_PATH }} run build
+      - name: Build npm-demo
+        run: npm run build
 
-      - name: List files in the repository
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-npm-demo
+          path: demos/npm/dist/**/*
+
+  publish-to-npm:
+    needs: [build-web, build-lib]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
+
+      - name: Download lib artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: lib/dist
+
+        # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
+      - name: Patch version
+        run: ./scripts/patch-version.sh v0.0.0-${{ github.run_number }}
+      # run: ./scripts/patch-version.sh "${{ github.ref_name }}"
+
+      - name: Setup registry access
         run: |
-          ls ${{ github.workspace }}/demos/vanilla
-          ls ${{ github.workspace }}/demos/integration
-          ls ${{ github.workspace }}/demos/ads
+          echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+
+      - name: Publish to NPM
+        run: npm publish --dry-run
+        # run: npm publish --access public
+#   deploy-demo:
+#     needs: [build-web, build-vanilla-demo, build-react-demo, build-npm-demo]
+#     runs-on: ubuntu-latest
+#     env:
+#       SDK_URI: https://cdn.optable.co/web-sdk/${{ github.ref_name }}/sdk.js
+#       ADS_HOST: ads.optable.co
+#       ADS_REGION: ca
+#       ADS_SITE: 4fe7c1ce-7c7d-4718-a0b8-5195e489319f
+#       DCN_HOST: sandbox.optable.co
+#       DCN_SITE: web-sdk-demo
+#       DCN_ID: optable
+#       DCN_INSECURE: "false"
+#       DCN_INIT: "true"
+#       UID2_BASE_URL: https://operator-integ.uidapi.com
+
+#       DEMO_REACT_PATH: demos/react
+#       DEMO_NPM_PATH: demos/npm
+#     permissions:
+#       packages: write
+#       contents: read
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Build vanilla demo
+#         run: |
+#           export SDK_URI=${{ env.SDK_URI }}
+#           export DCN_HOST=${{ env.DCN_HOST }}
+#           export DCN_SITE=${{ env.DCN_SITE }}
+#           export DCN_ID=${{ env.DCN_ID }}
+#           export DCN_INSECURE=${{ env.DCN_INSECURE }}
+#           export DCN_INIT=${{ env.DCN_INIT }}
+#           export ADS_SITE=${{ env.ADS_SITE }}
+#           export ADS_HOST=${{ env.ADS_HOST }}
+#           export ADS_REGION=${{ env.ADS_REGION }}
+#           export UID2_BASE_URL=${{ env.UID2_BASE_URL }}
+
+#           envsubst < demos/vanilla/identify.html.tpl > demos/vanilla/identify.html
+#           envsubst < demos/vanilla/witness.html.tpl > demos/vanilla/witness.html
+#           envsubst < demos/vanilla/profile.html.tpl > demos/vanilla/profile.html
+#           envsubst < demos/vanilla/targeting/gam360.html.tpl > demos/vanilla/targeting/gam360.html
+#           envsubst < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
+#           envsubst < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
+#           envsubst < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
+#           envsubst < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
+#           envsubst < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
+#           envsubst < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
+#           envsubst < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
+#           envsubst < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
+#           envsubst < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
+#           envsubst < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
+#           envsubst < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
+#           envsubst < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
+#           envsubst < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
+#           envsubst < demos/ads/protected-audience/publisher-prebid.html.tpl > demos/ads/protected-audience/publisher-prebid.html
+#           envsubst < demos/ads/protected-audience/ad.html.tpl > demos/ads/protected-audience/ad.html
+#           envsubst < demos/ads/topics/publisher.html.tpl > demos/ads/topics/publisher.html
+#           envsubst < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
+#           envsubst < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
+
+#       - name: Cache react demo dependencies
+#         id: cache-node-modules-react-demo
+#         uses: actions/cache@v4
+#         with:
+#           path: ${{ env.DEMO_REACT_PATH }}/node_modules
+#           key: node-demo-react-${{ hashFiles('demos/react/package-lock.json') }}
+
+#       - name: Install react demo dependencies
+#         if: steps.cache-node-modules-react-demo.outputs.cache-hit != 'true'
+#         run: npm --prefix ${{ env.DEMO_REACT_PATH }} ci
+
+#       - name: Build react demo
+#         run: npm --prefix ${{ env.DEMO_REACT_PATH }} run build
+
+#       - name: Cache npm demo dependencies
+#         id: cache-node-modules-npm-demo
+#         uses: actions/cache@v4
+#         with:
+#           path: ${{ env.DEMO_NPM_PATH }}/node_modules
+#           key: node-demo-npm-${{ hashFiles('demos/npm/package-lock.json') }}
+
+#       - name: Install npm demo dependencies
+#         if: steps.cache-node-modules-npm-demo.outputs.cache-hit != 'true'
+#         run: npm --prefix ${{ env.DEMO_NPM_PATH }} ci
+
+#       - name: Build npm demo
+#         run: npm --prefix ${{ env.DEMO_NPM_PATH }} run build
+
+#       - name: Get sdk artifact
+#         uses: actions/download-artifact@v4
+#         with:
+#           name: dist-sdk
+
+#     #   - name: Deploy to GCS
+#     #     run: ./scripts/gs-publish.sh gs://optable-web-sdk ./browser/dist/sdk.js "${{ github.ref_name }}"
+
