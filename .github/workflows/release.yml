@@ -151,6 +151,7 @@ jobs:
           path: node_modules
           key: node-${{ hashFiles('package-lock.json') }}
 
+      # SDK has a dependency on third-party js-sha256, we need to install node_modules in the root directory
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
@@ -239,99 +240,83 @@ jobs:
       - name: Publish to NPM
         run: npm publish --dry-run
         # run: npm publish --access public
-#   deploy-demo:
-#     needs: [build-web, build-vanilla-demo, build-react-demo, build-npm-demo]
-#     runs-on: ubuntu-latest
-#     env:
-#       SDK_URI: https://cdn.optable.co/web-sdk/${{ github.ref_name }}/sdk.js
-#       ADS_HOST: ads.optable.co
-#       ADS_REGION: ca
-#       ADS_SITE: 4fe7c1ce-7c7d-4718-a0b8-5195e489319f
-#       DCN_HOST: sandbox.optable.co
-#       DCN_SITE: web-sdk-demo
-#       DCN_ID: optable
-#       DCN_INSECURE: "false"
-#       DCN_INIT: "true"
-#       UID2_BASE_URL: https://operator-integ.uidapi.com
 
-#       DEMO_REACT_PATH: demos/react
-#       DEMO_NPM_PATH: demos/npm
-#     permissions:
-#       packages: write
-#       contents: read
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
+  deploy-demo:
+    needs: [publish-to-npm, build-vanilla-demo, build-react-demo, build-npm-demo]
+    permissions:
+      contents: "read"
+      id-token: "write"
+    runs-on: ubuntu-latest
+    env:
+      gcp-project-id: 118585658141
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-#       - name: Build vanilla demo
-#         run: |
-#           export SDK_URI=${{ env.SDK_URI }}
-#           export DCN_HOST=${{ env.DCN_HOST }}
-#           export DCN_SITE=${{ env.DCN_SITE }}
-#           export DCN_ID=${{ env.DCN_ID }}
-#           export DCN_INSECURE=${{ env.DCN_INSECURE }}
-#           export DCN_INIT=${{ env.DCN_INIT }}
-#           export ADS_SITE=${{ env.ADS_SITE }}
-#           export ADS_HOST=${{ env.ADS_HOST }}
-#           export ADS_REGION=${{ env.ADS_REGION }}
-#           export UID2_BASE_URL=${{ env.UID2_BASE_URL }}
+      - name: Get sdk artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
 
-#           envsubst < demos/vanilla/identify.html.tpl > demos/vanilla/identify.html
-#           envsubst < demos/vanilla/witness.html.tpl > demos/vanilla/witness.html
-#           envsubst < demos/vanilla/profile.html.tpl > demos/vanilla/profile.html
-#           envsubst < demos/vanilla/targeting/gam360.html.tpl > demos/vanilla/targeting/gam360.html
-#           envsubst < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
-#           envsubst < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
-#           envsubst < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
-#           envsubst < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
-#           envsubst < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
-#           envsubst < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
-#           envsubst < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
-#           envsubst < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
-#           envsubst < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
-#           envsubst < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
-#           envsubst < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
-#           envsubst < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
-#           envsubst < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
-#           envsubst < demos/ads/protected-audience/publisher-prebid.html.tpl > demos/ads/protected-audience/publisher-prebid.html
-#           envsubst < demos/ads/protected-audience/ad.html.tpl > demos/ads/protected-audience/ad.html
-#           envsubst < demos/ads/topics/publisher.html.tpl > demos/ads/topics/publisher.html
-#           envsubst < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
-#           envsubst < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
+      - name: Get vanilla-demo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-demo-vanilla
+          path: demos
 
-#       - name: Cache react demo dependencies
-#         id: cache-node-modules-react-demo
-#         uses: actions/cache@v4
-#         with:
-#           path: ${{ env.DEMO_REACT_PATH }}/node_modules
-#           key: node-demo-react-${{ hashFiles('demos/react/package-lock.json') }}
+      - name: Get react-demo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-react-demo
+          path: demos/react/dist
 
-#       - name: Install react demo dependencies
-#         if: steps.cache-node-modules-react-demo.outputs.cache-hit != 'true'
-#         run: npm --prefix ${{ env.DEMO_REACT_PATH }} ci
+      - name: Get npm-demo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-npm-demo
+          path: demos/npm/dist
 
-#       - name: Build react demo
-#         run: npm --prefix ${{ env.DEMO_REACT_PATH }} run build
+      - uses: "google-github-actions/auth@v2"
+        id: auth
+        with:
+          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
+          service_account: "gh-ci-optable-sandbox@optable-platform-ci.iam.gserviceaccount.com"
 
-#       - name: Cache npm demo dependencies
-#         id: cache-node-modules-npm-demo
-#         uses: actions/cache@v4
-#         with:
-#           path: ${{ env.DEMO_NPM_PATH }}/node_modules
-#           key: node-demo-npm-${{ hashFiles('demos/npm/package-lock.json') }}
+      - name: Build web-sdk-demos Docker Image
+        run: |
+          DOCKER_BUILDKIT=1 docker build \
+            -t us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }} \
+            ./demos
 
-#       - name: Install npm demo dependencies
-#         if: steps.cache-node-modules-npm-demo.outputs.cache-hit != 'true'
-#         run: npm --prefix ${{ env.DEMO_NPM_PATH }} ci
+      #   - name: Upload SDK to GCS bucket, upload new version
+      #     uses: 'google-github-actions/upload-cloud-storage@v2'
+      #     with:
+      #       path: 'browser/dist/sdk.js'
+      #       destination: 'gs://optable-web-sdk/${{ github.ref_name }}'
 
-#       - name: Build npm demo
-#         run: npm --prefix ${{ env.DEMO_NPM_PATH }} run build
+      - name: Check if tag is a release (not experimental, next, rc)
+        id: is-official-release
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "isOfficial='true'" >> $GITHUB_OUTPUT
+            else
+              echo "isOfficial='false'" >> $GITHUB_OUTPUT
+          fi
 
-#       - name: Get sdk artifact
-#         uses: actions/download-artifact@v4
-#         with:
-#           name: dist-sdk
+      #   - name: Upload SDK to GCS bucket, override latest
+      #     if: steps.is-official-release.outputs.isOfficial == 'true'
+      #     uses: 'google-github-actions/upload-cloud-storage@v2'
+      #     with:
+      #       path: 'browser/dist/sdk.js'
+      #       destination: 'gs://optable-web-sdk/latest'
 
-#     #   - name: Deploy to GCS
-#     #     run: ./scripts/gs-publish.sh gs://optable-web-sdk ./browser/dist/sdk.js "${{ github.ref_name }}"
+      - name: Login to Google Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: us-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.auth_token }}
 
+    #   - name: Publish web-sdk-demos to us-docker.pkg.dev
+    #     run: docker push us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }}
