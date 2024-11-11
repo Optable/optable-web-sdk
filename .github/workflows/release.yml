@@ -12,9 +12,12 @@ jobs:
     needs: [tests-prettier]
     uses: ./.github/workflows/reusable-build.yml
 
-  publish-to-npm:
+  deploy-sdk:
     needs: [build]
     runs-on: ubuntu-latest
+    env:
+        gcp-project-id: 118585658141
+        service-account: gh-ci-optable-web-sdk
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,8 +46,35 @@ jobs:
       - name: Publish to NPM
         run: npm publish --access public
 
+      - uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
+          service_account: "${{ env.service-account }}@optable-platform-ci.iam.gserviceaccount.com"
+
+      - name: Upload SDK to GCS bucket, upload new version
+        uses: "google-github-actions/upload-cloud-storage@v2"
+        with:
+          path: "browser/dist/sdk.js"
+          destination: "gs://optable-web-sdk/${{ github.ref_name }}"
+
+      - name: Check if tag is a release (not experimental, next, rc)
+        id: is-official-release
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "isLatest='true'" >> $GITHUB_OUTPUT
+            else
+              echo "isLatest='false'" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload SDK to GCS bucket, override latest
+        if: steps.is-official-release.outputs.isLatest == 'true'
+        uses: "google-github-actions/upload-cloud-storage@v2"
+        with:
+          path: "browser/dist/sdk.js"
+          destination: "gs://optable-web-sdk/latest"
+
   deploy-demo:
-    needs: [publish-to-npm]
+    needs: [deploy-sdk]
     permissions:
       contents: "read"
       id-token: "write"
@@ -91,28 +121,6 @@ jobs:
           DOCKER_BUILDKIT=1 docker build \
             -t us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }} \
             ./demos
-
-      - name: Upload SDK to GCS bucket, upload new version
-        uses: "google-github-actions/upload-cloud-storage@v2"
-        with:
-          path: "browser/dist/sdk.js"
-          destination: "gs://optable-web-sdk/${{ github.ref_name }}"
-
-      - name: Check if tag is a release (not experimental, next, rc)
-        id: is-official-release
-        run: |
-          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "isLatest='true'" >> $GITHUB_OUTPUT
-            else
-              echo "isLatest='false'" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload SDK to GCS bucket, override latest
-        if: steps.is-official-release.outputs.isLatest == 'true'
-        uses: "google-github-actions/upload-cloud-storage@v2"
-        with:
-          path: "browser/dist/sdk.js"
-          destination: "gs://optable-web-sdk/latest"
 
       - name: Login to Google Artifact Registry
         uses: docker/login-action@v3
