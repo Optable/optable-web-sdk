@@ -12,12 +12,12 @@ jobs:
     needs: [tests-prettier]
     uses: ./.github/workflows/reusable-build.yml
 
-  deploy-sdk:
+  deploy-sdk-to-npm:
     needs: [build]
     runs-on: ubuntu-latest
     env:
-        gcp-project-id: 118585658141
-        service-account: gh-ci-optable-web-sdk
+      gcp-project-id: 118585658141
+      service-account: gh-ci-optable-web-sdk
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,8 +73,66 @@ jobs:
           path: "browser/dist/sdk.js"
           destination: "gs://optable-web-sdk/latest"
 
+  define-gcs-versions-to-update:
+    needs: [deploy-sdk-to-npm]
+    runs-on: ubuntu-latest
+
+    outputs:
+      sdk-versions: ${{ steps.sdk-versions.outputs.versions }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install asdf CLI
+        uses: asdf-vm/actions/install@v3
+
+      # We need to determine which versions to update based on the new version
+      # - In case of a pre-release, only update vX.Y.Z-{prerel}
+      # - If not a pre-release
+      #   - Always update vX.Y.Z
+      #   - Always update vX.Y
+      #   - Update latest if the new release version is greater than current
+      #   - Update vX if patching a version for which the minor is the latest, examples:
+      #     - v.12.2.1 and patching v.12.1.4, we don't update v12
+      #     - v.12.2.1 and patching v.12.2.2, we update v12
+      - name: Determine versions to update
+        id: sdk-versions
+        run: ./scripts/versions-to-update.sh @optable/web-sdk ${{ github.ref_name }} >> "$GITHUB_OUTPUT"
+
+      - name: Show versions that will be updated
+        run: |
+          echo "SDK versions: ${{ steps.sdk-versions.outputs.versions }}"
+
+  deploy-sdk-to-gcs:
+    needs: [define-gcs-versions-to-update]
+    strategy:
+      matrix:
+        sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
+    runs-on: ubuntu-latest
+    env:
+      gcp-project-id: 118585658141
+      service-account: gh-ci-optable-web-sdk
+    steps:
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
+
+      - uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
+          service_account: "${{ env.service-account }}@optable-platform-ci.iam.gserviceaccount.com"
+
+      - name: Upload SDK to GCS bucket, upload new version
+        uses: "google-github-actions/upload-cloud-storage@v2"
+        with:
+          path: "browser/dist/sdk.js"
+          destination: "gs://optable-web-sdk/${{ matrix.sdk-version }}"
+
   deploy-demo:
-    needs: [deploy-sdk]
+    needs: [deploy-sdk-to-npm]
     permissions:
       contents: "read"
       id-token: "write"
