@@ -46,33 +46,6 @@ jobs:
       - name: Publish to NPM
         run: npm publish --access public
 
-      - uses: "google-github-actions/auth@v2"
-        with:
-          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
-          service_account: "${{ env.service-account }}@optable-platform-ci.iam.gserviceaccount.com"
-
-      - name: Upload SDK to GCS bucket, upload new version
-        uses: "google-github-actions/upload-cloud-storage@v2"
-        with:
-          path: "browser/dist/sdk.js"
-          destination: "gs://optable-web-sdk/${{ github.ref_name }}"
-
-      - name: Check if tag is a release (not experimental, next, rc)
-        id: is-official-release
-        run: |
-          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "isLatest='true'" >> $GITHUB_OUTPUT
-            else
-              echo "isLatest='false'" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload SDK to GCS bucket, override latest
-        if: steps.is-official-release.outputs.isLatest == 'true'
-        uses: "google-github-actions/upload-cloud-storage@v2"
-        with:
-          path: "browser/dist/sdk.js"
-          destination: "gs://optable-web-sdk/latest"
-
   define-gcs-versions-to-update:
     needs: [deploy-sdk-to-npm]
     runs-on: ubuntu-latest
