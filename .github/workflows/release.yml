@@ -18,7 +18,7 @@ jobs:
 
   deploy-sdk-to-npm:
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,7 +49,7 @@ jobs:
 
   define-gcs-versions-to-update:
     needs: [deploy-sdk-to-npm]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     outputs:
       sdk-versions: ${{ steps.sdk-versions.outputs.versions }}
@@ -83,7 +83,7 @@ jobs:
     strategy:
       matrix:
         sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Download web artifacts
         uses: actions/download-artifact@v4
@@ -107,7 +107,7 @@ jobs:
     permissions:
       contents: "read"
       id-token: "write"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
