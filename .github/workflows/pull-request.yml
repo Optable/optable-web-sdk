@@ -1,4 +1,4 @@
-name: Format, lint, test and build
+name: Continuous Integration
 on:
   pull_request:
     types:
