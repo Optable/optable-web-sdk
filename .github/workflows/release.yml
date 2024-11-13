@@ -4,6 +4,10 @@ on:
     tags:
       - "v.*"
 
+env:
+  gcp-project-id: 118585658141
+  service-account: gh-ci-optable-web-sdk
+
 jobs:
   tests-prettier:
     uses: ./.github/workflows/reusable-lint-test.yml
@@ -15,9 +19,6 @@ jobs:
   deploy-sdk-to-npm:
     needs: [build]
     runs-on: ubuntu-latest
-    env:
-      gcp-project-id: 118585658141
-      service-account: gh-ci-optable-web-sdk
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -83,9 +84,6 @@ jobs:
       matrix:
         sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
     runs-on: ubuntu-latest
-    env:
-      gcp-project-id: 118585658141
-      service-account: gh-ci-optable-web-sdk
     steps:
       - name: Download web artifacts
         uses: actions/download-artifact@v4
@@ -110,9 +108,6 @@ jobs:
       contents: "read"
       id-token: "write"
     runs-on: ubuntu-latest
-    env:
-      gcp-project-id: 118585658141
-      service-account: gh-ci-optable-web-sdk
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
