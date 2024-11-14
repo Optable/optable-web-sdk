@@ -1,0 +1,17 @@
+name: Continuous Integration
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+jobs:
+  tests-prettier:
+    uses: ./.github/workflows/reusable-lint-test.yml
+
+  build:
+    needs: [tests-prettier]
+    uses: ./.github/workflows/reusable-build.yml

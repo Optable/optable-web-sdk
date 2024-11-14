@@ -1,0 +1,159 @@
+name: Release new version of Optable SDK and demos
+on:
+  push:
+    tags:
+      - "v.*"
+
+env:
+  gcp-project-id: 118585658141
+  service-account: gh-ci-optable-web-sdk
+
+jobs:
+  tests-prettier:
+    uses: ./.github/workflows/reusable-lint-test.yml
+
+  build:
+    needs: [tests-prettier]
+    uses: ./.github/workflows/reusable-build.yml
+
+  deploy-sdk-to-npm:
+    needs: [build]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
+
+      - name: Download lib artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: lib/dist
+
+        # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
+      - name: Patch version
+        run: ./scripts/patch-version.sh "${{ github.ref_name }}"
+
+      - name: Setup registry access
+        run: |
+          echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+
+      - name: Publish to NPM
+        run: npm publish --access public
+
+  define-gcs-versions-to-update:
+    needs: [deploy-sdk-to-npm]
+    runs-on: ubuntu-22.04
+
+    outputs:
+      sdk-versions: ${{ steps.sdk-versions.outputs.versions }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install asdf CLI
+        uses: asdf-vm/actions/install@v3
+
+      # We need to determine which versions to update based on the new version
+      # - In case of a pre-release, only update vX.Y.Z-{prerel}
+      # - If not a pre-release
+      #   - Always update vX.Y.Z
+      #   - Always update vX.Y
+      #   - Update latest if the new release version is greater than current
+      #   - Update vX if patching a version for which the minor is the latest, examples:
+      #     - v.12.2.1 and patching v.12.1.4, we don't update v12
+      #     - v.12.2.1 and patching v.12.2.2, we update v12
+      - name: Determine versions to update
+        id: sdk-versions
+        run: ./scripts/versions-to-update.sh @optable/web-sdk ${{ github.ref_name }} >> "$GITHUB_OUTPUT"
+
+      - name: Show versions that will be updated
+        run: |
+          echo "SDK versions: ${{ steps.sdk-versions.outputs.versions }}"
+
+  deploy-sdk-to-gcs:
+    needs: [define-gcs-versions-to-update]
+    strategy:
+      matrix:
+        sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
+
+      - uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
+          service_account: "${{ env.service-account }}@optable-platform-ci.iam.gserviceaccount.com"
+
+      - name: Upload SDK to GCS bucket, upload new version
+        uses: "google-github-actions/upload-cloud-storage@v2"
+        with:
+          path: "browser/dist/sdk.js"
+          destination: "gs://optable-web-sdk/${{ matrix.sdk-version }}"
+
+  deploy-demo:
+    needs: [deploy-sdk-to-npm]
+    permissions:
+      contents: "read"
+      id-token: "write"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get sdk artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
+
+      - name: Get vanilla-demo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-demo-vanilla
+          path: demos
+
+      - name: Get react-demo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-react-demo
+          path: demos/react/dist
+
+      - name: Get npm-demo artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-npm-demo
+          path: demos/npm/dist
+
+      - uses: "google-github-actions/auth@v2"
+        id: auth
+        with:
+          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
+          service_account: "${{ env.service-account }}@optable-platform-ci.iam.gserviceaccount.com"
+
+      - name: Build web-sdk-demos Docker Image
+        run: |
+          DOCKER_BUILDKIT=1 docker build \
+            -t us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }} \
+            ./demos
+
+      - name: Login to Google Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: us-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.auth_token }}
+
+      - name: Publish web-sdk-demos to us-docker.pkg.dev
+        run: docker push us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }}
