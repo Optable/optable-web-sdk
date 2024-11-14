@@ -16,6 +16,9 @@ fi
 get_versions() {
   local package="$1"
   local version="$2"
+  if [[ "$version" != v* ]]; then
+    version="v$version"
+  fi
   local major; major=$(semver get major "$version")
   local minor; minor=$(semver get minor "$version")
   local prerel; prerel=$(semver get prerel "$version")
