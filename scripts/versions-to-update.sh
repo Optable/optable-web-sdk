@@ -16,10 +16,10 @@ fi
 get_versions() {
   local package="$1"
   local version="$2"
-  local major=$(semver get major "$version")
-  local minor=$(semver get minor "$version")
-  local prerel=$(semver get prerel "$version")
-  local latestVersion=$(npm view $package version)
+  local major; major=$(semver get major "$version")
+  local minor; minor=$(semver get minor "$version")
+  local prerel; prerel=$(semver get prerel "$version")
+  local prerel; latest_version=$(npm view "$package" version)
 
   # Prerelease we only update the current version
   if [[ "$prerel" != "" ]]; then
@@ -27,31 +27,31 @@ get_versions() {
     return 0
   fi
 
-  local versionCompare=$(semver compare "$version" "$latestVersion")
+  local version_compare; version_compare=$(semver compare "$version" "$latest_version")
 
   # If this update version is the latest, we update all versions
-  if [[ $versionCompare -eq 1 ]]; then
+  if [[ $version_compare -eq 1 ]]; then
     echo "versions=['$version','v$major.$minor','v$major','latest']"
     return 0
   fi
 
   # Initialize versions to update with the current version and major.minor, we always update both at least
-  local versionsToUpdate=(
-    "$version"
-    "v$major.$minor"
+  local versions_to_update=(
+    "'$version'"
+    "'v$major.$minor'"
   )
 
   # Get the latest minor version of the specified major version
-  local latestMinorOfSpecifiedMajor=$(npm view $package versions --json | jq -r '.[]' | grep -E "^$major\." | sort -V | tail -n 1)
-  local latestMinor=$(semver get minor "$latestMinorOfSpecifiedMajor")
+  local latest_minor_of_specified_major; latest_minor_of_specified_major=$(npm view "$package" versions --json | jq -r '.[]' | grep -E "^$major\." | sort -V | tail -n 1)
+  local latest_minor; latest_minor=$(semver get minor "$latest_minor_of_specified_major")
 
   # If the current version is the latest minor or greater version of the specified major version, we update the major version
-  if [[ "$minor" -ge "$latestMinor" ]]; then
-    versionsToUpdate+=("v$major")
+  if [[ "$minor" -ge "$latest_minor" ]]; then
+    versions_to_update+=("'v$major'")
   fi
 
   # format the output
-  echo "versions=['$(IFS=, ; echo "${versionsToUpdate[*]}" | sed "s/,/','/g")']"
+  echo "versions=[$(IFS=, ; echo "${versions_to_update[*]}")]"
   return 0
 }
 

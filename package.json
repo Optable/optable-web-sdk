@@ -24,6 +24,7 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "prettier": "^3.3.3",
+    "shellcheck": "^3.0.0",
     "typescript": "^5.2.2",
     "webpack": "^5.94.0",
     "webpack-cli": "^4.7.2",
@@ -47,6 +48,7 @@
     "build-lib": "tsc -b lib",
     "build-web": "tsc -b browser && webpack --config=./browser/webpack.config.js",
     "test": "jest",
-    "format": "prettier . --write"
+    "format": "prettier . --write",
+    "lint-scripts": "npx shellcheck scripts/*.sh"
   }
 }
