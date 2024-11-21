@@ -4,12 +4,8 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+(-[a-zA-Z0-9]+)?"
 
-permissions:
-  contents: read
-  id-token: write
-
 env:
-  workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+  workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
   service-account: ${{ secrets.SERVICE_ACCOUNT }}
 
 jobs:
@@ -19,6 +15,9 @@ jobs:
   build:
     needs: [tests-prettier]
     uses: ./.github/workflows/reusable-build.yml
+    permissions:
+      contents: read
+      id-token: write
 
   deploy-sdk-to-npm:
     needs: [build]
