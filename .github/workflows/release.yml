@@ -4,9 +4,13 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+(-[a-zA-Z0-9]+)?"
 
+permissions:
+  contents: read
+  id-token: write
+
 env:
-  gcp-project-id: 118585658141
-  service-account: gh-ci-optable-web-sdk
+  workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+  service-account: ${{ secrets.SERVICE_ACCOUNT }}
 
 jobs:
   tests-prettier:
@@ -93,8 +97,8 @@ jobs:
 
       - uses: "google-github-actions/auth@v2"
         with:
-          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
-          service_account: "${{ env.service-account }}@optable-platform-ci.iam.gserviceaccount.com"
+          workload_identity_provider: ${{ env.workload_identity_provider }}
+          service_account: ${{ env.service-account }}
 
       - name: Upload SDK to GCS bucket, upload new version
         uses: "google-github-actions/upload-cloud-storage@v2"
@@ -139,8 +143,8 @@ jobs:
       - uses: "google-github-actions/auth@v2"
         id: auth
         with:
-          workload_identity_provider: "projects/${{ env.gcp-project-id }}/locations/global/workloadIdentityPools/optable-ci/providers/github-pool-provider"
-          service_account: "${{ env.service-account }}@optable-platform-ci.iam.gserviceaccount.com"
+          workload_identity_provider: ${{ env.workload_identity_provider }}
+          service_account: ${{ env.service-account }}
 
       - name: Build web-sdk-demos Docker Image
         run: |
