@@ -1,6 +1,10 @@
 name: Building SDK and demos
 on: workflow_call
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build-web:
     runs-on: ubuntu-22.04
@@ -61,13 +65,13 @@ jobs:
       SDK_URI: https://cdn.optable.co/web-sdk/${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}/sdk.js
       ADS_HOST: ads.optable.co
       ADS_REGION: ca
-      ADS_SITE: 4fe7c1ce-7c7d-4718-a0b8-5195e489319f
+      ADS_SITE: ${{ vars.ADS_SITE }}
       DCN_HOST: sandbox.optable.co
       DCN_SITE: web-sdk-demo
       DCN_ID: optable
       DCN_INSECURE: "false"
       DCN_INIT: "true"
-      UID2_BASE_URL: https://operator-integ.uidapi.com
+      UID2_BASE_URL: ${{ vars.UID2_BASE_URL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

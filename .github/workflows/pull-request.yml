@@ -15,3 +15,6 @@ jobs:
   build:
     needs: [tests-prettier]
     uses: ./.github/workflows/reusable-build.yml
+    permissions:
+      contents: read
+      id-token: write
