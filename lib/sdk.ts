@@ -108,6 +108,10 @@ class OptableSDK {
     return email ? "e:" + sha256.hex(email.toLowerCase().trim()) : "";
   }
 
+  static sha256(string: string): string {
+    return string ? sha256.hex(string) : "";
+  }
+
   static cid(ppid: string, variant: number = 0): string {
     let prefix = "c:";
 
