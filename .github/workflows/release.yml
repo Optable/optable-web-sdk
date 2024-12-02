@@ -174,7 +174,7 @@ jobs:
           token: "${{ secrets.SLACK_MESSENGER_APP_TOKEN }}"
           payload: |
             channel: "${{ secrets.ALERTS_SLACK_CHANNEL_ID }}"
-            text: "Release Optable-web-sdk: ${{ job.status }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            text: "Release Optable-web-sdk: Failure\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             blocks:
               - type: "header"
                 text:
@@ -184,7 +184,7 @@ jobs:
               - type: "section"
                 fields:
                   - type: "mrkdwn"
-                    text: "*Status:*\n${{ job.status }}"
+                    text: "*Status:*\nFailure"
                   - type: "mrkdwn"
                     text: "*Branch:*\n${{ github.ref_name }}"
                   - type: "mrkdwn"
