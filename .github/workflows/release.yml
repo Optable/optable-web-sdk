@@ -173,7 +173,7 @@ jobs:
           method: chat.postMessage
           token: "${{ secrets.SLACK_MESSENGER_APP_TOKEN }}"
           payload: |
-            channel: "${{ vars.ALERTS_SLACK_CHANNEL_ID }}"
+            channel: "${{ secrets.ALERTS_SLACK_CHANNEL_ID }}"
             text: "Release Optable-web-sdk: ${{ job.status }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             blocks:
               - type: "header"
