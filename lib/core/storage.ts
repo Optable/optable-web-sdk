@@ -1,6 +1,7 @@
 import { SiteResponse } from "../edge/site";
 import type { OptableConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
+import { localStorage } from "./regs/storage";
 
 function toBinary(str: string): string {
   const codeUnits = new Uint16Array(str.length);
@@ -27,11 +28,11 @@ class LocalStorage {
   }
 
   getPassport(): string | null {
-    return window.localStorage.getItem(this.passportKey);
+    return localStorage.getItem(this.passportKey);
   }
 
   getV1Targeting(): TargetingResponse | null {
-    const raw = window.localStorage.getItem(this.targetingV1Key);
+    const raw = localStorage.getItem(this.targetingV1Key);
     const parsed = raw ? JSON.parse(raw) : null;
     if (!parsed) {
       return null;
@@ -57,14 +58,14 @@ class LocalStorage {
   }
 
   getTargeting(): TargetingResponse | null {
-    const raw = window.localStorage.getItem(this.targetingKey);
+    const raw = localStorage.getItem(this.targetingKey);
     const parsed = raw ? JSON.parse(raw) : null;
     return parsed ? parsed : this.getV1Targeting();
   }
 
   setPassport(passport: string) {
     if (passport && passport.length > 0) {
-      window.localStorage.setItem(this.passportKey, passport);
+      localStorage.setItem(this.passportKey, passport);
     }
   }
 
@@ -73,32 +74,32 @@ class LocalStorage {
       return;
     }
 
-    window.localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
+    localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
   }
 
   setSite(site?: SiteResponse | null) {
     if (!site) {
       return;
     }
-    window.localStorage.setItem(this.siteKey, JSON.stringify(site));
+    localStorage.setItem(this.siteKey, JSON.stringify(site));
   }
 
   getSite(): SiteResponse | null {
-    const raw = window.localStorage.getItem(this.siteKey);
+    const raw = localStorage.getItem(this.siteKey);
     const parsed = raw ? JSON.parse(raw) : null;
     return parsed;
   }
 
   clearPassport() {
-    window.localStorage.removeItem(this.passportKey);
+    localStorage.removeItem(this.passportKey);
   }
 
   clearTargeting() {
-    window.localStorage.removeItem(this.targetingKey);
+    localStorage.removeItem(this.targetingKey);
   }
 
   clearSite() {
-    window.localStorage.removeItem(this.siteKey);
+    localStorage.removeItem(this.siteKey);
   }
 }
 
