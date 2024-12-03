@@ -3,7 +3,10 @@
   "main": "./lib/dist/sdk.js",
   "types": "./lib/dist/sdk.d.ts",
   "browser": "./lib/dist/sdk.js",
-  "repository": "https://github.com/optable/optable-web-sdk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/optable/optable-web-sdk.git"
+  },
   "homepage": "https://optable.co",
   "license": "SEE LICENSE IN LICENSE",
   "version": "0.0.0-experimental",
@@ -20,14 +23,16 @@
     "core-js": "^3.7.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "prettier": "^3.3.3",
+    "shellcheck": "^3.0.0",
     "typescript": "^5.2.2",
-    "webpack": "^5.76.0",
+    "webpack": "^5.94.0",
     "webpack-cli": "^4.7.2",
     "whatwg-fetch": "^3.6.20"
   },
   "dependencies": {
     "@babel/runtime": "^7.12.5",
-    "js-sha256": "^0.9.0",
+    "js-sha256": "^0.11.0",
     "regenerator-runtime": "^0.13.7"
   },
   "files": [
@@ -42,6 +47,8 @@
     "start": "tsc -b browser --watch & webpack --config=./browser/webpack.config.js --mode=development --watch --devtool=source-map",
     "build-lib": "tsc -b lib",
     "build-web": "tsc -b browser && webpack --config=./browser/webpack.config.js",
-    "test": "jest"
+    "test": "jest",
+    "format": "prettier . --write",
+    "lint-scripts": "npx shellcheck scripts/*.sh"
   }
 }
