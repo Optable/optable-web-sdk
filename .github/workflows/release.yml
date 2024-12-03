@@ -2,7 +2,8 @@ name: Release new version of Optable SDK and demos
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+(-[a-zA-Z0-9]+)?"
+      - v[0-9]+.[0-9]+.[0-9]+
+      - v[0-9]+.[0-9]+.[0-9]+-*
 
 env:
   workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
@@ -142,6 +143,7 @@ jobs:
       - uses: "google-github-actions/auth@v2"
         id: auth
         with:
+          token_format: "access_token"
           workload_identity_provider: ${{ env.workload_identity_provider }}
           service_account: ${{ env.service-account }}
 
@@ -156,7 +158,39 @@ jobs:
         with:
           registry: us-docker.pkg.dev
           username: oauth2accesstoken
-          password: ${{ steps.auth.outputs.auth_token }}
+          password: ${{ steps.auth.outputs.access_token }}
 
       - name: Publish web-sdk-demos to us-docker.pkg.dev
         run: docker push us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }}
+
+  slack-notification:
+    needs: [tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-demo]
+    runs-on: ubuntu-22.04
+    if: ${{ failure() }}
+    steps:
+      - name: Post to Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          method: chat.postMessage
+          token: "${{ secrets.SLACK_MESSENGER_APP_TOKEN }}"
+          payload: |
+            channel: "${{ secrets.ALERTS_SLACK_CHANNEL_ID }}"
+            text: "Release Optable-web-sdk: Failure\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            blocks:
+              - type: "header"
+                text:
+                  type: "plain_text"
+                  text: ":crybot: Release Optable-web-sdk"
+                  emoji: true
+              - type: "section"
+                fields:
+                  - type: "mrkdwn"
+                    text: "*Status:*\nFailure"
+                  - type: "mrkdwn"
+                    text: "*Branch:*\n${{ github.ref_name }}"
+                  - type: "mrkdwn"
+                    text: "*Author:*\n${{ github.actor || github.triggering_actor }}"
+                  - type: "mrkdwn"
+                    text: ":x: *Workflow run:*\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  - type: "mrkdwn"
+                    text: "*Mentions:*\n@here"
