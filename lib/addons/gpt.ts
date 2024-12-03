@@ -1,5 +1,4 @@
 import type { WitnessProperties } from "../edge/witness";
-import { lmpidProvider } from "../edge/targeting";
 import OptableSDK from "../sdk";
 
 declare module "../sdk" {
