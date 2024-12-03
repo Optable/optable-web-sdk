@@ -103,12 +103,5 @@ function TargetingKeyValues(tdata: TargetingResponse | null): TargetingKeyValues
   return result;
 }
 
-export {
-  Targeting,
-  TargetingFromCache,
-  TargetingClearCache,
-  TargetingResponse,
-  PrebidORTB2,
-  TargetingKeyValues,
-};
+export { Targeting, TargetingFromCache, TargetingClearCache, TargetingResponse, PrebidORTB2, TargetingKeyValues };
 export default Targeting;
