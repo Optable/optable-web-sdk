@@ -1,4 +1,4 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 
@@ -23,7 +23,7 @@ type SiteResponse = {
 };
 
 // Grab the site configuration from the server and store it in local storage
-async function Site(config: Required<OptableConfig>): Promise<SiteResponse> {
+async function Site(config: ResolvedConfig): Promise<SiteResponse> {
   const response: SiteResponse = await fetch("/config", config, {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -35,7 +35,7 @@ async function Site(config: Required<OptableConfig>): Promise<SiteResponse> {
 }
 
 // Obtain the site configuration from local storage
-function SiteFromCache(config: Required<OptableConfig>): SiteResponse | null {
+function SiteFromCache(config: ResolvedConfig): SiteResponse | null {
   const ls = new LocalStorage(config);
   return ls.getSite();
 }

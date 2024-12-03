@@ -1,4 +1,4 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 
 type Uid2TokenResponse = {
@@ -10,7 +10,7 @@ type Uid2TokenResponse = {
   RefreshResponseKey: string;
 };
 
-function Uid2Token(config: Required<OptableConfig>, id: string): Promise<Uid2TokenResponse> {
+function Uid2Token(config: ResolvedConfig, id: string): Promise<Uid2TokenResponse> {
   return fetch("/uid2/token", config, {
     method: "POST",
     headers: {

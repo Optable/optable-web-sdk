@@ -1,8 +1,8 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
-function buildRequest(path: string, config: Required<OptableConfig>, init?: RequestInit): Request {
+function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { site, host, cookies } = config;
 
   const url = new URL(`${site}${path}`, `https://${host}`);
@@ -25,7 +25,7 @@ function buildRequest(path: string, config: Required<OptableConfig>, init?: Requ
   return request;
 }
 
-async function fetch<T>(path: string, config: Required<OptableConfig>, init?: RequestInit): Promise<T> {
+async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
   const response = await globalThis.fetch(buildRequest(path, config, init));
 
   const contentType = response.headers.get("Content-Type");
