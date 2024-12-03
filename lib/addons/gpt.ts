@@ -51,7 +51,7 @@ OptableSDK.prototype.installGPTEventListeners = function () {
  * Allow for user-defined signal passing. Currently requires specifying the provider name since most signals will be linked to custom ids.
  */
 OptableSDK.prototype.installGPTSecureSignals = function (...signals: [string, string][]) {
-  const gpt = (window.googletag ||= { cmd: [], secureSignalProviders: [] });
+  const gpt = (window.googletag ||= { cmd: [] });
 
   if (signals?.length) {
     signals.forEach(([provider, idString]) => {
