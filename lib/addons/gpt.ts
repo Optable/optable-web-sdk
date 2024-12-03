@@ -33,8 +33,10 @@ OptableSDK.prototype.installGPTEventListeners = function () {
   const sdk = this;
   sdk.installGPTEventListeners = function () {};
 
-  window.googletag = window.googletag || { cmd: [] };
-  const gpt = window.googletag;
+  const gpt = (window.googletag ||= {
+    cmd: [],
+    secureSignalProviders: [] as Array<{ id: string; collectorFunction: () => Promise<string> }>,
+  } as Partial<typeof googletag>);
 
   gpt.cmd.push(function () {
     gpt.pubads().addEventListener("slotRenderEnded", function (event: any) {
