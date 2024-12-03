@@ -60,8 +60,6 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
-	envsubst $(DEMO_VARS) < demos/integration/lmpid-prebid-gpt.html.tpl > demos/integration/lmpid-prebid-gpt.html
-	envsubst $(DEMO_VARS) < demos/integration/lmpid-signal-gpt.html.tpl > demos/integration/lmpid-signal-gpt.html
 	envsubst $(DEMO_VARS) < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
 	envsubst $(DEMO_VARS) < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
 	envsubst $(DEMO_VARS) < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
