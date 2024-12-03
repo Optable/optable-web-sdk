@@ -102,4 +102,5 @@ class LocalStorage {
   }
 }
 
+export { LocalStorage };
 export default LocalStorage;
