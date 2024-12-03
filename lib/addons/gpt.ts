@@ -54,19 +54,8 @@ OptableSDK.prototype.installGPTEventListeners = function () {
 OptableSDK.prototype.installGPTSecureSignals = function(...signals) {
   const sdk = this;
   const gpt = window.googletag ||= { cmd: [], secureSignalProviders: [] };
-  const lmpid = sdk.lmpidFromCache();
-  if (lmpid && !sdk._gptSecureSignalsInstalled) {
-    sdk._gptSecureSignalsInstalled = true;
-    gpt.cmd.push(function () {
-      gpt.secureSignalProviders.push({
-        id: lmpidProvider,
-        collectorFunction: function () {
-          return Promise.resolve(lmpid);
-        },
-      });
-    });
-  }
-  if (signals.length > 0) {
+
+  if (signals?.length) {
     signals.forEach(signal => {
       const [provider, idString] = signal;
       const id = idString.split(':')[1];
