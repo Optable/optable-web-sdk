@@ -20,8 +20,8 @@ class LocalStorage {
 
   private storage: LocalStorageProxy;
 
-  constructor(private Config: OptableConfig) {
-    const sfx = btoa(toBinary(`${this.Config.host}/${this.Config.site}`));
+  constructor(private config: OptableConfig) {
+    const sfx = btoa(toBinary(`${this.config.host}/${this.config.site}`));
     // Legacy targeting key
     this.targetingV1Key = "OPTABLE_TGT_" + sfx;
 
@@ -29,7 +29,7 @@ class LocalStorage {
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
     this.siteKey = "OPTABLE_SITE_" + sfx;
 
-    const consent = this.Config.consent === "auto" ? globalConsent : this.Config.consent;
+    const consent = this.config.consent === "auto" ? globalConsent : this.config.consent;
     this.storage = new LocalStorageProxy(consent);
   }
 
