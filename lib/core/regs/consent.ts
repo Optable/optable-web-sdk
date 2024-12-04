@@ -125,3 +125,4 @@ function onTCFChange(cb: (_: TCFConsentData) => void): void {
 }
 
 export default getConsent();
+export { Consent, getConsent };
