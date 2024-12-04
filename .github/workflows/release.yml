@@ -88,6 +88,9 @@ jobs:
       matrix:
         sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Download web artifacts
         uses: actions/download-artifact@v4
