@@ -107,7 +107,7 @@ jobs:
         uses: "google-github-actions/upload-cloud-storage@v2"
         with:
           path: "browser/dist/sdk.js"
-          destination: "gs://optable-web-sdk/${{ matrix.sdk-version }}"
+          destination: "optable-web-sdk/${{ matrix.sdk-version }}"
 
   deploy-demo:
     needs: [deploy-sdk-to-npm]
