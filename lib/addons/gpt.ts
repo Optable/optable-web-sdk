@@ -65,4 +65,3 @@ OptableSDK.prototype.installGPTSecureSignals = function (...signals: Array<{ pro
     });
   }
 };
-
