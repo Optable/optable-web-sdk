@@ -1,5 +1,4 @@
 import type { WitnessProperties } from "../edge/witness";
-import { lmpidProvider } from "../edge/targeting";
 import OptableSDK from "../sdk";
 
 declare module "../sdk" {
@@ -48,23 +47,19 @@ OptableSDK.prototype.installGPTEventListeners = function () {
 };
 
 /*
- * installGPTSecureSignals() sets up loblaw media private ID secure signals on GPT from targeting.
+ * Pass user-defined signals to GAM Secure Signals
  */
-OptableSDK.prototype.installGPTSecureSignals = function () {
-  const sdk = this;
-  sdk.installGPTSecureSignals = function () {};
-
-  window.googletag = window.googletag || { cmd: [], secureSignalProviders: [] };
+OptableSDK.prototype.installGPTSecureSignals = function (...signals: Array<{ provider: string; id: string }>) {
+  window.googletag = window.googletag || { cmd: [] };
   const gpt = window.googletag;
 
-  const lmpid = sdk.lmpidFromCache();
-  if (lmpid) {
-    gpt.cmd.push(function () {
-      gpt.secureSignalProviders.push({
-        id: lmpidProvider,
-        collectorFunction: function () {
-          return Promise.resolve(lmpid);
-        },
+  if (signals && signals.length > 0) {
+    gpt.cmd.push(() => {
+      signals.forEach(({ provider, id }) => {
+        gpt.secureSignalProviders.push({
+          id: provider,
+          collectorFunction: () => Promise.resolve(id),
+        });
       });
     });
   }

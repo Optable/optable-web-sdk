@@ -1,7 +1,6 @@
 import { SiteResponse } from "../edge/site";
 import type { OptableConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
-import { lmpidProvider } from "../edge/targeting";
 
 function toBinary(str: string): string {
   const codeUnits = new Uint16Array(str.length);
@@ -11,17 +10,10 @@ function toBinary(str: string): string {
   return String.fromCharCode(...new Uint8Array(codeUnits.buffer));
 }
 
-declare global {
-  interface Window {
-    __lmpid?: string;
-  }
-}
-
 class LocalStorage {
   private passportKey: string;
   private targetingV1Key: string;
   private targetingKey: string;
-  private lmpidKey: string;
   private siteKey: string;
 
   constructor(private Config: OptableConfig) {
@@ -31,7 +23,6 @@ class LocalStorage {
 
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
-    this.lmpidKey = "__lmpid";
     this.siteKey = "OPTABLE_SITE_" + sfx;
   }
 
@@ -83,7 +74,6 @@ class LocalStorage {
     }
 
     window.localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
-    this.setLmpid(targeting);
   }
 
   setSite(site?: SiteResponse | null) {
@@ -99,24 +89,6 @@ class LocalStorage {
     return parsed;
   }
 
-  // setLmpid conditionally set the Lmpid in local storage
-  // based on the provider being present in the targeting response
-  setLmpid(targeting: TargetingResponse) {
-    const provider = targeting.user?.find((userIds) => userIds.provider === lmpidProvider);
-    // Don't touch local storage if the provider is not enabled
-    if (!provider) {
-      return;
-    }
-
-    const id = provider.ids?.[0]?.id ?? "";
-    window.localStorage.setItem(this.lmpidKey, id);
-    window.__lmpid = id;
-  }
-
-  getLmpid(): string | null {
-    return window.__lmpid || window.localStorage.getItem(this.lmpidKey) || null;
-  }
-
   clearPassport() {
     window.localStorage.removeItem(this.passportKey);
   }
@@ -130,5 +102,5 @@ class LocalStorage {
   }
 }
 
-export { LocalStorage, lmpidProvider };
+export { LocalStorage };
 export default LocalStorage;

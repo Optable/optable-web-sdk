@@ -24,8 +24,6 @@ type TargetingResponse = {
   user?: UserIdentifiers[];
 };
 
-const lmpidProvider = "loblawmedia.ca";
-
 async function Targeting(config: Required<OptableConfig>, id: string): Promise<TargetingResponse> {
   const searchParams = new URLSearchParams({ id });
   const path = "/v2/targeting?" + searchParams.toString();
@@ -41,11 +39,6 @@ async function Targeting(config: Required<OptableConfig>, id: string): Promise<T
   }
 
   return response;
-}
-
-function LmpidFromCache(config: Required<OptableConfig>): string | null {
-  const ls = new LocalStorage(config);
-  return ls.getLmpid();
 }
 
 function TargetingFromCache(config: Required<OptableConfig>): TargetingResponse | null {
@@ -110,14 +103,5 @@ function TargetingKeyValues(tdata: TargetingResponse | null): TargetingKeyValues
   return result;
 }
 
-export {
-  Targeting,
-  TargetingFromCache,
-  TargetingClearCache,
-  TargetingResponse,
-  PrebidORTB2,
-  TargetingKeyValues,
-  LmpidFromCache,
-  lmpidProvider,
-};
+export { Targeting, TargetingFromCache, TargetingClearCache, TargetingResponse, PrebidORTB2, TargetingKeyValues };
 export default Targeting;
