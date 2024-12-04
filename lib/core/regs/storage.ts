@@ -26,20 +26,4 @@ const localStorageProxy = {
   },
 };
 
-const windowStorageProxy = new Proxy(window, {
-  get: (target, prop, receiver) => {
-    if (!consent.deviceAccess) {
-      return undefined;
-    }
-    return Reflect.get(target, prop, receiver);
-  },
-
-  set: (target, prop, value, receiver) => {
-    if (!consent.deviceAccess) {
-      return false;
-    }
-    return Reflect.set(target, prop, value, receiver);
-  },
-});
-
-export { localStorageProxy as localStorage, windowStorageProxy as window };
+export { localStorageProxy as localStorage };
