@@ -46,7 +46,7 @@ jobs:
       - name: Setup registry access
         run: |
           echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_CI_ACCESS_TOKEN }}" >> ~/.npmrc
 
       - name: Publish to NPM
         run: npm publish --access public
