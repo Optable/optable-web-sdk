@@ -1,4 +1,4 @@
-import { timezoneRegion, Region } from "./region";
+import { timezoneRegulation, Regulation } from "./regulations";
 import { PingReturn as GPPConsentData } from "./gpp/cmpapi";
 import { TCData as TCFConsentData } from "./tcf/cmpapi";
 import { SectionID as TCFEuV2SectionID, APIPrefix as TCFEuV2APIPrefix } from "./gpp/tcfeuv2";
@@ -6,21 +6,21 @@ import { SectionID as TCFCaV1SectionID, APIPrefix as TCFCaV1APIPrefix } from "./
 
 type Consent = {
   deviceAccess: boolean;
-  region: Region | null;
+  reg: Regulation | null;
 };
 
 function getConsent(): Consent {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const region = timezoneRegion(timeZone);
+  const reg = timezoneRegulation(timeZone);
   const hasGPP = typeof window.__gpp === "function";
   const hasTCF = typeof window.__tcfapi === "function";
 
-  let consent = { deviceAccess: false, region };
+  let consent = { deviceAccess: false, reg };
 
-  switch (region) {
-    // For CA regions, use GPP if available,
+  switch (reg) {
+    // For CAN reg, use GPP if available,
     // otherwise assume device access is not allowed
-    case "ca":
+    case "can":
       if (!hasGPP) {
         break;
       }
@@ -28,9 +28,9 @@ function getConsent(): Consent {
         consent.deviceAccess = gppCADeviceAccess(data);
       });
       break;
-    // For EU regions, use GPP if available, otherwise use TCF,
+    // For GDPR reg, use GPP if available, otherwise use TCF,
     // otherwise assume device access is not allowed
-    case "eu":
+    case "gdpr":
       if (hasGPP) {
         onGPPSectionChange(TCFEuV2SectionID, (data) => {
           consent.deviceAccess = gppEUDeviceAccess(data);
