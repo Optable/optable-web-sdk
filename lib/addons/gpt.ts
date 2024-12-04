@@ -50,7 +50,7 @@ OptableSDK.prototype.installGPTEventListeners = function () {
  * InstallGPTSecureSignals() sets up loblaw media private ID secure signals on GPT from targeting.
  * Allow for user-defined signal passing. Currently requires specifying the provider name since most signals will be linked to custom ids.
  */
-OptableSDK.prototype.installGPTSecureSignals = function (...signals: Array<{provider: string, id: string}>) {
+OptableSDK.prototype.installGPTSecureSignals = function (...signals: Array<{ provider: string; id: string }>) {
   window.googletag = window.googletag || { cmd: [] };
   const gpt = window.googletag;
 
