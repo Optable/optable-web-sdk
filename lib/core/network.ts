@@ -3,10 +3,9 @@ import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
 function buildRequest(path: string, config: Required<OptableConfig>, init?: RequestInit): Request {
-  const { site, host, insecure, cookies } = config;
+  const { site, host, cookies } = config;
 
-  const proto = insecure ? "http" : "https";
-  const url = new URL(`${site}${path}`, `${proto}://${host}`);
+  const url = new URL(`${site}${path}`, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
 
   if (cookies) {

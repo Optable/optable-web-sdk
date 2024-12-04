@@ -23,7 +23,6 @@
           host: "${DCN_HOST}",
           initPassport: JSON.parse("${DCN_INIT}"),
           site: "${DCN_SITE}",
-          insecure: JSON.parse("${DCN_INSECURE}"),
           cookies: cookiesTransport,
         });
       })
