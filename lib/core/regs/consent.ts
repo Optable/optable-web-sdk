@@ -24,7 +24,7 @@ function getConsent(): Consent {
       if (!hasGPP) {
         break;
       }
-      onGPPChange((data) => {
+      onGPPSectionChange(TCFCaV1SectionID, (data) => {
         consent.deviceAccess = gppCADeviceAccess(data);
       });
       break;
@@ -32,7 +32,7 @@ function getConsent(): Consent {
     // otherwise assume device access is not allowed
     case "eu":
       if (hasGPP) {
-        onGPPChange((data) => {
+        onGPPSectionChange(TCFEuV2SectionID, (data) => {
           consent.deviceAccess = gppEUDeviceAccess(data);
         });
       } else if (hasTCF) {
@@ -52,10 +52,6 @@ function getConsent(): Consent {
 }
 
 function gppCADeviceAccess(data: GPPConsentData): boolean {
-  if (!data.applicableSections.includes(TCFCaV1SectionID)) {
-    return false;
-  }
-
   if (!(TCFCaV1APIPrefix in data.parsedSections)) {
     return false;
   }
@@ -76,10 +72,6 @@ function gppCADeviceAccess(data: GPPConsentData): boolean {
 }
 
 function gppEUDeviceAccess(data: GPPConsentData): boolean {
-  if (!data.applicableSections.includes(TCFEuV2SectionID)) {
-    return false;
-  }
-
   if (!(TCFEuV2APIPrefix in data.parsedSections)) {
     return false;
   }
@@ -99,19 +91,18 @@ function gppEUDeviceAccess(data: GPPConsentData): boolean {
 }
 
 function tcfDeviceAccess(data: TCFConsentData): boolean {
-  if (!data.gdprApplies) {
-    return true;
-  }
-
   return data.publisher.consents[1] || data.publisher.legitimateInterests[1];
 }
 
-function onGPPChange(cb: (_: GPPConsentData) => void): void {
+function onGPPSectionChange(sectionID: number, cb: (_: GPPConsentData) => void): void {
   window.__gpp?.("addEventListener", (data, success) => {
     if (!success) {
       return;
     }
     if (data.eventName !== "signalStatus" || data.data !== "ready") {
+      return;
+    }
+    if (!data.pingData.applicableSections.includes(sectionID)) {
       return;
     }
     cb(data.pingData);
@@ -126,7 +117,9 @@ function onTCFChange(cb: (_: TCFConsentData) => void): void {
     if (data.eventStatus !== "tcloaded" && data.eventStatus !== "useractioncomplete") {
       return;
     }
-
+    if (!data.gdprApplies) {
+      return;
+    }
     cb(data);
   });
 }
