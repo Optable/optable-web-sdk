@@ -54,8 +54,8 @@ OptableSDK.prototype.installGPTSecureSignals = function (...signals: Array<{ pro
   const gpt = window.googletag;
 
   if (signals && signals.length > 0) {
-    signals.forEach(({ provider, id }) => {
-      gpt.cmd.push(() => {
+    gpt.cmd.push(() => {
+      signals.forEach(({ provider, id }) => {
         gpt.secureSignalProviders.push({
           id: provider,
           collectorFunction: () => Promise.resolve(id),
