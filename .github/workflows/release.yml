@@ -6,7 +6,7 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+-*
 
 env:
-  workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+  workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
   service-account: ${{ secrets.SERVICE_ACCOUNT }}
 
 jobs:
