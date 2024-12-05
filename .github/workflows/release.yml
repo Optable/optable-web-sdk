@@ -20,39 +20,9 @@ jobs:
       contents: read
       id-token: write
 
-  deploy-sdk-to-npm:
-    needs: [build]
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download web artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist-web
-          path: browser/dist
-
-      - name: Download lib artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist-web
-          path: lib/dist
-
-        # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
-      - name: Patch version
-        run: ./scripts/patch-version.sh "${{ github.ref_name }}"
-
-      - name: Setup registry access
-        run: |
-          echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_CI_ACCESS_TOKEN }}" >> ~/.npmrc
-
-      - name: Publish to NPM
-        run: npm publish --access public
-
+  # This job needs to run before deploying to npm otherwise `latest` won't be updated
   define-gcs-versions-to-update:
-    needs: [deploy-sdk-to-npm]
+    needs: [build]
     runs-on: ubuntu-22.04
 
     outputs:
@@ -82,8 +52,39 @@ jobs:
         run: |
           echo "SDK versions: ${{ steps.sdk-versions.outputs.versions }}"
 
+  deploy-sdk-to-npm:
+    needs: [build, define-gcs-versions-to-update]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download web artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: browser/dist
+
+      - name: Download lib artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: lib/dist
+
+        # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
+      - name: Patch version
+        run: ./scripts/patch-version.sh "${{ github.ref_name }}"
+
+      - name: Setup registry access
+        run: |
+          echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_CI_ACCESS_TOKEN }}" >> ~/.npmrc
+
+      - name: Publish to NPM
+        run: npm publish --access public
+
   deploy-sdk-to-gcs:
-    needs: [define-gcs-versions-to-update]
+    needs: [deploy-sdk-to-npm, define-gcs-versions-to-update]
     strategy:
       matrix:
         sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
