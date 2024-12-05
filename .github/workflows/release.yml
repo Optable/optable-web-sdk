@@ -19,6 +19,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    with:
+      version: ${{ github.ref_name }}
 
   # This job needs to run before deploying to npm otherwise `latest` won't be updated
   define-gcs-versions-to-update:

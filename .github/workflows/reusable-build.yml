@@ -1,5 +1,12 @@
 name: Building SDK and demos
-on: workflow_call
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to be build"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -30,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-web
-          path: browser/dist
+          path: browser/dist/**/*
 
   build-lib:
     runs-on: ubuntu-22.04
@@ -49,6 +56,9 @@ jobs:
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
 
+      - name: Patch build.json version
+        run: ./scripts/patch-version.sh "${{ inputs.version }}"
+
       - name: Transpile lib
         run: npm run build-lib
 
@@ -56,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-lib
-          path: lib/dist
+          path: lib/dist/**/*
 
   build-vanilla-demo:
     runs-on: ubuntu-22.04
