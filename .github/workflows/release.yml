@@ -113,8 +113,9 @@ jobs:
           path: "browser/dist/sdk.js"
           destination: "optable-web-sdk/${{ matrix.sdk-version }}"
           gzip: false
+          process_gcloudignore: false
           headers: |
-            x-goog-meta-optable-sdk-version: '${{ github.ref_name }}'
+            x-goog-meta-optable-sdk-version: ${{ github.ref_name }}
 
   deploy-demo:
     needs: [deploy-sdk-to-npm]
