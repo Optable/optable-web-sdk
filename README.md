@@ -1,4 +1,4 @@
-# Optable Web SDK [![CircleCI](https://dl.circleci.com/status-badge/img/gh/Optable/optable-web-sdk/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/Optable/optable-web-sdk/tree/master)
+# Optable Web SDK [![Continuous Integration](https://github.com/Optable/optable-web-sdk/actions/workflows/pull-request.yml/badge.svg)](https://github.com/Optable/optable-web-sdk/actions/workflows/pull-request.yml)
 
 JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](https://docs.optable.co/) from a web site or web application.
 
