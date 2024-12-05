@@ -101,16 +101,20 @@ jobs:
           name: dist-web
           path: browser/dist
 
-      - uses: "google-github-actions/auth@v2"
+      - name: Auth to google cloud
+        uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ env.workload_identity_provider }}
           service_account: ${{ env.service-account }}
 
       - name: Upload SDK to GCS bucket, upload new version
-        uses: "google-github-actions/upload-cloud-storage@v2"
+        uses: google-github-actions/upload-cloud-storage@v2
         with:
           path: "browser/dist/sdk.js"
           destination: "optable-web-sdk/${{ matrix.sdk-version }}"
+          gzip: false
+          headers: |
+            x-goog-meta-optable-sdk-version: '${{ github.ref_name }}'
 
   deploy-demo:
     needs: [deploy-sdk-to-npm]
