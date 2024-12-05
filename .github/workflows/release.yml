@@ -70,7 +70,7 @@ jobs:
       - name: Download lib artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dist-web
+          name: dist-lib
           path: lib/dist
 
         # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
