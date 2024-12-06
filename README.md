@@ -103,13 +103,7 @@ const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site" });
 
 You can then call various SDK APIs on the instance as shown in the examples below. It's also possible to configure multiple instances of `OptableSDK` in order to connect to other (e.g., partner) DCNs and/or reference other configured web site slug IDs.
 
-Note that all SDK communication with Optable DCNs is done over TLS. The only exception to this is if you instantiate the `OptableSDK` class with the `insecure` optional boolean parameter set to `true`. For example:
-
-```js
-const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", insecure: true });
-```
-
-Note that production DCNs only listen to TLS traffic. The `insecure: true` option is meant to be used by Optable developers running the DCN locally for testing. See [developer docs](https://github.com/Optable/optable-web-sdk/tree/master/docs) for other developer notes.
+Note that all SDK communication with Optable DCNs is done over TLS.
 
 ### Identify API
 

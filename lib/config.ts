@@ -1,13 +1,11 @@
 type OptableConfig = {
   host: string;
   site: string;
-  insecure?: boolean;
   cookies?: boolean;
   initPassport?: boolean;
 };
 
 const DCN_DEFAULTS = {
-  insecure: false,
   cookies: true,
   initPassport: true,
 };

@@ -29,7 +29,6 @@ module.exports = {
         host: process.env.DCN_HOST,
         initPassport: process.env.DCN_INIT === "true",
         site: "${DCN_SITE}",
-        insecure: process.env.DCN_INSECURE === "true",
       }),
     }),
     new HtmlWebpackPlugin({
