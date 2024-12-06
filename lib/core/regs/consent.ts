@@ -57,6 +57,7 @@ function gppCADeviceAccess(data: GPPConsentData): boolean {
   }
 
   const section = data.parsedSections[TCFCaV1APIPrefix] || [];
+
   const publisherSubsection = section.find((s) => {
     return "SubsectionType" in s && s.SubsectionType === 3;
   });
@@ -99,7 +100,9 @@ function onGPPSectionChange(sectionID: number, cb: (_: GPPConsentData) => void):
     if (!success) {
       return;
     }
-    if (data.eventName !== "signalStatus" || data.data !== "ready") {
+
+    const ready = data.eventName === "signalStatus" && data.data === "ready";
+    if (!ready) {
       return;
     }
     if (!data.pingData.applicableSections.includes(sectionID)) {
@@ -114,7 +117,8 @@ function onTCFChange(cb: (_: TCFConsentData) => void): void {
     if (!success) {
       return;
     }
-    if (data.eventStatus !== "tcloaded" && data.eventStatus !== "useractioncomplete") {
+    const ready = data.eventStatus === "tcloaded" || data.eventStatus === "useractioncomplete";
+    if (!ready) {
       return;
     }
     if (!data.gdprApplies) {

@@ -16,6 +16,8 @@
     "@babel/plugin-transform-runtime": "^7.12.1",
     "@babel/preset-env": "^7.12.1",
     "@babel/preset-typescript": "^7.12.1",
+    "@iabgpp/cmpapi": "^3.1.4",
+    "@iabgpp/stub": "^3.1.4",
     "@types/googletag": "^3.1.3",
     "@types/jest": "^26.0.15",
     "babel-jest": "^29.7.0",
