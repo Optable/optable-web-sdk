@@ -1,0 +1,24 @@
+name: "Setup demo npm"
+description: "A composite action to setup npm for npm demo"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Node.js version
+      id: get-node-version
+      shell: bash
+      run: echo "node_version=$(grep node .tool-versions | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ steps.get-node-version.outputs.node_version }}
+    - name: npm cache
+      id: cache-node-modules
+      uses: actions/cache@v4
+      with:
+        path: demos/npm/node_modules
+        key: ${{ runner.os }}-npm-packages-npm-demo-${{ hashFiles('demos/npm/package-lock.json') }}
+    - name: Install dependencies
+      shell: bash
+      if: steps.cache-node-modules.outputs.cache-hit != 'true'
+      run: npm ci --prefix demos/npm

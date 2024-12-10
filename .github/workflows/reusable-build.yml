@@ -19,16 +19,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache dependencies
-        id: cache-node-modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-${{ hashFiles('package-lock.json') }}
-
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
+      - name: Setup npm
+        uses: ./.github/actions/setup-npm
 
       - name: Build web production
         run: npm run build-web -- --mode=production
@@ -45,16 +37,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache dependencies
-        id: cache-node-modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-${{ hashFiles('package-lock.json') }}
-
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
+      - name: Setup npm
+        uses: ./.github/actions/setup-npm
 
       - name: Patch build.json version
         run: ./scripts/patch-version.sh "${{ inputs.version }}"
@@ -111,30 +95,12 @@ jobs:
           name: dist-lib
           path: lib/dist
 
-      - name: Cache dependencies
-        id: cache-node-modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-${{ hashFiles('package-lock.json') }}
-
       # SDK has a dependency on third-party js-sha256, we need to install node_modules in the root directory
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: |
-          cd ../../
-          npm ci
+      - name: Setup npm
+        uses: ./.github/actions/setup-npm
 
-      - name: Cache react demo dependencies
-        id: cache-node-modules-react-demo
-        uses: actions/cache@v4
-        with:
-          path: demos/react/node_modules
-          key: node-react-demo-${{ hashFiles('demos/react/package-lock.json') }}
-
-      - name: Install react demo dependencies
-        if: steps.cache-node-modules-react-demo.outputs.cache-hit != 'true'
-        run: npm ci
+      - name: Setup npm react demo
+        uses: ./.github/actions/setup-npm-demos-react
 
       - name: Build react demo
         run: npm run build
@@ -154,16 +120,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache npm-demo dependencies
-        id: cache-node-modules-npm-demo
-        uses: actions/cache@v4
-        with:
-          path: demos/npm/node_modules
-          key: node-npm-demo-${{ hashFiles('demos/npm/package-lock.json') }}
-
-      - name: Install npm-demo dependencies
-        if: steps.cache-node-modules-npm-demo.outputs.cache-hit != 'true'
-        run: npm ci
+      - name: Setup npm demos npm
+        uses: ./.github/actions/setup-npm-demos-npm
 
       - name: Build npm-demo
         run: npm run build
