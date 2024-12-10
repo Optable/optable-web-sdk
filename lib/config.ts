@@ -1,22 +1,26 @@
-import { Consent } from "./core/regs/consent";
+import globalConsent, { Consent } from "./core/regs/consent";
 
-type OptableConfig = {
+type InitConfig = {
   host: string;
   site: string;
   cookies?: boolean;
   initPassport?: boolean;
-  consent: Consent | "auto";
+  consent?: Consent;
 };
+
+type ResolvedConfig = Required<InitConfig>;
 
 const DCN_DEFAULTS = {
   cookies: true,
   initPassport: true,
-  consent: "auto",
+  consent: globalConsent,
 };
 
-function getConfig(config: OptableConfig): Required<OptableConfig> {
-  return { ...DCN_DEFAULTS, ...config };
+function getConfig(init: InitConfig): ResolvedConfig {
+  return {
+    ...DCN_DEFAULTS,
+    ...init,
+  };
 }
 
-export { OptableConfig, getConfig };
-export default OptableConfig;
+export { InitConfig, ResolvedConfig, getConfig };

@@ -1,8 +1,7 @@
 import { SiteResponse } from "../edge/site";
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
-import globalConsent from "./regs/consent";
 
 function toBinary(str: string): string {
   const codeUnits = new Uint16Array(str.length);
@@ -20,7 +19,7 @@ class LocalStorage {
 
   private storage: LocalStorageProxy;
 
-  constructor(private config: OptableConfig) {
+  constructor(private config: ResolvedConfig) {
     const sfx = btoa(toBinary(`${this.config.host}/${this.config.site}`));
     // Legacy targeting key
     this.targetingV1Key = "OPTABLE_TGT_" + sfx;
@@ -28,9 +27,7 @@ class LocalStorage {
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
     this.siteKey = "OPTABLE_SITE_" + sfx;
-
-    const consent = this.config.consent === "auto" ? globalConsent : this.config.consent;
-    this.storage = new LocalStorageProxy(consent);
+    this.storage = new LocalStorageProxy(this.config.consent);
   }
 
   getPassport(): string | null {

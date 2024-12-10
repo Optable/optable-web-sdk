@@ -1,11 +1,11 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 
 type ProfileTraits = {
   [key: string]: string | number | boolean;
 };
 
-function Profile(config: Required<OptableConfig>, traits: ProfileTraits): Promise<void> {
+function Profile(config: ResolvedConfig, traits: ProfileTraits): Promise<void> {
   const profile = {
     traits: traits,
   };
