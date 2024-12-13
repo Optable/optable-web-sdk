@@ -30,6 +30,7 @@ jobs:
         with:
           name: dist-web
           path: browser/dist/**/*
+          retention-days: 1
 
   build-lib:
     runs-on: ubuntu-22.04
@@ -51,6 +52,7 @@ jobs:
         with:
           name: dist-lib
           path: lib/dist/**/*
+          retention-days: 1
 
   build-vanilla-demo:
     runs-on: ubuntu-22.04
@@ -78,6 +80,7 @@ jobs:
         with:
           name: dist-demo-vanilla
           path: demos/**/*.html
+          retention-days: 1
 
   build-react-demo:
     needs: [build-lib]
@@ -110,6 +113,7 @@ jobs:
         with:
           name: dist-react-demo
           path: demos/react/dist/**/*
+          retention-days: 1
 
   build-npm-demo:
     runs-on: ubuntu-22.04
@@ -131,3 +135,4 @@ jobs:
         with:
           name: dist-npm-demo
           path: demos/npm/dist/**/*
+          retention-days: 1
