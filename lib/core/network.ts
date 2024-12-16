@@ -8,6 +8,18 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   const url = new URL(`${site}${path}`, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
 
+  if (config.consent.reg) {
+    url.searchParams.set("reg", config.consent.reg);
+  }
+
+  if (config.consent.gpp) {
+    url.searchParams.set("gpp", config.consent.gpp);
+  }
+
+  if (config.consent.tcf) {
+    url.searchParams.set("tcf", config.consent.tcf);
+  }
+
   if (cookies) {
     url.searchParams.set("cookies", "yes");
   } else {
