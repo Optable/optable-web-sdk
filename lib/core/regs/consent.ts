@@ -72,16 +72,14 @@ function gppEUDeviceAccess(data: GPPConsentData): boolean {
     return false;
   }
 
-  return (
-    publisherSubsection.PubPurposesConsent.includes(1) || publisherSubsection.PubPurposesLITransparency.includes(1)
-  );
+  return publisherSubsection.PubPurposesConsent.includes(1);
 }
 
 function tcfDeviceAccess(data: TCFConsentData): boolean {
   if (!data.gdprApplies) {
     return true;
   }
-  return !!data.publisher.consents["1"] || !!data.publisher.legitimateInterests["1"];
+  return !!data.publisher.consents["1"];
 }
 
 function onGPPSectionChange(sectionID: number, cb: (_: GPPConsentData) => void): void {
