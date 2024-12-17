@@ -22,3 +22,4 @@ function Uid2Token(config: Required<OptableConfig>, id: string): Promise<Uid2Tok
 
 export { Uid2Token };
 export default Uid2Token;
+export type { Uid2TokenResponse };

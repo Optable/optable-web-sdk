@@ -23,5 +23,6 @@ function Tokenize(config: Required<OptableConfig>, id: string): Promise<Tokenize
   });
 }
 
-export { Tokenize, TokenizeRequest, TokenizeResponse };
+export { Tokenize };
 export default Tokenize;
+export type { TokenizeRequest, TokenizeResponse };
