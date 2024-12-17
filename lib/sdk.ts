@@ -4,7 +4,7 @@ import { getConfig } from "./config";
 import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
-import { Uid2Token } from "./edge/uid2_token";
+import { Uid2Token, Uid2TokenResponse } from "./edge/uid2_token";
 import { Resolve, ResolveResponse } from "./edge/resolve";
 import { Site, SiteResponse, SiteFromCache } from "./edge/site";
 import {
@@ -33,7 +33,7 @@ class OptableSDK {
     this.init = this.dcn.initPassport ? Site(this.dcn).then(noop).catch(noop) : Promise.resolve();
   }
 
-  async identify(...ids: string[]) {
+  async identify(...ids: string[]): Promise<void> {
     await this.init;
     return Identify(
       this.dcn,
@@ -41,7 +41,7 @@ class OptableSDK {
     );
   }
 
-  async uid2Token(id: string) {
+  async uid2Token(id: string): Promise<Uid2TokenResponse> {
     await this.init;
     return Uid2Token(this.dcn, id);
   }
@@ -63,7 +63,7 @@ class OptableSDK {
     return SiteFromCache(this.dcn);
   }
 
-  targetingClearCache() {
+  targetingClearCache(): void {
     TargetingClearCache(this.dcn);
   }
 

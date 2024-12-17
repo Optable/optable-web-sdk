@@ -1,0 +1,71 @@
+import { http, HttpResponse } from "msw";
+import { TEST_BASE_URL } from "./mocks";
+import { Uid2TokenResponse } from "edge/uid2_token";
+import { SiteResponse } from "edge/site";
+import { TokenizeResponse } from "edge/tokenize";
+import { TargetingResponse } from "edge/targeting";
+import { EdgePassport } from "edge/passport";
+
+const ok200 = {
+  status: 200,
+};
+
+const passport: EdgePassport = {
+  passport: "PASSPORT",
+};
+
+const handlers = [
+  http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+    const data: SiteResponse = {
+      interestGroupPixel: "",
+      auctionConfigURL: "",
+      auctionConfig: null,
+      getTopicsURL: "https://ads.optable.co/ca/topics/v1/get?origin=70cc15ee-484c-4d26-8868-c949a5c084b8",
+    };
+    return HttpResponse.json({ ...data, ...passport }, ok200);
+  }),
+
+  http.post(`${TEST_BASE_URL}/identify`, async ({}) => {
+    return HttpResponse.json({ ...passport }, ok200);
+  }),
+
+  http.post(`${TEST_BASE_URL}/uid2/token`, async ({}) => {
+    const data: Uid2TokenResponse = {
+      advertising_token: "gfsdgsdfgsdeagdfs",
+      RefreshToken: "dasdasdasdas",
+      IdentityExpires: 1734459312780,
+      RefreshFrom: 1734462312780,
+      RefreshExpires: 2734462312780,
+      RefreshResponseKey: "gdsfgfsd",
+    };
+    return HttpResponse.json({ ...data, ...passport }, ok200);
+  }),
+
+  http.post(`${TEST_BASE_URL}/witness`, async ({}) => {
+    return HttpResponse.json({ ...passport }, ok200);
+  }),
+
+  http.post(`${TEST_BASE_URL}/profile`, async ({}) => {
+    return HttpResponse.json({ ...passport }, ok200);
+  }),
+
+  http.post(`${TEST_BASE_URL}/v1/tokenize`, async ({}) => {
+    const data: TokenizeResponse = {
+      User: {
+        data: [],
+        ext: undefined,
+      },
+    };
+    return HttpResponse.json({ ...data, ...passport }, ok200);
+  }),
+
+  http.get(`${TEST_BASE_URL}/v2/targeting`, async ({}) => {
+    const data: TargetingResponse = {
+      audience: [],
+      user: [],
+    };
+    return HttpResponse.json({ ...data, ...passport }, ok200);
+  }),
+];
+
+export { handlers };
