@@ -1,7 +1,13 @@
 /** @type {import('jest').Config} */
 const config = {
   testEnvironment: "jsdom",
-  setupFiles: ["<rootDir>/setup-jest.js"],
+  resetMocks: false,
+  setupFiles: ["<rootDir>/setup-jest.js", "jest-localstorage-mock"],
+  setupFilesAfterEnv: ["<rootDir>/setup-env.js"],
+  testEnvironmentOptions: {
+    customExportConditions: [""],
+  },
+  collectCoverage: true,
 };
 
 module.exports = config;
