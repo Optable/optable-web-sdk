@@ -1,4 +1,4 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 import { User } from "./rtb2";
 
@@ -10,7 +10,7 @@ type TokenizeRequest = {
   id: string;
 };
 
-function Tokenize(config: Required<OptableConfig>, id: string): Promise<TokenizeResponse> {
+function Tokenize(config: ResolvedConfig, id: string): Promise<TokenizeResponse> {
   let request: TokenizeRequest = {
     id: id,
   };
