@@ -16,6 +16,10 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     url.searchParams.set("gpp", config.consent.gpp);
   }
 
+  if (config.consent.gppSectionIDs) {
+    url.searchParams.set("gpp_sid", config.consent.gppSectionIDs.join(","));
+  }
+
   if (config.consent.tcf) {
     url.searchParams.set("tcf", config.consent.tcf);
   }

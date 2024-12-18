@@ -1,20 +1,42 @@
 import { inferRegulation, Regulation } from "./regulations";
-import { PingReturn as GPPConsentData } from "./gpp/cmpapi";
-import { TCData as TCFConsentData } from "./tcf/cmpapi";
-import { SectionID as TCFEuV2SectionID, APIPrefix as TCFEuV2APIPrefix } from "./gpp/tcfeuv2";
-import { SectionID as TCFCaV1SectionID } from "./gpp/tcfcav1";
+import * as gpp from "./gpp";
+import * as tcf from "./tcf";
 
 type Consent = {
   deviceAccess: boolean;
   reg: Regulation | null;
   tcf?: string;
   gpp?: string;
+  gppSectionIDs?: number[];
 };
+
+const gdprSectionIDs = [gpp.tcfeuv2.SectionID];
+
+const canSectionIDs = [gpp.tcfcav1.SectionID];
+
+const usSectionIDs = [
+  gpp.usnat.SectionID,
+  gpp.usca.SectionID,
+  gpp.usco.SectionID,
+  gpp.usct.SectionID,
+  gpp.usde.SectionID,
+  gpp.usfl.SectionID,
+  gpp.usia.SectionID,
+  gpp.usmt.SectionID,
+  gpp.usne.SectionID,
+  gpp.usnh.SectionID,
+  gpp.usnj.SectionID,
+  gpp.usor.SectionID,
+  gpp.ustn.SectionID,
+  gpp.ustx.SectionID,
+  gpp.usut.SectionID,
+  gpp.usva.SectionID,
+];
 
 function gdprConsent(): Consent {
   const consent: Consent = { deviceAccess: false, reg: "gdpr" };
 
-  // For use TCF if available, otherwise use GPP,
+  // Use TCF if available, otherwise use GPP,
   // if none available assume device access is not allowed
   if (hasTCF()) {
     onTCFChange((data) => {
@@ -22,9 +44,10 @@ function gdprConsent(): Consent {
       consent.tcf = data.tcString;
     });
   } else if (hasGPP()) {
-    onGPPSectionChange(TCFEuV2SectionID, (data) => {
+    onGPPSectionChange(gdprSectionIDs, (data) => {
       consent.deviceAccess = gppEUDeviceAccess(data);
       consent.gpp = data.gppString;
+      consent.gppSectionIDs = data.applicableSections;
     });
   }
 
@@ -32,14 +55,20 @@ function gdprConsent(): Consent {
 }
 
 function usConsent(): Consent {
-  return { deviceAccess: true, reg: "us" };
+  const consent: Consent = { deviceAccess: true, reg: "us" };
+  onGPPSectionChange(usSectionIDs, (data) => {
+    consent.gpp = data.gppString;
+    consent.gppSectionIDs = data.applicableSections;
+  });
+
+  return consent;
 }
 
 function canConsent(): Consent {
   const consent: Consent = { deviceAccess: true, reg: "can" };
-  onGPPSectionChange(TCFCaV1SectionID, (data) => {
-    // Device access is always granted
+  onGPPSectionChange(canSectionIDs, (data) => {
     consent.gpp = data.gppString;
+    consent.gppSectionIDs = data.applicableSections;
   });
 
   return consent;
@@ -58,12 +87,12 @@ function getConsent(reg: Regulation | null): Consent {
   }
 }
 
-function gppEUDeviceAccess(data: GPPConsentData): boolean {
-  if (!(TCFEuV2APIPrefix in data.parsedSections)) {
+function gppEUDeviceAccess(data: gpp.cmpapi.PingReturn): boolean {
+  if (!(gpp.tcfeuv2.APIPrefix in data.parsedSections)) {
     return false;
   }
 
-  const section = data.parsedSections[TCFEuV2APIPrefix] || [];
+  const section = data.parsedSections[gpp.tcfeuv2.APIPrefix] || [];
   const publisherSubsection = section.find((s) => {
     return "SegmentType" in s && s.SegmentType === 3;
   });
@@ -75,14 +104,14 @@ function gppEUDeviceAccess(data: GPPConsentData): boolean {
   return publisherSubsection.PubPurposesConsent.includes(1);
 }
 
-function tcfDeviceAccess(data: TCFConsentData): boolean {
+function tcfDeviceAccess(data: tcf.cmpapi.TCData): boolean {
   if (!data.gdprApplies) {
     return true;
   }
   return !!data.publisher.consents["1"];
 }
 
-function onGPPSectionChange(sectionID: number, cb: (_: GPPConsentData) => void): void {
+function onGPPSectionChange(sectionIDs: number[], cb: (_: gpp.cmpapi.PingReturn) => void): void {
   if (!hasGPP()) {
     return;
   }
@@ -96,14 +125,19 @@ function onGPPSectionChange(sectionID: number, cb: (_: GPPConsentData) => void):
     if (!ready) {
       return;
     }
-    if (!data.pingData.applicableSections.includes(sectionID)) {
+
+    const anyChanged = sectionIDs.some((sectionID) => {
+      return data.pingData.applicableSections.includes(sectionID);
+    });
+
+    if (!anyChanged) {
       return;
     }
     cb(data.pingData);
   });
 }
 
-function onTCFChange(cb: (_: TCFConsentData) => void): void {
+function onTCFChange(cb: (_: tcf.cmpapi.TCData) => void): void {
   if (!hasTCF()) {
     return;
   }
