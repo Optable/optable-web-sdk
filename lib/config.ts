@@ -1,28 +1,38 @@
-import globalConsent, { Consent } from "./core/regs/consent";
+import { getConsent, Consent, inferRegulation } from "./core/regs/consent";
+
+type CMPApiConfig = {
+  // An optional vendor ID from GVL (global vendor list) when interpretting TCF/GPP EU consent,
+  // when not passed, defaults to publisher consent.
+  tcfeuVendorID?: number;
+};
+
+type InitConsent = {
+  // A "cmpapi" configuration indicating that consent should be gathered from CMP apis.
+  cmpapi?: CMPApiConfig;
+  // A "static" consent object already collected by the publisher
+  static?: Consent;
+};
 
 type InitConfig = {
   host: string;
   site: string;
   cookies?: boolean;
   initPassport?: boolean;
-  consent?: Consent | "auto";
+  consent?: InitConsent;
 };
 
-type ResolvedConfig = Required<InitConfig> & {
+type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
   consent: Consent;
 };
 
 const DCN_DEFAULTS = {
   cookies: true,
   initPassport: true,
-  // Backwards compatibility, default to device access allowed
-  // Once we have measured the impact of automatic CMP integration in the wild
-  // we may move to "auto" default.
-  consent: { deviceAccess: true, reg: null } as Consent,
+  consent: { deviceAccess: true, reg: null },
 };
 
 function getConfig(init: InitConfig): ResolvedConfig {
-  const config = {
+  const config: ResolvedConfig = {
     host: init.host,
     site: init.site,
     cookies: init.cookies ?? DCN_DEFAULTS.cookies,
@@ -30,10 +40,14 @@ function getConfig(init: InitConfig): ResolvedConfig {
     consent: DCN_DEFAULTS.consent,
   };
 
-  if (init.consent) {
-    config.consent = init.consent === "auto" ? globalConsent : init.consent;
+  if (init.consent?.static) {
+    config.consent = init.consent.static;
+  } else if (init.consent?.cmpapi) {
+    config.consent = getConsent(inferRegulation(), init.consent.cmpapi);
   }
+
   return config;
 }
 
-export { InitConfig, ResolvedConfig, getConfig };
+export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig };
+export { getConfig };

@@ -72,4 +72,5 @@ function inferRegulation(): Regulation | null {
   return regulation ?? null;
 }
 
-export { inferRegulation, Regulation };
+export { inferRegulation };
+export type { Regulation };
