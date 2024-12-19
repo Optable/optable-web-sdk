@@ -1,12 +1,12 @@
 import React, { useContext, createContext, useState } from "react";
 import ReactDOM from "react-dom";
-import OptableSDK, { OptableConfig } from "@optable/web-sdk";
+import OptableSDK, { InitConfig } from "@optable/web-sdk";
 
 const OptableContext = createContext<OptableSDK | null>(null);
 
 // Sandbox configuration injected by webpack based on build environment (see demos/react/webpack.config.js)
 declare global {
-  const DCN_CONFIG: OptableConfig;
+  const DCN_CONFIG: InitConfig;
 }
 
 // Provide a global SDK instance across the application

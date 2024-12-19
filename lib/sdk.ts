@@ -1,4 +1,4 @@
-import type { OptableConfig } from "./config";
+import type { InitConfig, ResolvedConfig } from "./config";
 import { default as buildInfo } from "./build.json";
 import { getConfig } from "./config";
 import type { WitnessProperties } from "./edge/witness";
@@ -22,10 +22,10 @@ import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 class OptableSDK {
   public static version = buildInfo.version;
 
-  public dcn: Required<OptableConfig>;
+  public dcn: ResolvedConfig;
   private init: Promise<void>;
 
-  constructor(dcn: OptableConfig) {
+  constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
     // If initPassport, prefetch site config and cache it, it assigns a passport as a side effect
     const noop = () => {};
@@ -135,5 +135,5 @@ class OptableSDK {
 }
 
 export { OptableSDK };
-export type { OptableConfig };
+export type { InitConfig };
 export default OptableSDK;

@@ -1,4 +1,4 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 import { UIDAgentType, User as RTB2User } from "./rtb2";
@@ -24,7 +24,7 @@ type TargetingResponse = {
   user?: UserIdentifiers[];
 };
 
-async function Targeting(config: Required<OptableConfig>, id: string): Promise<TargetingResponse> {
+async function Targeting(config: ResolvedConfig, id: string): Promise<TargetingResponse> {
   const searchParams = new URLSearchParams({ id });
   const path = "/v2/targeting?" + searchParams.toString();
 
@@ -41,12 +41,12 @@ async function Targeting(config: Required<OptableConfig>, id: string): Promise<T
   return response;
 }
 
-function TargetingFromCache(config: Required<OptableConfig>): TargetingResponse | null {
+function TargetingFromCache(config: ResolvedConfig): TargetingResponse | null {
   const ls = new LocalStorage(config);
   return ls.getTargeting();
 }
 
-function TargetingClearCache(config: Required<OptableConfig>) {
+function TargetingClearCache(config: ResolvedConfig) {
   const ls = new LocalStorage(config);
   ls.clearTargeting();
 }
