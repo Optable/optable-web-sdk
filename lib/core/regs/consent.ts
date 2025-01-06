@@ -9,7 +9,7 @@ type Consent = {
   deviceAccess: boolean;
   // The regulation that was detected, null if unknown
   reg: Regulation | null;
-  // The TCF string if available, only when reg is "gdpr"
+  // The TCF string if available
   tcf?: string;
   // The GPP string if available
   gpp?: string;
@@ -17,86 +17,37 @@ type Consent = {
   gppSectionIDs?: number[];
 };
 
-const gdprSectionIDs = [gpp.tcfeuv2.SectionID];
-
-const canSectionIDs = [gpp.tcfcav1.SectionID];
-
-const usSectionIDs = [
-  gpp.usnat.SectionID,
-  gpp.usca.SectionID,
-  gpp.usco.SectionID,
-  gpp.usct.SectionID,
-  gpp.usde.SectionID,
-  gpp.usfl.SectionID,
-  gpp.usia.SectionID,
-  gpp.usmt.SectionID,
-  gpp.usne.SectionID,
-  gpp.usnh.SectionID,
-  gpp.usnj.SectionID,
-  gpp.usor.SectionID,
-  gpp.ustn.SectionID,
-  gpp.ustx.SectionID,
-  gpp.usut.SectionID,
-  gpp.usva.SectionID,
-];
-
-function gdprConsent(tcfeuVendorID?: number): Consent {
-  const consent: Consent = { deviceAccess: false, reg: "gdpr" };
-
-  // Use TCF if available, otherwise use GPP,
-  // if none available assume device access is not allowed
-  if (hasTCF()) {
-    onTCFChange((data) => {
-      consent.deviceAccess = tcfDeviceAccess(data, tcfeuVendorID);
-      consent.tcf = data.tcString;
-    });
-  } else if (hasGPP()) {
-    onGPPSectionChange(gdprSectionIDs, (data) => {
-      consent.deviceAccess = gppEUDeviceAccess(data, tcfeuVendorID);
-      consent.gpp = data.gppString;
-      consent.gppSectionIDs = data.applicableSections;
-    });
-  }
-
-  return consent;
-}
-
-function usConsent(): Consent {
-  const consent: Consent = { deviceAccess: true, reg: "us" };
-  onGPPSectionChange(usSectionIDs, (data) => {
-    consent.gpp = data.gppString;
-    consent.gppSectionIDs = data.applicableSections;
-  });
-
-  return consent;
-}
-
-function canConsent(): Consent {
-  const consent: Consent = { deviceAccess: true, reg: "can" };
-  onGPPSectionChange(canSectionIDs, (data) => {
-    consent.gpp = data.gppString;
-    consent.gppSectionIDs = data.applicableSections;
-  });
-
-  return consent;
-}
-
 function getConsent(reg: Regulation | null, conf: CMPApiConfig = {}): Consent {
-  switch (reg) {
-    case "gdpr":
-      return gdprConsent(conf.tcfeuVendorID);
-    case "us":
-      return usConsent();
-    case "can":
-      return canConsent();
-    default:
-      return { deviceAccess: true, reg: null };
+  const consent: Consent = { deviceAccess: true, reg };
+
+  onGPPChange((data) => {
+    consent.gpp = data.gppString;
+    consent.gppSectionIDs = data.applicableSections;
+  });
+
+  onTCFChange((data) => {
+    consent.tcf = data.gdprApplies ? data.tcString : undefined;
+  });
+
+  if (reg === "gdpr") {
+    consent.deviceAccess = false;
+    if (hasTCF()) {
+      onTCFChange((data) => {
+        consent.deviceAccess = tcfDeviceAccess(data, conf.tcfeuVendorID);
+      });
+    } else if (hasGPP()) {
+      onGPPChange((data) => {
+        consent.deviceAccess = gppEUDeviceAccess(data, conf.tcfeuVendorID);
+      });
+    }
   }
+
+  return consent;
 }
 
 function gppEUDeviceAccess(data: gpp.cmpapi.PingReturn, vendorID?: number): boolean {
-  if (!(gpp.tcfeuv2.APIPrefix in data.parsedSections)) {
-    return false;
+  if (!data.applicableSections.includes(gpp.tcfeuv2.SectionID)) {
+    return true;
   }
 
   const section = data.parsedSections[gpp.tcfeuv2.APIPrefix] || [];
@@ -105,6 +56,7 @@ function gppEUDeviceAccess(data: gpp.cmpapi.PingReturn, vendorID?: number): bool
     const coreSegment = section.find((s) => {
       return "Version" in s;
     });
+
     if (!coreSegment) {
       return false;
     }
@@ -135,7 +87,7 @@ function tcfDeviceAccess(data: tcf.cmpapi.TCData, vendorID?: number): boolean {
   return !!data.publisher.consents["1"];
 }
 
-function onGPPSectionChange(sectionIDs: number[], cb: (_: gpp.cmpapi.PingReturn) => void): void {
+function onGPPChange(cb: (_: gpp.cmpapi.PingReturn) => void): void {
   if (!hasGPP()) {
     return;
   }
@@ -150,13 +102,6 @@ function onGPPSectionChange(sectionIDs: number[], cb: (_: gpp.cmpapi.PingReturn)
       return;
     }
 
-    const anyChanged = sectionIDs.some((sectionID) => {
-      return data.pingData.applicableSections.includes(sectionID);
-    });
-
-    if (!anyChanged) {
-      return;
-    }
     cb(data.pingData);
   });
 }
