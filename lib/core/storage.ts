@@ -88,7 +88,7 @@ class LocalStorage {
   }
 
   getSite(): SiteResponse | null {
-    const raw = localStorage.getItem(this.siteKey);
+    const raw = this.storage.getItem(this.siteKey);
     const parsed = raw ? JSON.parse(raw) : null;
     return parsed;
   }
