@@ -1,11 +1,11 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 
 type WitnessProperties = {
   [key: string]: string | number | boolean;
 };
 
-function Witness(config: Required<OptableConfig>, event: string, properties: WitnessProperties): Promise<void> {
+function Witness(config: ResolvedConfig, event: string, properties: WitnessProperties): Promise<void> {
   const evt = {
     event: event,
     properties: properties,

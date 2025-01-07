@@ -1,6 +1,7 @@
 import { SiteResponse } from "../edge/site";
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
+import { LocalStorageProxy } from "./regs/storage";
 
 function toBinary(str: string): string {
   const codeUnits = new Uint16Array(str.length);
@@ -16,22 +17,25 @@ class LocalStorage {
   private targetingKey: string;
   private siteKey: string;
 
-  constructor(private Config: OptableConfig) {
-    const sfx = btoa(toBinary(`${this.Config.host}/${this.Config.site}`));
+  private storage: LocalStorageProxy;
+
+  constructor(private config: ResolvedConfig) {
+    const sfx = btoa(toBinary(`${this.config.host}/${this.config.site}`));
     // Legacy targeting key
     this.targetingV1Key = "OPTABLE_TGT_" + sfx;
 
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
     this.siteKey = "OPTABLE_SITE_" + sfx;
+    this.storage = new LocalStorageProxy(this.config.consent);
   }
 
   getPassport(): string | null {
-    return window.localStorage.getItem(this.passportKey);
+    return this.storage.getItem(this.passportKey);
   }
 
   getV1Targeting(): TargetingResponse | null {
-    const raw = window.localStorage.getItem(this.targetingV1Key);
+    const raw = this.storage.getItem(this.targetingV1Key);
     const parsed = raw ? JSON.parse(raw) : null;
     if (!parsed) {
       return null;
@@ -57,14 +61,14 @@ class LocalStorage {
   }
 
   getTargeting(): TargetingResponse | null {
-    const raw = window.localStorage.getItem(this.targetingKey);
+    const raw = this.storage.getItem(this.targetingKey);
     const parsed = raw ? JSON.parse(raw) : null;
     return parsed ? parsed : this.getV1Targeting();
   }
 
   setPassport(passport: string) {
     if (passport && passport.length > 0) {
-      window.localStorage.setItem(this.passportKey, passport);
+      this.storage.setItem(this.passportKey, passport);
     }
   }
 
@@ -73,32 +77,32 @@ class LocalStorage {
       return;
     }
 
-    window.localStorage.setItem(this.targetingKey, JSON.stringify(targeting));
+    this.storage.setItem(this.targetingKey, JSON.stringify(targeting));
   }
 
   setSite(site?: SiteResponse | null) {
     if (!site) {
       return;
     }
-    window.localStorage.setItem(this.siteKey, JSON.stringify(site));
+    this.storage.setItem(this.siteKey, JSON.stringify(site));
   }
 
   getSite(): SiteResponse | null {
-    const raw = window.localStorage.getItem(this.siteKey);
+    const raw = this.storage.getItem(this.siteKey);
     const parsed = raw ? JSON.parse(raw) : null;
     return parsed;
   }
 
   clearPassport() {
-    window.localStorage.removeItem(this.passportKey);
+    this.storage.removeItem(this.passportKey);
   }
 
   clearTargeting() {
-    window.localStorage.removeItem(this.targetingKey);
+    this.storage.removeItem(this.targetingKey);
   }
 
   clearSite() {
-    window.localStorage.removeItem(this.siteKey);
+    this.storage.removeItem(this.siteKey);
   }
 }
 

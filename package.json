@@ -27,7 +27,7 @@
     "shellcheck": "^3.0.0",
     "typescript": "^5.2.2",
     "webpack": "^5.97.1",
-    "webpack-cli": "^4.7.2",
+    "webpack-cli": "^5.1.4",
     "whatwg-fetch": "^3.6.20"
   },
   "dependencies": {

@@ -1,12 +1,28 @@
-import type { OptableConfig } from "../config";
+import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
-function buildRequest(path: string, config: Required<OptableConfig>, init?: RequestInit): Request {
+function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { site, host, cookies } = config;
 
   const url = new URL(`${site}${path}`, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
+
+  if (config.consent.reg) {
+    url.searchParams.set("reg", config.consent.reg);
+  }
+
+  if (config.consent.gpp) {
+    url.searchParams.set("gpp", config.consent.gpp);
+  }
+
+  if (config.consent.gppSectionIDs) {
+    url.searchParams.set("gpp_sid", config.consent.gppSectionIDs.join(","));
+  }
+
+  if (config.consent.tcf) {
+    url.searchParams.set("tcf", config.consent.tcf);
+  }
 
   if (cookies) {
     url.searchParams.set("cookies", "yes");
@@ -25,7 +41,7 @@ function buildRequest(path: string, config: Required<OptableConfig>, init?: Requ
   return request;
 }
 
-async function fetch<T>(path: string, config: Required<OptableConfig>, init?: RequestInit): Promise<T> {
+async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
   const response = await globalThis.fetch(buildRequest(path, config, init));
 
   const contentType = response.headers.get("Content-Type");
