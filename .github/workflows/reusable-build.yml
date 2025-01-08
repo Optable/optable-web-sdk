@@ -22,6 +22,11 @@ jobs:
       - name: Setup npm
         uses: ./.github/actions/setup-npm
 
+        # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
+      - name: Patch version
+        run: ./scripts/patch-version.sh "${{ github.ref_name }}"
+        continue-on-error: true
+
       - name: Build web production
         run: npm run build-web -- --mode=production
 
