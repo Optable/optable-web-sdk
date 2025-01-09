@@ -5,6 +5,7 @@ import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
 import { Identify } from "./edge/identify";
 import { Uid2Token } from "./edge/uid2_token";
+import { Resolve, ResolveResponse } from "./edge/resolve";
 import { Site, SiteResponse, SiteFromCache } from "./edge/site";
 import {
   TargetingKeyValues,
@@ -97,6 +98,11 @@ class OptableSDK {
   async tokenize(id: string): Promise<TokenizeResponse> {
     await this.init;
     return Tokenize(this.dcn, id);
+  }
+
+  async resolve(id?: string): Promise<ResolveResponse> {
+    await this.init;
+    return Resolve(this.dcn, id);
   }
 
   static eid(email: string): string {
