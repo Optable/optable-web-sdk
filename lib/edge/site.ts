@@ -19,6 +19,7 @@ type AuctionConfig = {
 type SiteResponse = {
   interestGroupPixel: string;
   auctionConfig?: AuctionConfig | null;
+  auctionConfigURL?: string;
   getTopicsURL: string;
 };
 
@@ -40,5 +41,6 @@ function SiteFromCache(config: ResolvedConfig): SiteResponse | null {
   return ls.getSite();
 }
 
-export { Site, SiteResponse, SiteFromCache, Size, AuctionConfig };
+export { Site, SiteFromCache };
 export default Site;
+export type { SiteResponse, Size, AuctionConfig };

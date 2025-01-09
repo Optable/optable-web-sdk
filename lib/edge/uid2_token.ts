@@ -22,3 +22,4 @@ function Uid2Token(config: ResolvedConfig, id: string): Promise<Uid2TokenRespons
 
 export { Uid2Token };
 export default Uid2Token;
+export type { Uid2TokenResponse };
