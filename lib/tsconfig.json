@@ -8,5 +8,6 @@
     "target": "es6",
     "lib": ["DOM", "DOM.Iterable", "ES6"]
   },
-  "include": ["./build.json", "."]
+  "include": ["./build.json", "."],
+  "exclude": ["./**/*.test.ts", "./test"]
 }

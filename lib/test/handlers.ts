@@ -74,6 +74,13 @@ const handlers = [
     };
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
+
+  http.get(`${TEST_BASE_URL}/v1/resolve`, async ({}) => {
+    const data: ResolveResponse = {
+      clusters: [],
+    };
+    return HttpResponse.json({ ...data, ...passport }, ok200);
+  }),
 ];
 
 export { handlers };

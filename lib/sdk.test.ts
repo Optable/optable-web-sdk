@@ -1,6 +1,9 @@
 import { SiteResponse } from "edge/site";
 import OptableSDK from "./sdk";
 import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "./test/mocks";
+import { DCN_DEFAULTS } from "./config";
+
+const defaultConsent = DCN_DEFAULTS.consent;
 
 describe("eid", () => {
   test("is correct", () => {
@@ -57,11 +60,6 @@ describe("cid", () => {
 const defaultConfig = {
   host: TEST_HOST,
   site: TEST_SITE,
-};
-
-const defaultConsent = {
-  deviceAccess: true,
-  reg: null,
 };
 
 describe("Breaking change detection: if typescript complains or a test fails it's likely a breaking change has occurred.", () => {
