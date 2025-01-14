@@ -8,16 +8,20 @@ declare module "../sdk" {
   }
 }
 
-function toWitnessProperties(event: any): WitnessProperties {
+type CombinedEvents =
+  | (googletag.events.SlotRenderEndedEvent & Partial<googletag.events.ImpressionViewableEvent>)
+  | (googletag.events.ImpressionViewableEvent & Partial<googletag.events.SlotRenderEndedEvent>);
+
+function toWitnessProperties(event: CombinedEvents): WitnessProperties {
   return {
     advertiserId: event.advertiserId?.toString() as string,
     campaignId: event.campaignId?.toString() as string,
     creativeId: event.creativeId?.toString() as string,
     isEmpty: event.isEmpty?.toString() as string,
     lineItemId: event.lineItemId?.toString() as string,
-    serviceName: event.serviceName?.toString() as string,
+    serviceName: event.serviceName?.toString(),
     size: event.size?.toString() as string,
-    slotElementId: event.slot?.getSlotElementId() as string,
+    slotElementId: event.slot?.getSlotElementId(),
     sourceAgnosticCreativeId: event.sourceAgnosticCreativeId?.toString() as string,
     sourceAgnosticLineItemId: event.sourceAgnosticLineItemId?.toString() as string,
   };
@@ -37,10 +41,10 @@ OptableSDK.prototype.installGPTEventListeners = function () {
   const gpt = window.googletag;
 
   gpt.cmd.push(function () {
-    gpt.pubads().addEventListener("slotRenderEnded", function (event: any) {
+    gpt.pubads().addEventListener("slotRenderEnded", function (event: googletag.events.SlotRenderEndedEvent) {
       sdk.witness("googletag.events.slotRenderEnded", toWitnessProperties(event));
     });
-    gpt.pubads().addEventListener("impressionViewable", function (event: any) {
+    gpt.pubads().addEventListener("impressionViewable", function (event: googletag.events.ImpressionViewableEvent) {
       sdk.witness("googletag.events.impressionViewable", toWitnessProperties(event));
     });
   });
