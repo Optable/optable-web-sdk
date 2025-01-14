@@ -73,4 +73,5 @@ function parseResolveResponse(resolveResponse: unknown): ResolveResponse {
   return response;
 }
 
-export { Resolve, ResolveResponse, parseResolveResponse };
+export { Resolve, parseResolveResponse };
+export type { ResolveResponse };

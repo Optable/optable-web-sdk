@@ -5,6 +5,7 @@ import { SiteResponse } from "edge/site";
 import { TokenizeResponse } from "edge/tokenize";
 import { TargetingResponse } from "edge/targeting";
 import { EdgePassport } from "edge/passport";
+import { ResolveResponse } from "edge/resolve";
 
 const ok200 = {
   status: 200,
@@ -47,6 +48,13 @@ const handlers = [
 
   http.post(`${TEST_BASE_URL}/profile`, async ({}) => {
     return HttpResponse.json({ ...passport }, ok200);
+  }),
+
+  http.get(`${TEST_BASE_URL}/v1/resolve`, async ({}) => {
+    const data: ResolveResponse = {
+      clusters: [],
+    };
+    return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
   http.post(`${TEST_BASE_URL}/v1/tokenize`, async ({}) => {
