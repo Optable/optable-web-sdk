@@ -157,6 +157,17 @@ OptableSDK.prototype.joinAdInterestGroups = async function () {
     throw "join-ad-interest-group not supported";
   }
 
+  // For now gate for everything happenning inside the join-ig frame.
+  // Eventually each behavior will be individually gated in the frame itself.
+  const accessGranted =
+    this.dcn.consent.deviceAccess &&
+    this.dcn.consent.createProfilesForAdvertising &&
+    this.dcn.consent.measureAdvertisingPerformance;
+
+  if (!accessGranted) {
+    throw "consent not granted for joining interest groups";
+  }
+
   const siteConfig = await this.site();
   if (!siteConfig.interestGroupPixel) {
     throw "origin not enabled for protected audience apis";

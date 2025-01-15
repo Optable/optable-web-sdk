@@ -1,10 +1,5 @@
-import { getConsent, Consent, inferRegulation } from "./core/regs/consent";
-
-type CMPApiConfig = {
-  // An optional vendor ID from GVL (global vendor list) when interpretting TCF/GPP EU consent,
-  // when not passed, defaults to publisher consent.
-  tcfeuVendorID?: number;
-};
+import { getConsent, inferRegulation } from "./core/regs/consent";
+import type { CMPApiConfig, Consent } from "./core/regs/consent";
 
 type InitConsent = {
   // A "cmpapi" configuration indicating that consent should be gathered from CMP apis.
@@ -28,7 +23,13 @@ type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
 const DCN_DEFAULTS = {
   cookies: true,
   initPassport: true,
-  consent: { deviceAccess: true, reg: null },
+  consent: {
+    reg: null,
+    deviceAccess: true,
+    createProfilesForAdvertising: true,
+    useProfilesForAdvertising: true,
+    measureAdvertisingPerformance: true,
+  },
 };
 
 function getConfig(init: InitConfig): ResolvedConfig {
@@ -50,4 +51,4 @@ function getConfig(init: InitConfig): ResolvedConfig {
 }
 
 export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig };
-export { getConfig };
+export { getConfig, DCN_DEFAULTS };

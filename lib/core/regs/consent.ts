@@ -1,12 +1,31 @@
-import type { CMPApiConfig } from "config";
 import type { Regulation } from "./regulations";
 import { inferRegulation } from "./regulations";
 import * as gpp from "./gpp";
 import * as tcf from "./tcf";
 
+type CMPApiConfig = {
+  // An optional vendor ID from GVL (global vendor list) when interpretting TCF/GPP EU consent,
+  // when not passed, defaults to publisher consent.
+  tcfeuVendorID?: number;
+
+  // An optional vendor ID from GVL (global vendor list) when interpretting GPP CA consent,
+  // when not passed, defaults to publisher consent.
+  tcfcaVendorID?: number;
+};
+
 type Consent = {
   // Whether the device access is granted
   deviceAccess: boolean;
+
+  // Whether the visitor has consented to use its data for creating profiles for advertising
+  createProfilesForAdvertising: boolean;
+
+  // Whether the visitor has consented to use its data for showing personalized ads
+  useProfilesForAdvertising: boolean;
+
+  // Whether the visitor has consented to participate in advertising performance measurement
+  measureAdvertisingPerformance: boolean;
+
   // The regulation that was detected, null if unknown
   reg: Regulation | null;
   // The TCF string if available
@@ -18,7 +37,13 @@ type Consent = {
 };
 
 function getConsent(reg: Regulation | null, conf: CMPApiConfig = {}): Consent {
-  const consent: Consent = { deviceAccess: true, reg };
+  const consent: Consent = {
+    reg,
+    deviceAccess: false,
+    createProfilesForAdvertising: false,
+    useProfilesForAdvertising: false,
+    measureAdvertisingPerformance: false,
+  };
 
   onGPPChange((data) => {
     consent.gpp = data.gppString;
@@ -29,62 +54,116 @@ function getConsent(reg: Regulation | null, conf: CMPApiConfig = {}): Consent {
     consent.tcf = data.gdprApplies ? data.tcString : undefined;
   });
 
-  if (reg === "gdpr") {
-    consent.deviceAccess = false;
-    if (hasTCF()) {
-      onTCFChange((data) => {
-        consent.deviceAccess = tcfDeviceAccess(data, conf.tcfeuVendorID);
-      });
-    } else if (hasGPP()) {
+  switch (reg) {
+    case "gdpr":
+      if (hasTCF()) {
+        onTCFChange((data) => {
+          consent.deviceAccess = tcfPurpose(data, 1, conf.tcfeuVendorID);
+          consent.createProfilesForAdvertising = tcfPurpose(data, 3, conf.tcfeuVendorID);
+          consent.useProfilesForAdvertising = tcfPurpose(data, 4, conf.tcfeuVendorID);
+          consent.measureAdvertisingPerformance = tcfPurpose(data, 7, conf.tcfeuVendorID);
+        });
+      } else if (hasGPP()) {
+        onGPPChange((data) => {
+          consent.deviceAccess = gppEuPurpose(data, 1, conf.tcfeuVendorID);
+          consent.createProfilesForAdvertising = gppEuPurpose(data, 3, conf.tcfeuVendorID);
+          consent.useProfilesForAdvertising = gppEuPurpose(data, 4, conf.tcfeuVendorID);
+          consent.measureAdvertisingPerformance = gppEuPurpose(data, 7, conf.tcfeuVendorID);
+        });
+      }
+      break;
+    case "can":
+      consent.deviceAccess = true;
       onGPPChange((data) => {
-        consent.deviceAccess = gppEUDeviceAccess(data, conf.tcfeuVendorID);
+        consent.createProfilesForAdvertising = gppCanPurpose(data, 3, conf.tcfcaVendorID);
+        consent.useProfilesForAdvertising = gppCanPurpose(data, 4, conf.tcfcaVendorID);
+        consent.measureAdvertisingPerformance = gppCanPurpose(data, 7, conf.tcfcaVendorID);
       });
-    }
+      break;
+    case "us":
+    default:
+      consent.deviceAccess = true;
+      consent.createProfilesForAdvertising = true;
+      consent.useProfilesForAdvertising = true;
+      consent.measureAdvertisingPerformance = true;
   }
 
   return consent;
 }
 
-function gppEUDeviceAccess(data: gpp.cmpapi.PingReturn, vendorID?: number): boolean {
-  if (!data.applicableSections.includes(gpp.tcfeuv2.SectionID)) {
-    return true;
-  }
-
-  const section = data.parsedSections[gpp.tcfeuv2.APIPrefix] || [];
-
-  if (typeof vendorID === "number") {
-    const coreSegment = section.find((s) => {
-      return "Version" in s;
-    });
-
-    if (!coreSegment) {
-      return false;
-    }
-
-    return coreSegment.PurposeConsent.includes(1) && coreSegment.VendorConsent.includes(vendorID);
-  }
-
-  const publisherSubsection = section.find((s) => {
-    return "SegmentType" in s && s.SegmentType === 3;
-  });
-
-  if (!publisherSubsection) {
-    return false;
-  }
-
-  return publisherSubsection.PubPurposesConsent.includes(1);
-}
-
-function tcfDeviceAccess(data: tcf.cmpapi.TCData, vendorID?: number): boolean {
+function tcfPurpose(data: tcf.cmpapi.TCData, purpose: number, vendorID?: number): boolean {
   if (!data.gdprApplies) {
     return true;
   }
 
   if (vendorID) {
-    return data.purpose.consents["1"] && data.vendor.consents[vendorID];
+    return data.purpose.consents[purpose] && data.vendor.consents[vendorID];
+  }
+  return !!data.publisher.consents[purpose];
+}
+
+function gppCanPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: number): boolean {
+  if (!data.applicableSections.includes(gpp.tcfcav1.SectionID)) {
+    return true;
+  }
+  const includeImplied = purpose > 1;
+
+  const section = data.parsedSections[gpp.tcfcav1.APIPrefix] || [];
+  if (typeof vendorID === "number") {
+    const coreSegment = section.find((s) => "Version" in s);
+    if (!coreSegment) {
+      return false;
+    }
+    let granted =
+      coreSegment.PurposesExpressConsent.includes(purpose) && coreSegment.VendorExpressConsent.includes(vendorID);
+    if (includeImplied) {
+      granted ||=
+        coreSegment.PurposesImpliedConsent.includes(purpose) && coreSegment.VendorImpliedConsent.includes(vendorID);
+    }
+    return granted;
   }
 
-  return !!data.publisher.consents["1"];
+  const publisherSubsection = section.find((s) => "SubsectionType" in s && s.SubsectionType === 3);
+  if (!publisherSubsection) {
+    return false;
+  }
+  let granted = publisherSubsection.PubPurposesExpressConsent.includes(purpose);
+  if (includeImplied) {
+    granted ||= publisherSubsection.PubPurposesImpliedConsent.includes(purpose);
+  }
+  return granted;
+}
+
+function gppEuPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: number): boolean {
+  if (!data.applicableSections.includes(gpp.tcfeuv2.SectionID)) {
+    return true;
+  }
+
+  const includeLegitimateInterest = purpose > 1;
+
+  const section = data.parsedSections[gpp.tcfeuv2.APIPrefix] || [];
+  if (typeof vendorID === "number") {
+    const coreSegment = section.find((s) => "Version" in s);
+    if (!coreSegment) {
+      return false;
+    }
+    let granted = coreSegment.PurposeConsent.includes(purpose) && coreSegment.VendorConsent.includes(vendorID);
+    if (includeLegitimateInterest) {
+      granted ||=
+        coreSegment.PurposesLITransparency.includes(purpose) && coreSegment.VendorLegitimateInterest.includes(vendorID);
+    }
+    return granted;
+  }
+
+  const publisherSubsection = section.find((s) => "SegmentType" in s && s.SegmentType === 3);
+  if (!publisherSubsection) {
+    return false;
+  }
+  let granted = publisherSubsection.PubPurposesConsent.includes(purpose);
+  if (includeLegitimateInterest) {
+    granted ||= publisherSubsection.PubPurposesLITransparency.includes(purpose);
+  }
+  return granted;
 }
 
 function onGPPChange(cb: (_: gpp.cmpapi.PingReturn) => void): void {
@@ -132,4 +211,4 @@ function hasTCF(): boolean {
 }
 
 export { getConsent, inferRegulation };
-export type { Consent };
+export type { Consent, CMPApiConfig };
