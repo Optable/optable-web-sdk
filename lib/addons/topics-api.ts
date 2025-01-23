@@ -23,6 +23,10 @@ OptableSDK.prototype.getTopics = async function (): Promise<BrowsingTopic[]> {
     throw "browsing-topics not supported";
   }
 
+  if (!this.dcn.consent.deviceAccess) {
+    throw "consent not granted for reading browsing topics";
+  }
+
   const siteConfig = await this.site();
   if (!siteConfig.getTopicsURL) {
     throw "origin not enabled for topics api";
