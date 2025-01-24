@@ -20,35 +20,33 @@ type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
   consent: Consent;
 };
 
-const DCN_DEFAULTS = {
-  cookies: true,
-  initPassport: true,
-  consent: {
-    reg: null,
-    deviceAccess: true,
-    createProfilesForAdvertising: true,
-    useProfilesForAdvertising: true,
-    measureAdvertisingPerformance: true,
-  },
+const defaultConsent: Consent = {
+  reg: null,
+  deviceAccess: true,
+  createProfilesForAdvertising: true,
+  useProfilesForAdvertising: true,
+  measureAdvertisingPerformance: true,
 };
 
 function getConfig(init: InitConfig): ResolvedConfig {
-  const config: ResolvedConfig = {
+  return {
     host: init.host,
     site: init.site,
-    cookies: init.cookies ?? DCN_DEFAULTS.cookies,
-    initPassport: init.initPassport ?? DCN_DEFAULTS.initPassport,
-    consent: DCN_DEFAULTS.consent,
+    cookies: init.cookies ?? true,
+    initPassport: init.initPassport ?? true,
+    consent: resolveConsent(init.consent),
   };
+}
 
-  if (init.consent?.static) {
-    config.consent = init.consent.static;
-  } else if (init.consent?.cmpapi) {
-    config.consent = getConsent(inferRegulation(), init.consent.cmpapi);
+function resolveConsent(init?: InitConsent): Consent {
+  if (init?.static) {
+    return init.static;
+  } else if (init?.cmpapi) {
+    return getConsent(inferRegulation(), init.cmpapi);
   }
 
-  return config;
+  return defaultConsent;
 }
 
 export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig };
-export { getConfig, DCN_DEFAULTS };
+export { getConfig, resolveConsent };
