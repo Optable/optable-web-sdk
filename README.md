@@ -20,6 +20,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Targeting key values](#targeting-key-values)
   - [Targeting key values from local cache](#targeting-key-values-from-local-cache)
   - [Witnessing ad events](#witnessing-ad-events)
+  - [Passing Secure Signals to GAM](#gam-secure-signals)
 - [Integrating Prebid](#integrating-prebid)
   - [Seller Defined Audiences](#seller-defined-audiences)
   - [Custom key values](#custom-key-values)
@@ -417,6 +418,32 @@ To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.co
 Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
 
 A working example of both targeting and event witnessing is available in the demo pages.
+
+### GAM Secure Signals
+
+The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-defined signals to Google Ad Manager (GAM) [Secure Signals](https://support.google.com/admanager/answer/10488752). The method supports an array of objects, each representing a unique signal to pass to GAM, for example: 
+
+```html
+<!-- Optable SDK async load: -->
+<script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
+<script>
+  const mySecureSignals = [];
+  mySecureSignals.push({
+    // Name of the provider
+    provider: 'uidapi.com',
+    // ID to use in the Secure Signal
+    value: 'uid2_token_goes_here'
+  });
+  window.optable = window.optable || { cmd: [] };
+  optable.cmd.push(function () {
+    optable.instance.installGPTSecureSignals(mySecureSignals);
+  });
+</script>
+```
+Please refer to the list of approved Secure Signal [providers](https://support.google.com/admanager/answer/14750072). Please refer to the provider's integration documentation for the exact provider name and value to pass as a signal. 
+
+You can verify the signal was correctly passed to GAM by searching for its value cached in `localStorage` under the key `_GESPSK-<provider_name>`.
+
 
 ## Integrating Prebid
 
