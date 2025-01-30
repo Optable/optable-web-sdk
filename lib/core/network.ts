@@ -2,6 +2,8 @@ import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
+const identityHeaderName = "X-Optable-Visitor";
+
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { site, host, cookies } = config;
 
@@ -36,7 +38,7 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
 
     if (pass) {
       const headers = new Headers(requestInit.headers);
-      headers.set(config.identityHeaderName, pass);
+      headers.set(identityHeaderName, pass);
       requestInit.headers = headers;
     }
   }
@@ -54,9 +56,9 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     throw new Error(data.error);
   }
 
-  if (response.headers.has(config.identityHeaderName)) {
+  if (response.headers.has(identityHeaderName)) {
     const ls = new LocalStorage(config);
-    ls.setPassport(response.headers.get(config.identityHeaderName) || "");
+    ls.setPassport(response.headers.get(identityHeaderName) || "");
   }
 
   return data;

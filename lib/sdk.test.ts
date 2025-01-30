@@ -223,7 +223,6 @@ describe("behavior testing of", () => {
       site: "site",
       cookies: false,
       initPassport: false,
-      identityHeaderName: "X-Optable-Visitor",
     });
     await sdk["init"];
     expect(localStorage.setItem).toBeCalledTimes(0);
@@ -262,7 +261,6 @@ describe("behavior testing of", () => {
       site: "site",
       cookies: true,
       initPassport: true,
-      identityHeaderName: "X-Optable-Visitor",
     });
     await sdk["init"];
     expect(window.localStorage.setItem).toHaveBeenLastCalledWith(

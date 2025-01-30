@@ -13,7 +13,6 @@ type InitConfig = {
   site: string;
   cookies?: boolean;
   initPassport?: boolean;
-  identityHeaderName?: string;
   consent?: InitConsent;
 };
 
@@ -24,7 +23,6 @@ type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
 const DCN_DEFAULTS = {
   cookies: true,
   initPassport: true,
-  identityHeaderName: "X-Optable-Visitor",
   consent: {
     reg: null,
     deviceAccess: true,
@@ -38,7 +36,6 @@ function getConfig(init: InitConfig): ResolvedConfig {
   const config: ResolvedConfig = {
     host: init.host,
     site: init.site,
-    identityHeaderName: init.identityHeaderName ?? DCN_DEFAULTS.identityHeaderName,
     cookies: init.cookies ?? DCN_DEFAULTS.cookies,
     initPassport: init.initPassport ?? DCN_DEFAULTS.initPassport,
     consent: DCN_DEFAULTS.consent,
