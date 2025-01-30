@@ -2,6 +2,8 @@ import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
+const identityHeaderName = "X-Optable-Visitor";
+
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { site, host, cookies } = config;
 
@@ -24,21 +26,24 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     url.searchParams.set("tcf", config.consent.tcf);
   }
 
+  const requestInit: RequestInit = { ...init };
+
   if (cookies) {
+    requestInit.credentials = "include";
     url.searchParams.set("cookies", "yes");
   } else {
     const ls = new LocalStorage(config);
     const pass = ls.getPassport();
     url.searchParams.set("cookies", "no");
-    url.searchParams.set("passport", pass ? pass : "");
+
+    if (pass) {
+      const headers = new Headers(requestInit.headers);
+      headers.set(identityHeaderName, pass);
+      requestInit.headers = headers;
+    }
   }
 
-  const requestInit: RequestInit = { ...init };
-  requestInit.credentials = "include";
-
-  const request = new Request(url.toString(), requestInit);
-
-  return request;
+  return new Request(url.toString(), requestInit);
 }
 
 async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
@@ -51,16 +56,9 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     throw new Error(data.error);
   }
 
-  if (data.passport) {
+  if (response.headers.has(identityHeaderName)) {
     const ls = new LocalStorage(config);
-    ls.setPassport(data.passport);
-
-    // We delete the passport attribute from the returned payload. This is because
-    // the targeting edge handler was initially made to return targeting data directly
-    // in the form of 'key values' on the returned JSON payload -- if we don't delete
-    // the `passport` attribute here, it may end up sent as targeting data to ad servers.
-    // Not the end of the world, but something we want to avoid due to passport size.
-    delete data.passport;
+    ls.setPassport(response.headers.get(identityHeaderName) || "");
   }
 
   return data;

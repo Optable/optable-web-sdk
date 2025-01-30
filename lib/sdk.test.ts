@@ -64,6 +64,7 @@ const defaultConfig = {
 
 describe("Breaking change detection: if typescript complains or a test fails it's likely a breaking change has occurred.", () => {
   beforeEach(() => localStorage.clear());
+  afterEach(() => jest.clearAllMocks());
 
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: constructor with cookies and initPassport set", async () => {
     new OptableSDK({
@@ -232,7 +233,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f5"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&cookies=no&passport=`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&cookies=no`,
       })
     );
 
@@ -241,8 +242,9 @@ describe("behavior testing of", () => {
     expect(fetchSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         method: "POST",
+        headers: { map: expect.objectContaining({ "x-optable-visitor": "PASSPORT" }) },
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f6"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&cookies=no&passport=PASSPORT`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&cookies=no`,
       })
     );
   });
@@ -464,5 +466,39 @@ describe("behavior testing of", () => {
         url: expect.stringContaining("v1/tokenize"),
       })
     );
+  });
+
+  test("passport is passed along", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    const buildRes = (passport) => ({
+      headers: new Headers({ "Content-Type": "application/json", "X-Optable-Visitor": passport }),
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    fetchSpy.mockImplementationOnce(() => Promise.resolve(buildRes("one")));
+    fetchSpy.mockImplementationOnce(() => Promise.resolve(buildRes("two")));
+    fetchSpy.mockImplementationOnce(() => Promise.resolve(buildRes("three")));
+
+    const sdk = new OptableSDK({ ...defaultConfig, initPassport: true, cookies: false });
+
+    let request;
+
+    await sdk.init;
+    request = fetchSpy.mock.lastCall[0];
+    expect(request.headers.get("X-Optable-Visitor")).toBe(null);
+
+    await sdk.identify("c:id").catch(() => {});
+    request = fetchSpy.mock.lastCall[0];
+    expect(request.headers.get("X-Optable-Visitor")).toBe("one");
+
+    await sdk.identify("c:id").catch(() => {});
+    request = fetchSpy.mock.lastCall[0];
+    expect(request.headers.get("X-Optable-Visitor")).toBe("two");
+
+    await sdk.identify("c:id").catch(() => {});
+    request = fetchSpy.mock.lastCall[0];
+    expect(request.headers.get("X-Optable-Visitor")).toBe("three");
   });
 });
