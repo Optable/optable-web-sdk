@@ -9,10 +9,10 @@ import { ResolveResponse } from "edge/resolve";
 
 const ok200 = {
   status: 200,
-  headers: new Headers({
-    "X-Optable-Visitor": "PASSPORT",
-    "Content-Type": "application/json",
-  }),
+};
+
+const passport: EdgePassport = {
+  passport: "PASSPORT",
 };
 
 const handlers = [
@@ -23,11 +23,11 @@ const handlers = [
       auctionConfig: null,
       getTopicsURL: "https://ads.optable.co/ca/topics/v1/get?origin=70cc15ee-484c-4d26-8868-c949a5c084b8",
     };
-    return HttpResponse.json({ ...data }, ok200);
+    return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
   http.post(`${TEST_BASE_URL}/identify`, async ({}) => {
-    return HttpResponse.json({}, ok200);
+    return HttpResponse.json({ ...passport }, ok200);
   }),
 
   http.post(`${TEST_BASE_URL}/uid2/token`, async ({}) => {
@@ -39,22 +39,22 @@ const handlers = [
       RefreshExpires: 2734462312780,
       RefreshResponseKey: "gdsfgfsd",
     };
-    return HttpResponse.json({ ...data }, ok200);
+    return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
   http.post(`${TEST_BASE_URL}/witness`, async ({}) => {
-    return HttpResponse.json({}, ok200);
+    return HttpResponse.json({ ...passport }, ok200);
   }),
 
   http.post(`${TEST_BASE_URL}/profile`, async ({}) => {
-    return HttpResponse.json({}, ok200);
+    return HttpResponse.json({ ...passport }, ok200);
   }),
 
   http.get(`${TEST_BASE_URL}/v1/resolve`, async ({}) => {
     const data: ResolveResponse = {
       clusters: [],
     };
-    return HttpResponse.json({ ...data }, ok200);
+    return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
   http.post(`${TEST_BASE_URL}/v1/tokenize`, async ({}) => {
@@ -64,7 +64,7 @@ const handlers = [
         ext: undefined,
       },
     };
-    return HttpResponse.json({ ...data }, ok200);
+    return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
   http.get(`${TEST_BASE_URL}/v2/targeting`, async ({}) => {
@@ -72,14 +72,14 @@ const handlers = [
       audience: [],
       user: [],
     };
-    return HttpResponse.json({ ...data }, ok200);
+    return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
   http.get(`${TEST_BASE_URL}/v1/resolve`, async ({}) => {
     const data: ResolveResponse = {
       clusters: [],
     };
-    return HttpResponse.json({ ...data }, ok200);
+    return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 ];
 
