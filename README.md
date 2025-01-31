@@ -421,7 +421,7 @@ A working example of both targeting and event witnessing is available in the dem
 
 ### GAM Secure Signals
 
-The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-defined signals to Google Ad Manager (GAM) [Secure Signals](https://support.google.com/admanager/answer/10488752). The method supports an array of objects, each representing a unique signal to pass to GAM, for example: 
+The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-defined signals to Google Ad Manager (GAM) [Secure Signals](https://support.google.com/admanager/answer/10488752). The method supports an array of objects, each representing a unique signal to pass to GAM, for example:
 
 ```html
 <!-- Optable SDK async load: -->
@@ -430,9 +430,9 @@ The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-def
   const mySecureSignals = [];
   mySecureSignals.push({
     // Name of the provider
-    provider: 'uidapi.com',
+    provider: "uidapi.com",
     // ID to use in the Secure Signal
-    value: 'uid2_token_goes_here'
+    value: "uid2_token_goes_here",
   });
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
@@ -440,10 +440,10 @@ The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-def
   });
 </script>
 ```
-Please refer to the list of approved Secure Signal [providers](https://support.google.com/admanager/answer/14750072). Please refer to the provider's integration documentation for the exact provider name and value to pass as a signal. 
+
+Please refer to the list of approved Secure Signal [providers](https://support.google.com/admanager/answer/14750072). Please refer to the provider's integration documentation for the exact provider name and value to pass as a signal.
 
 You can verify the signal was correctly passed to GAM by searching for its value cached in `localStorage` under the key `_GESPSK-<provider_name>`.
-
 
 ## Integrating Prebid
 
