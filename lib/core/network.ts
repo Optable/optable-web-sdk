@@ -7,6 +7,7 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
 
   const url = new URL(`${site}${path}`, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
+  url.searchParams.set("sid", config.sessionID);
 
   if (config.consent.reg) {
     url.searchParams.set("reg", config.consent.reg);

@@ -18,6 +18,7 @@ type InitConfig = {
 
 type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
   consent: Consent;
+  sessionID: string;
 };
 
 const DCN_DEFAULTS = {
@@ -39,6 +40,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     cookies: init.cookies ?? DCN_DEFAULTS.cookies,
     initPassport: init.initPassport ?? DCN_DEFAULTS.initPassport,
     consent: DCN_DEFAULTS.consent,
+    sessionID: generateSessionID(),
   };
 
   if (init.consent?.static) {
@@ -48,6 +50,10 @@ function getConfig(init: InitConfig): ResolvedConfig {
   }
 
   return config;
+}
+
+function generateSessionID(): string {
+  return crypto.randomUUID();
 }
 
 export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig };

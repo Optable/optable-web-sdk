@@ -202,8 +202,12 @@ describe("Breaking change detection: if typescript complains or a test fails it'
 
 describe("behavior testing of", () => {
   beforeEach(() => {
-    localStorage.clear();
+    jest.spyOn(crypto, "randomUUID").mockReturnValue("0");
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
   });
 
   test("constructor with cookies and initPassport set to false initializes without localStorage", async () => {
@@ -222,6 +226,7 @@ describe("behavior testing of", () => {
       site: "site",
       cookies: false,
       initPassport: false,
+      sessionID: "0",
     });
     await sdk["init"];
     expect(localStorage.setItem).toBeCalledTimes(0);
@@ -232,7 +237,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f5"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&cookies=no&passport=`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=0&cookies=no&passport=`,
       })
     );
 
@@ -242,7 +247,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f6"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&cookies=no&passport=PASSPORT`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=0&cookies=no&passport=PASSPORT`,
       })
     );
   });
@@ -259,6 +264,7 @@ describe("behavior testing of", () => {
       site: "site",
       cookies: true,
       initPassport: true,
+      sessionID: "0",
     });
     await sdk["init"];
     expect(window.localStorage.setItem).toHaveBeenLastCalledWith(
@@ -270,7 +276,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "GET",
         bodyUsed: false,
-        url: expect.stringContaining("config?osdk=web-0.0.0-experimental&cookies=yes"),
+        url: expect.stringContaining("config?osdk=web-0.0.0-experimental&sid=0&cookies=yes"),
       })
     );
 
@@ -280,7 +286,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f5"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&cookies=yes`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=0&cookies=yes`,
       })
     );
   });
