@@ -13,7 +13,6 @@ function toBinary(str: string): string {
 
 class LocalStorage {
   private passportKey: string;
-  private targetingV1Key: string;
   private targetingKey: string;
   private siteKey: string;
 
@@ -21,9 +20,6 @@ class LocalStorage {
 
   constructor(private config: ResolvedConfig) {
     const sfx = btoa(toBinary(`${this.config.host}/${this.config.site}`));
-    // Legacy targeting key
-    this.targetingV1Key = "OPTABLE_TGT_" + sfx;
-
     this.passportKey = "OPTABLE_PASS_" + sfx;
     this.targetingKey = "OPTABLE_V2_TGT_" + sfx;
     this.siteKey = "OPTABLE_SITE_" + sfx;
@@ -34,36 +30,9 @@ class LocalStorage {
     return this.storage.getItem(this.passportKey);
   }
 
-  getV1Targeting(): TargetingResponse | null {
-    const raw = this.storage.getItem(this.targetingV1Key);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (!parsed) {
-      return null;
-    }
-
-    const audiences = Object.entries(parsed).map(([keyspace, values]) => {
-      return {
-        provider: "optable.co",
-        keyspace,
-        // 5001 is Optable Private Member Defined Audiences
-        // See: https://github.com/InteractiveAdvertisingBureau/openrtb/pull/81
-        //
-        // Starting v2 this is returned in the targeting payload directly
-        rtb_segtax: 5001,
-        ids: [].concat(...[values as any]).map((id: any) => ({ id: String(id) })),
-      };
-    });
-
-    return {
-      user: [],
-      audience: audiences,
-    };
-  }
-
   getTargeting(): TargetingResponse | null {
     const raw = this.storage.getItem(this.targetingKey);
-    const parsed = raw ? JSON.parse(raw) : null;
-    return parsed ? parsed : this.getV1Targeting();
+    return raw ? JSON.parse(raw) : null;
   }
 
   setPassport(passport: string) {
