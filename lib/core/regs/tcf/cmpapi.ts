@@ -17,41 +17,41 @@ type TCData = {
   useNonStandardStacks: boolean;
   publisherCC: string;
   purposeOneTreatment: boolean;
-  purpose: {
-    consents: {
+  purpose?: {
+    consents?: {
       [purposeID: string]: boolean;
     };
-    legitimateInterests: {
+    legitimateInterests?: {
       [purposeID: string]: boolean;
     };
   };
-  vendor: {
-    consents: {
+  vendor?: {
+    consents?: {
       [vendorID: string]: boolean;
     };
-    legitimateInterests: {
+    legitimateInterests?: {
       [vendorID: string]: boolean;
     };
   };
   specialFeatureOptins: {
     [featureID: string]: boolean;
   };
-  publisher: {
-    consents: {
+  publisher?: {
+    consents?: {
       [purposeID: string]: boolean;
     };
-    legitimateInterests: {
+    legitimateInterests?: {
       [purposeID: string]: boolean;
     };
-    customPurpose: {
-      consents: {
+    customPurpose?: {
+      consents?: {
         [purposeID: string]: boolean;
       };
-      legitimateInterests: {
+      legitimateInterests?: {
         [purposeID: string]: boolean;
       };
     };
-    restrictions: {
+    restrictions?: {
       [purposeID: string]: {
         [vendorID: string]: 0 | 1 | 2;
       };
