@@ -97,9 +97,9 @@ function tcfPurpose(data: tcf.cmpapi.TCData, purpose: number, vendorID?: number)
   }
 
   if (vendorID) {
-    return data.purpose.consents[purpose] && data.vendor.consents[vendorID];
+    return !!data.purpose?.consents?.[purpose] && !!data.vendor?.consents?.[vendorID];
   }
-  return !!data.publisher.consents[purpose];
+  return !!data.publisher?.consents?.[purpose];
 }
 
 function gppCanPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: number): boolean {
