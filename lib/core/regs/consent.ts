@@ -28,74 +28,128 @@ type Consent = {
 
   // The regulation that was detected, null if unknown
   reg: Regulation | null;
-  // The TCF string if available
-  tcf?: string;
+
+  // The GDPR string if available
+  gdpr?: string;
+
+  // Whether GDPR applies to the visitor
+  gdprApplies?: boolean;
+
   // The GPP string if available
   gpp?: string;
+
   // The GPP section IDs that are applicable
   gppSectionIDs?: number[];
 };
 
-function getConsent(reg: Regulation | null, conf: CMPApiConfig = {}): Consent {
-  const consent: Consent = {
-    reg,
-    deviceAccess: false,
-    createProfilesForAdvertising: false,
-    useProfilesForAdvertising: false,
-    measureAdvertisingPerformance: false,
+function getConsent(defaultReg: Regulation | null, conf: CMPApiConfig = {}): Consent {
+  let gdprString: string | undefined;
+  let gdprApplies: boolean | undefined;
+
+  let gppString: string | undefined;
+  let gppSectionIDs: number[] | undefined;
+
+  let gdprData: tcf.cmpapi.TCData | undefined;
+  let gppData: gpp.cmpapi.PingReturn | undefined;
+
+  const applicableReg = () => {
+    // If CMP indicates GDPR applies, use GDPR regulation
+    if (gdprApplies === true) {
+      return "gdpr";
+    }
+
+    // If CMP indicates GDPR does not apply, use unknown regulation
+    if (gdprApplies === false) {
+      return defaultReg === "gdpr" ? null : defaultReg;
+    }
+
+    // If CMP doesn't indicates whether GDPR applies, infer based on GPP if available
+    if (typeof gppSectionIDs === "undefined" || gppSectionIDs.includes(-1)) {
+      return defaultReg;
+    }
+
+    if (gpp.euSections.some((s) => gppSectionIDs?.includes(s.SectionID))) {
+      return "gdpr";
+    }
+
+    if (gpp.caSections.some((s) => gppSectionIDs?.includes(s.SectionID))) {
+      return "can";
+    }
+
+    if (gpp.usSections.some((s) => gppSectionIDs?.includes(s.SectionID))) {
+      return "us";
+    }
+
+    return null;
+  }
+
+  const computeConsent = (): Consent => {
+    const consent: Consent = {
+      reg: applicableReg(),
+      gpp: gppString,
+      gppSectionIDs: gppSectionIDs,
+      gdpr: gdprString,
+      gdprApplies: gdprApplies,
+
+      deviceAccess: false,
+      createProfilesForAdvertising: false,
+      useProfilesForAdvertising: false,
+      measureAdvertisingPerformance: false,
+    }
+
+    switch (consent.reg) {
+      case "gdpr":
+        if (gdprData) {
+          consent.deviceAccess = tcfPurpose(gdprData, 1, conf.tcfeuVendorID);
+          consent.createProfilesForAdvertising = tcfPurpose(gdprData, 3, conf.tcfeuVendorID);
+          consent.useProfilesForAdvertising = tcfPurpose(gdprData, 4, conf.tcfeuVendorID);
+          consent.measureAdvertisingPerformance = tcfPurpose(gdprData, 7, conf.tcfeuVendorID);
+        } else if (gppData) {
+          consent.deviceAccess = gppEuPurpose(gppData, 1, conf.tcfeuVendorID);
+          consent.createProfilesForAdvertising = gppEuPurpose(gppData, 3, conf.tcfeuVendorID);
+          consent.useProfilesForAdvertising = gppEuPurpose(gppData, 4, conf.tcfeuVendorID);
+          consent.measureAdvertisingPerformance = gppEuPurpose(gppData, 7, conf.tcfeuVendorID);
+        }
+        break;
+      case "can":
+        consent.deviceAccess = true;
+        if (gppData) {
+          consent.createProfilesForAdvertising = gppCanPurpose(gppData, 3, conf.tcfcaVendorID);
+          consent.useProfilesForAdvertising = gppCanPurpose(gppData, 4, conf.tcfcaVendorID);
+          consent.measureAdvertisingPerformance = gppCanPurpose(gppData, 7, conf.tcfcaVendorID);
+        }
+        break;
+      case "us":
+      default:
+        consent.deviceAccess = true;
+        consent.createProfilesForAdvertising = true;
+        consent.useProfilesForAdvertising = true;
+        consent.measureAdvertisingPerformance = true;
+    }
+
+    return consent;
   };
 
-  onGPPChange((data) => {
-    consent.gpp = data.gppString;
-    consent.gppSectionIDs = data.applicableSections;
-  });
+  const consent = computeConsent();
 
   onTCFChange((data) => {
-    consent.tcf = data.gdprApplies ? data.tcString : undefined;
+    gdprString = data.tcString;
+    gdprApplies = data.gdprApplies;
+    gdprData = data;
+    Object.assign(consent, computeConsent());
   });
 
-  switch (reg) {
-    case "gdpr":
-      if (hasTCF()) {
-        onTCFChange((data) => {
-          consent.deviceAccess = tcfPurpose(data, 1, conf.tcfeuVendorID);
-          consent.createProfilesForAdvertising = tcfPurpose(data, 3, conf.tcfeuVendorID);
-          consent.useProfilesForAdvertising = tcfPurpose(data, 4, conf.tcfeuVendorID);
-          consent.measureAdvertisingPerformance = tcfPurpose(data, 7, conf.tcfeuVendorID);
-        });
-      } else if (hasGPP()) {
-        onGPPChange((data) => {
-          consent.deviceAccess = gppEuPurpose(data, 1, conf.tcfeuVendorID);
-          consent.createProfilesForAdvertising = gppEuPurpose(data, 3, conf.tcfeuVendorID);
-          consent.useProfilesForAdvertising = gppEuPurpose(data, 4, conf.tcfeuVendorID);
-          consent.measureAdvertisingPerformance = gppEuPurpose(data, 7, conf.tcfeuVendorID);
-        });
-      }
-      break;
-    case "can":
-      consent.deviceAccess = true;
-      onGPPChange((data) => {
-        consent.createProfilesForAdvertising = gppCanPurpose(data, 3, conf.tcfcaVendorID);
-        consent.useProfilesForAdvertising = gppCanPurpose(data, 4, conf.tcfcaVendorID);
-        consent.measureAdvertisingPerformance = gppCanPurpose(data, 7, conf.tcfcaVendorID);
-      });
-      break;
-    case "us":
-    default:
-      consent.deviceAccess = true;
-      consent.createProfilesForAdvertising = true;
-      consent.useProfilesForAdvertising = true;
-      consent.measureAdvertisingPerformance = true;
-  }
+  onGPPChange((data) => {
+    gppString = data.gppString;
+    gppSectionIDs = data.applicableSections;
+    gppData = data;
+    Object.assign(consent, computeConsent());
+  });
 
   return consent;
 }
 
 function tcfPurpose(data: tcf.cmpapi.TCData, purpose: number, vendorID?: number): boolean {
-  if (!data.gdprApplies) {
-    return true;
-  }
-
   if (vendorID) {
     return !!data.purpose?.consents?.[purpose] && !!data.vendor?.consents?.[vendorID];
   }
@@ -103,12 +157,9 @@ function tcfPurpose(data: tcf.cmpapi.TCData, purpose: number, vendorID?: number)
 }
 
 function gppCanPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: number): boolean {
-  if (!data.applicableSections.includes(gpp.tcfcav1.SectionID)) {
-    return true;
-  }
   const includeImplied = purpose > 1;
 
-  const section = data.parsedSections[gpp.tcfcav1.APIPrefix] || [];
+  const section = data.parsedSections?.[gpp.tcfcav1.APIPrefix] || [];
   if (typeof vendorID === "number") {
     const coreSegment = section.find((s) => "Version" in s);
     if (!coreSegment) {
@@ -135,13 +186,9 @@ function gppCanPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: 
 }
 
 function gppEuPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: number): boolean {
-  if (!data.applicableSections.includes(gpp.tcfeuv2.SectionID)) {
-    return true;
-  }
-
   const includeLegitimateInterest = purpose > 1;
 
-  const section = data.parsedSections[gpp.tcfeuv2.APIPrefix] || [];
+  const section = data.parsedSections?.[gpp.tcfeuv2.APIPrefix] || [];
   if (typeof vendorID === "number") {
     const coreSegment = section.find((s) => "Version" in s);
     if (!coreSegment) {
