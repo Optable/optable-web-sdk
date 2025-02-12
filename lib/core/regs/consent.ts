@@ -37,6 +37,9 @@ type Consent = {
 };
 
 function getConsent(reg: Regulation | null, conf: CMPApiConfig = {}): Consent {
+  tcf.cmpapi.installFrameProxy();
+  gpp.cmpapi.installFrameProxy();
+
   const consent: Consent = {
     reg,
     deviceAccess: false,
