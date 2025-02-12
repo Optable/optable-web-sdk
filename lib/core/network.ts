@@ -8,20 +8,20 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   const url = new URL(`${site}${path}`, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
 
-  if (config.consent.reg) {
-    url.searchParams.set("reg", config.consent.reg);
-  }
-
-  if (config.consent.gpp) {
+  if (typeof config.consent.gpp !== "undefined") {
     url.searchParams.set("gpp", config.consent.gpp);
   }
 
-  if (config.consent.gppSectionIDs) {
+  if (typeof config.consent.gppSectionIDs !== "undefined") {
     url.searchParams.set("gpp_sid", config.consent.gppSectionIDs.join(","));
   }
 
-  if (config.consent.tcf) {
-    url.searchParams.set("tcf", config.consent.tcf);
+  if (typeof config.consent.gdpr !== "undefined") {
+    url.searchParams.set("gdpr_consent", config.consent.gdpr);
+  }
+
+  if (typeof config.consent.gdprApplies !== "undefined") {
+    url.searchParams.set("gdpr", Number(config.consent.gdprApplies).toString());
   }
 
   if (cookies) {

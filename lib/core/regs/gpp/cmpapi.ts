@@ -37,7 +37,7 @@ type PingReturn = {
   sectionList: number[];
   applicableSections: number[];
   gppString: string;
-  parsedSections: ParsedSections;
+  parsedSections?: ParsedSections;
 };
 
 type AddEventListener = {
