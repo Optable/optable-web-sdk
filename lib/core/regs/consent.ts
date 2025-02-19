@@ -28,57 +28,133 @@ type Consent = {
 
   // The regulation that was detected, null if unknown
   reg: Regulation | null;
-  // The TCF string if available
-  tcf?: string;
+
+  // The GDPR string if available
+  gdpr?: string;
+
+  // Whether GDPR applies to the visitor
+  gdprApplies?: boolean;
+
   // The GPP string if available
   gpp?: string;
+
   // The GPP section IDs that are applicable
   gppSectionIDs?: number[];
 };
 
-function getConsent(reg: Regulation | null, conf: CMPApiConfig = {}): Consent {
+type CMPSignals = {
+  gdprString?: string;
+  gdprApplies?: boolean;
+  gdprData?: tcf.cmpapi.TCData;
+
+  gppString?: string;
+  gppSectionIDs?: number[];
+  gppData?: gpp.cmpapi.PingReturn;
+};
+
+function applicableReg(defaultReg: Regulation | null, cmp: CMPSignals): Regulation | null {
+  const { gdprApplies, gppSectionIDs, gdprData } = cmp;
+
+  // Handle TCF signaling (preferred over GPP)
+  if (typeof gdprApplies !== "undefined") {
+    if (gdprApplies) {
+      return "gdpr";
+    }
+
+    // Override with unknown regulation if CMP indicates gdpr doesn't apply
+    return defaultReg === "gdpr" ? null : defaultReg;
+  }
+
+  // gdprApplies is optional, so gdprData presence is necessary
+  if (typeof gdprData !== "undefined" && defaultReg === "gdpr") {
+    return "gdpr";
+  }
+
+  // Handle GPP signaling
+  //
+  // Unknown regulation signal
+  if (typeof gppSectionIDs === "undefined" || (gppSectionIDs.length === 1 && gppSectionIDs[0] === 0)) {
+    return defaultReg;
+  }
+
+  // No applicable regulation
+  if (gppSectionIDs.length === 1 && gppSectionIDs[0] === -1) {
+    return null;
+  }
+
+  // GDPR > CAN > US
+  if (gppSectionIDs.some((sid) => gpp.euSectionIDs.includes(sid))) {
+    return "gdpr";
+  }
+
+  if (gppSectionIDs.some((sid) => gpp.caSectionIDs.includes(sid))) {
+    return "can";
+  }
+
+  if (gppSectionIDs.some((sid) => gpp.usSectionIDs.includes(sid))) {
+    return "us";
+  }
+
+  // Override with unknown regulation if CMP indicates the detected
+  // regulation doesn't apply
+  switch (defaultReg) {
+    case "gdpr":
+      if (!gppSectionIDs.some((sid) => gpp.euSectionIDs.includes(sid))) {
+        return null;
+      }
+      break;
+    case "can":
+      if (!gppSectionIDs.some((sid) => gpp.caSectionIDs.includes(sid))) {
+        return null;
+      }
+      break;
+    case "us":
+      if (!gppSectionIDs.some((sid) => gpp.usSectionIDs.includes(sid))) {
+        return null;
+      }
+      break;
+  }
+
+  return defaultReg;
+}
+
+function computeConsent(defaultReg: Regulation | null, cmp: CMPSignals, conf: CMPApiConfig = {}): Consent {
+  const reg = applicableReg(defaultReg, cmp);
+
   const consent: Consent = {
     reg,
+    gpp: cmp.gppString,
+    gppSectionIDs: cmp.gppSectionIDs,
+    gdpr: cmp.gdprString,
+    gdprApplies: cmp.gdprApplies,
+
     deviceAccess: false,
     createProfilesForAdvertising: false,
     useProfilesForAdvertising: false,
     measureAdvertisingPerformance: false,
   };
 
-  onGPPChange((data) => {
-    consent.gpp = data.gppString;
-    consent.gppSectionIDs = data.applicableSections;
-  });
-
-  onTCFChange((data) => {
-    consent.tcf = data.gdprApplies ? data.tcString : undefined;
-  });
-
   switch (reg) {
     case "gdpr":
-      if (hasTCF()) {
-        onTCFChange((data) => {
-          consent.deviceAccess = tcfPurpose(data, 1, conf.tcfeuVendorID);
-          consent.createProfilesForAdvertising = tcfPurpose(data, 3, conf.tcfeuVendorID);
-          consent.useProfilesForAdvertising = tcfPurpose(data, 4, conf.tcfeuVendorID);
-          consent.measureAdvertisingPerformance = tcfPurpose(data, 7, conf.tcfeuVendorID);
-        });
-      } else if (hasGPP()) {
-        onGPPChange((data) => {
-          consent.deviceAccess = gppEuPurpose(data, 1, conf.tcfeuVendorID);
-          consent.createProfilesForAdvertising = gppEuPurpose(data, 3, conf.tcfeuVendorID);
-          consent.useProfilesForAdvertising = gppEuPurpose(data, 4, conf.tcfeuVendorID);
-          consent.measureAdvertisingPerformance = gppEuPurpose(data, 7, conf.tcfeuVendorID);
-        });
+      if (cmp.gdprData) {
+        consent.deviceAccess = tcfPurpose(cmp.gdprData, 1, conf.tcfeuVendorID);
+        consent.createProfilesForAdvertising = tcfPurpose(cmp.gdprData, 3, conf.tcfeuVendorID);
+        consent.useProfilesForAdvertising = tcfPurpose(cmp.gdprData, 4, conf.tcfeuVendorID);
+        consent.measureAdvertisingPerformance = tcfPurpose(cmp.gdprData, 7, conf.tcfeuVendorID);
+      } else if (cmp.gppData) {
+        consent.deviceAccess = gppEuPurpose(cmp.gppData, 1, conf.tcfeuVendorID);
+        consent.createProfilesForAdvertising = gppEuPurpose(cmp.gppData, 3, conf.tcfeuVendorID);
+        consent.useProfilesForAdvertising = gppEuPurpose(cmp.gppData, 4, conf.tcfeuVendorID);
+        consent.measureAdvertisingPerformance = gppEuPurpose(cmp.gppData, 7, conf.tcfeuVendorID);
       }
       break;
     case "can":
       consent.deviceAccess = true;
-      onGPPChange((data) => {
-        consent.createProfilesForAdvertising = gppCanPurpose(data, 3, conf.tcfcaVendorID);
-        consent.useProfilesForAdvertising = gppCanPurpose(data, 4, conf.tcfcaVendorID);
-        consent.measureAdvertisingPerformance = gppCanPurpose(data, 7, conf.tcfcaVendorID);
-      });
+      if (cmp.gppData) {
+        consent.createProfilesForAdvertising = gppCanPurpose(cmp.gppData, 3, conf.tcfcaVendorID);
+        consent.useProfilesForAdvertising = gppCanPurpose(cmp.gppData, 4, conf.tcfcaVendorID);
+        consent.measureAdvertisingPerformance = gppCanPurpose(cmp.gppData, 7, conf.tcfcaVendorID);
+      }
       break;
     case "us":
     default:
@@ -91,11 +167,28 @@ function getConsent(reg: Regulation | null, conf: CMPApiConfig = {}): Consent {
   return consent;
 }
 
-function tcfPurpose(data: tcf.cmpapi.TCData, purpose: number, vendorID?: number): boolean {
-  if (!data.gdprApplies) {
-    return true;
-  }
+function getConsent(defaultReg: Regulation | null, conf: CMPApiConfig = {}): Consent {
+  const cmp: CMPSignals = {};
+  const consent = computeConsent(defaultReg, cmp, conf);
 
+  onTCFChange((data) => {
+    cmp.gdprString = data.tcString;
+    cmp.gdprApplies = data.gdprApplies;
+    cmp.gdprData = data;
+    Object.assign(consent, computeConsent(defaultReg, cmp, conf));
+  });
+
+  onGPPChange((data) => {
+    cmp.gppString = data.gppString;
+    cmp.gppSectionIDs = data.applicableSections;
+    cmp.gppData = data;
+    Object.assign(consent, computeConsent(defaultReg, cmp, conf));
+  });
+
+  return consent;
+}
+
+function tcfPurpose(data: tcf.cmpapi.TCData, purpose: number, vendorID?: number): boolean {
   if (vendorID) {
     return !!data.purpose?.consents?.[purpose] && !!data.vendor?.consents?.[vendorID];
   }
@@ -103,12 +196,9 @@ function tcfPurpose(data: tcf.cmpapi.TCData, purpose: number, vendorID?: number)
 }
 
 function gppCanPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: number): boolean {
-  if (!data.applicableSections.includes(gpp.tcfcav1.SectionID)) {
-    return true;
-  }
   const includeImplied = purpose > 1;
 
-  const section = data.parsedSections[gpp.tcfcav1.APIPrefix] || [];
+  const section = data.parsedSections?.[gpp.tcfcav1.APIPrefix] || [];
   if (typeof vendorID === "number") {
     const coreSegment = section.find((s) => "Version" in s);
     if (!coreSegment) {
@@ -135,13 +225,9 @@ function gppCanPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: 
 }
 
 function gppEuPurpose(data: gpp.cmpapi.PingReturn, purpose: number, vendorID?: number): boolean {
-  if (!data.applicableSections.includes(gpp.tcfeuv2.SectionID)) {
-    return true;
-  }
-
   const includeLegitimateInterest = purpose > 1;
 
-  const section = data.parsedSections[gpp.tcfeuv2.APIPrefix] || [];
+  const section = data.parsedSections?.[gpp.tcfeuv2.APIPrefix] || [];
   if (typeof vendorID === "number") {
     const coreSegment = section.find((s) => "Version" in s);
     if (!coreSegment) {
@@ -210,5 +296,5 @@ function hasTCF(): boolean {
   return typeof window.__tcfapi === "function";
 }
 
-export { getConsent, inferRegulation };
+export { getConsent, inferRegulation, applicableReg };
 export type { Consent, CMPApiConfig };
