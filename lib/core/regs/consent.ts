@@ -53,45 +53,63 @@ type CMPSignals = {
 };
 
 function applicableReg(defaultReg: Regulation | null, cmp: CMPSignals): Regulation | null {
-  const { gdprApplies, gppSectionIDs } = cmp;
+  const { gdprApplies, gppSectionIDs, gdprData } = cmp;
 
-  // Respect CMP signaling that a regulation applies
-  if (gdprApplies === true) {
+  // Handle TCF signaling (preferred over GPP)
+  if (typeof gdprApplies !== "undefined") {
+    if (gdprApplies) {
+      return "gdpr";
+    }
+
+    // Override with unknown regulation if CMP indicates gdpr doesn't apply
+    return defaultReg === "gdpr" ? null : defaultReg;
+  }
+
+  // gdprApplies is optional, so gdprData presence is necessary
+  if (typeof gdprData !== "undefined" && defaultReg === "gdpr") {
     return "gdpr";
   }
 
-  if (gpp.euSections.some((s) => gppSectionIDs?.includes(s.SectionID))) {
+  // Handle GPP signaling
+  //
+  // Unknown regulation signal
+  if (typeof gppSectionIDs === "undefined" || (gppSectionIDs.length === 1 && gppSectionIDs[0] === 0)) {
+    return defaultReg;
+  }
+
+  // No applicable regulation
+  if (gppSectionIDs.length === 1 && gppSectionIDs[0] === -1) {
+    return null;
+  }
+
+  // GDPR > CAN > US
+  if (gppSectionIDs.some((sid) => gpp.euSectionIDs.includes(sid))) {
     return "gdpr";
   }
 
-  if (gpp.caSections.some((s) => gppSectionIDs?.includes(s.SectionID))) {
+  if (gppSectionIDs.some((sid) => gpp.caSectionIDs.includes(sid))) {
     return "can";
   }
 
-  if (gpp.usSections.some((s) => gppSectionIDs?.includes(s.SectionID))) {
+  if (gppSectionIDs.some((sid) => gpp.usSectionIDs.includes(sid))) {
     return "us";
   }
-
-  const gppUnknown = typeof gppSectionIDs === "undefined" || (gppSectionIDs.length === 1 && gppSectionIDs[0] === 0);
 
   // Override with unknown regulation if CMP indicates the detected
   // regulation doesn't apply
   switch (defaultReg) {
     case "gdpr":
-      if (gdprApplies === false) {
-        return null;
-      }
-      if (!gppUnknown && !gpp.euSections.some((s) => gppSectionIDs!.includes(s.SectionID))) {
+      if (!gppSectionIDs.some((sid) => gpp.euSectionIDs.includes(sid))) {
         return null;
       }
       break;
     case "can":
-      if (!gppUnknown && !gpp.caSections.some((s) => gppSectionIDs!.includes(s.SectionID))) {
+      if (!gppSectionIDs.some((sid) => gpp.caSectionIDs.includes(sid))) {
         return null;
       }
       break;
     case "us":
-      if (!gppUnknown && !gpp.usSections.some((s) => gppSectionIDs!.includes(s.SectionID))) {
+      if (!gppSectionIDs.some((sid) => gpp.usSectionIDs.includes(sid))) {
         return null;
       }
       break;

@@ -17,27 +17,27 @@ import * as ustx from "./ustx";
 import * as usut from "./usut";
 import * as usva from "./usva";
 
-export const euSections = [tcfeuv2];
+export const euSectionIDs = [tcfeuv2.SectionID];
 
-export const caSections = [tcfcav1];
+export const caSectionIDs = [tcfcav1.SectionID];
 
-export const usSections = [
-  usnat,
-  usca,
-  usco,
-  usct,
-  usde,
-  usfl,
-  usia,
-  usmt,
-  usne,
-  usnh,
-  usnj,
-  usor,
-  ustn,
-  ustx,
-  usut,
-  usva,
+export const usSectionIDs = [
+  usnat.SectionID,
+  usca.SectionID,
+  usco.SectionID,
+  usct.SectionID,
+  usde.SectionID,
+  usfl.SectionID,
+  usia.SectionID,
+  usmt.SectionID,
+  usne.SectionID,
+  usnh.SectionID,
+  usnj.SectionID,
+  usor.SectionID,
+  ustn.SectionID,
+  ustx.SectionID,
+  usut.SectionID,
+  usva.SectionID,
 ];
 
 export {
