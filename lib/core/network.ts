@@ -24,6 +24,10 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     url.searchParams.set("gdpr", Number(config.consent.gdprApplies).toString());
   }
 
+  if (config.readOnly) {
+    url.searchParams.set("ro", "true");
+  }
+
   if (cookies) {
     url.searchParams.set("cookies", "yes");
   } else {

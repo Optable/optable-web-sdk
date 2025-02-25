@@ -222,6 +222,7 @@ describe("behavior testing of", () => {
       site: "site",
       cookies: false,
       initPassport: false,
+      readOnly: false,
     });
     await sdk["init"];
     expect(localStorage.setItem).toBeCalledTimes(0);
@@ -259,6 +260,7 @@ describe("behavior testing of", () => {
       site: "site",
       cookies: true,
       initPassport: true,
+      readOnly: false,
     });
     await sdk["init"];
     expect(window.localStorage.setItem).toHaveBeenLastCalledWith(
