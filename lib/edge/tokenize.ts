@@ -1,9 +1,9 @@
 import type { ResolvedConfig } from "../config";
+import type { BidRequest } from "iab-openrtb/v26";
 import { fetch } from "../core/network";
-import { User } from "./rtb2";
 
 type TokenizeResponse = {
-  User: User;
+  user: BidRequest["user"];
 };
 
 type TokenizeRequest = {

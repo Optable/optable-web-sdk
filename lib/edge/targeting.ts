@@ -2,7 +2,6 @@ import type { BidRequest } from "iab-openrtb/v26";
 import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
-import { UIDAgentType, User as RTB2User } from "./rtb2";
 
 type Identifier = {
   id: string;
@@ -53,7 +52,7 @@ function TargetingClearCache(config: ResolvedConfig) {
   ls.clearTargeting();
 }
 
-type PrebidORTB2 = { user?: RTB2User };
+type PrebidORTB2 = { user?: BidRequest["user"] };
 
 /*
  * Prebid.js supports passing seller-defined audiences to compatible
@@ -68,21 +67,7 @@ type PrebidORTB2 = { user?: RTB2User };
  * https://iabtechlab.com/wp-content/uploads/2021/03/IABTechLab_Taxonomy_and_Data_Transparency_Standards_to_Support_Seller-defined_Audience_and_Context_Signaling_2021-03.pdf
  */
 function PrebidORTB2(tdata: TargetingResponse | null): PrebidORTB2 {
-  return {
-    user: {
-      data: (tdata?.audience ?? []).map((identifiers) => ({
-        name: identifiers.provider,
-        segment: identifiers.ids,
-        ext: { segtax: identifiers.rtb_segtax },
-      })),
-      ext: {
-        eids: (tdata?.user ?? []).map((identifiers) => ({
-          source: identifiers.provider,
-          uids: identifiers.ids.map(({ id }) => ({ id, atype: UIDAgentType.PersonID })),
-        })),
-      },
-    },
-  };
+  return tdata?.ortb2 ?? {};
 }
 
 type TargetingKeyValues = { [key: string]: string[] };
