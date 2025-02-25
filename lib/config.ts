@@ -14,6 +14,7 @@ type InitConfig = {
   cookies?: boolean;
   initPassport?: boolean;
   consent?: InitConsent;
+  readOnly?: boolean;
 };
 
 type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
@@ -23,6 +24,7 @@ type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
 const DCN_DEFAULTS = {
   cookies: true,
   initPassport: true,
+  readOnly: false,
   consent: {
     reg: null,
     deviceAccess: true,
@@ -39,6 +41,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     cookies: init.cookies ?? DCN_DEFAULTS.cookies,
     initPassport: init.initPassport ?? DCN_DEFAULTS.initPassport,
     consent: DCN_DEFAULTS.consent,
+    readOnly: init.readOnly ?? DCN_DEFAULTS.readOnly,
   };
 
   if (init.consent?.static) {
