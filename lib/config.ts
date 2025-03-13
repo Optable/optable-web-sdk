@@ -9,16 +9,28 @@ type InitConsent = {
 };
 
 type InitConfig = {
-  host: string;
+  // Source slug for SDK calls
   site: string;
+  // API host
+  host: string;
+  // Node for API calls (only set if required by the host)
+  node?: string;
+  // Enable cookie storage
   cookies?: boolean;
+  // Previous Host, used only when switching hosts to retain previous cache state
+  legacyHostCache?: string;
+  // Initialize passport on SDK load
   initPassport?: boolean;
+  // Consent settings
   consent?: InitConsent;
+  // Enable read-only mode
   readOnly?: boolean;
 };
 
-type ResolvedConfig = Required<Omit<InitConfig, "consent">> & {
+type ResolvedConfig = Required<Omit<InitConfig, "consent" | "node" | "legacyHostCache">> & {
   consent: Consent;
+  node?: string;
+  legacyHostCache?: string;
 };
 
 const DCN_DEFAULTS = {
@@ -42,6 +54,8 @@ function getConfig(init: InitConfig): ResolvedConfig {
     initPassport: init.initPassport ?? DCN_DEFAULTS.initPassport,
     consent: DCN_DEFAULTS.consent,
     readOnly: init.readOnly ?? DCN_DEFAULTS.readOnly,
+    node: init.node,
+    legacyHostCache: init.legacyHostCache,
   };
 
   if (init.consent?.static) {

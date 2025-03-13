@@ -5,6 +5,7 @@ demos/react/dist
 demos/npm/dist
 nginx/tls
 !nginx/tls/.gitkeep
+nginx/templates/*.conf
 
 browser/dist/
 
