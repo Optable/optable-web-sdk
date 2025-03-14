@@ -27,9 +27,14 @@ type InitConfig = {
   readOnly?: boolean;
 };
 
-type ResolvedConfig = Required<Omit<InitConfig, "consent" | "node" | "legacyHostCache">> & {
+type ResolvedConfig = {
+  site: string;
+  host: string;
   consent: Consent;
   node?: string;
+  cookies?: boolean;
+  initPassport?: boolean;
+  readOnly?: boolean;
   legacyHostCache?: string;
 };
 
