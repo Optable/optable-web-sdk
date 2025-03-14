@@ -28,7 +28,9 @@ module.exports = {
       DCN_CONFIG: JSON.stringify({
         host: process.env.DCN_HOST,
         initPassport: process.env.DCN_INIT === "true",
-        site: "${DCN_SITE}",
+        site: process.env.DCN_SITE,
+        node: process.env.DCN_NODE,
+        legacyHostCache: process.env.DCN_LEGACY_HOST_CACHE,
       }),
     }),
     new HtmlWebpackPlugin({

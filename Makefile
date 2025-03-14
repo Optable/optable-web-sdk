@@ -22,6 +22,8 @@ deps:
 export SDK_URI ?= https://localhost:8181/sdk.js
 export DCN_HOST ?= sandbox.optable.co
 export DCN_SITE ?= web-sdk-demo
+export DCN_NODE ?= 
+export DCN_LEGACYHOSTCACHE ?=
 export DCN_INIT ?= true
 export DCN_ID ?= optable
 export ADS_HOST ?= ads.optable.co
@@ -36,6 +38,8 @@ DEMO_VARS:='\
 	SDK_URI=$${SDK_URI} \
 	DCN_HOST=$${DCN_HOST} \
 	DCN_SITE=$${DCN_SITE} \
+	DCN_NODE=$${DCN_NODE} \
+	DCN_LEGACYHOSTCACHE=$${DCN_LEGACYHOSTCACHE} \
 	DCN_ID=$${DCN_ID} \
 	DCN_INIT=$${DCN_INIT} \
 	ADS_SITE=$${ADS_SITE} \

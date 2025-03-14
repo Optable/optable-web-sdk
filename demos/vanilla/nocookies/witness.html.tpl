@@ -21,6 +21,8 @@
           initPassport: JSON.parse("${DCN_INIT}"),
           site: "${DCN_SITE}",
           cookies: false,
+          node: "${DCN_NODE}",
+          legacyHostCache: "${DCN_LEGACY_HOST_CACHE}",
         });
 
         optable.instance.tryIdentifyFromParams();

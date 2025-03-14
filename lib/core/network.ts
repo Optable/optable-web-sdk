@@ -8,6 +8,10 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   const url = new URL(`${site}${path}`, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
 
+  if (config.node) {
+    url.searchParams.set("t", config.node);
+  }
+
   if (typeof config.consent.gpp !== "undefined") {
     url.searchParams.set("gpp", config.consent.gpp);
   }

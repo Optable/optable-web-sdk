@@ -92,9 +92,45 @@ const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", cookies:
 
 Note that the default is `cookies: true` and will be inferred if you do not specify the `cookies` parameter at all.
 
-## Using (npm module)
+# Using (npm module)
 
-To configure an instance of `OptableSDK` integrating with an [Optable](https://optable.co/) DCN running at hostname `dcn.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `OptableSDK` class exported by the `@optable/web-sdk` module:
+## Initialization Configuration (`InitConfig`)
+
+When creating an instance of `OptableSDK`, you can pass an `InitConfig` object to customize its behavior. Below are the available configuration keys and their descriptions:
+
+### Required Keys
+
+- **`site` (string)**
+  The identifier (slug) of Javascript SDK source. This must match a configured site in the [Optable](https://optable.co/) DCN. Must have properly configure `Allowed HTTP Origins`.
+
+- **`host` (string)**
+  The hostname of the Optable DCN to which the SDK will connect. All API requests will be directed here.
+
+### Optional Keys
+
+- **`node` (string)**
+  If supported by the DCN host, specify the API node for SDK requests. Used in multi-node environments.
+
+- **`cookies` (boolean, default: `true`)**
+  If `true`, enables the use of browser cookies for storage.
+
+- **`legacyHostCache` (string)**
+  Used when migrating from one DCN host to another. If specified, it retains the previous cache state when switching hosts.
+
+- **`initPassport` (boolean, default: `true`)**
+  If `true`, initializes the user passport (identity mechanism) upon SDK load.
+
+- **`consent` (`InitConsent`)**
+  Defines the consent settings for data collection and processing.
+
+- **`readOnly` (boolean, default: `false`)**
+  When set to `true`, puts the SDK in a read-only mode, preventing any data modifications while still allowing API queries.
+
+These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
+
+## Usage Example
+
+To configure an instance of `OptableSDK` integrating with an Optable DCN running at hostname `dcn.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `OptableSDK` class exported by the `@optable/web-sdk` module:
 
 ```js
 import OptableSDK from "@optable/web-sdk";
@@ -102,9 +138,12 @@ import OptableSDK from "@optable/web-sdk";
 const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site" });
 ```
 
-You can then call various SDK APIs on the instance as shown in the examples below. It's also possible to configure multiple instances of `OptableSDK` in order to connect to other (e.g., partner) DCNs and/or reference other configured web site slug IDs.
+You can then call various SDK APIs on the instance as shown in the examples below. It is also possible to configure multiple instances of `OptableSDK` in order to connect to different DCNs or reference multiple site slugs.
 
-Note that all SDK communication with Optable DCNs is done over TLS.
+### Security & Privacy
+
+- All SDK communication with Optable DCNs is done over TLS to ensure data security.
+- The `consent` option allows compliance with privacy regulations by defining explicit data collection settings.
 
 ### Identify API
 
