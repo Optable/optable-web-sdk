@@ -42,7 +42,7 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   }
 
   const requestInit: RequestInit = { ...init };
-  requestInit.credentials = "include";
+  requestInit.credentials = config.consent.deviceAccess ? "include" : "omit";
 
   const request = new Request(url.toString(), requestInit);
 
