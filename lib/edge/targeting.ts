@@ -1,3 +1,4 @@
+import type { BidRequest } from "iab-openrtb/v26";
 import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
@@ -22,6 +23,7 @@ type UserIdentifiers = {
 type TargetingResponse = {
   audience?: AudienceIdentifiers[];
   user?: UserIdentifiers[];
+  ortb2: Partial<BidRequest>;
 };
 
 async function Targeting(config: ResolvedConfig, id: string): Promise<TargetingResponse> {
