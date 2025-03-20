@@ -2,69 +2,36 @@ import { SiteResponse } from "../edge/site";
 import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
+import { generatedPairKeys, generatePassportKeys, generateSiteKeys, generateTargetingKeys, StorageKeys } from "./storage-keys";
 
 const pairEIDSource = "pair-protocol.com";
-const pairStorageKey = "_optable_pairId";
-
-export function encodeBase64(str: string): string {
-  const codeUnits = new Uint16Array(str.length);
-  for (let i = 0; i < codeUnits.length; i++) {
-    codeUnits[i] = str.charCodeAt(i);
-  }
-  return btoa(String.fromCharCode(...new Uint8Array(codeUnits.buffer)));
-}
-
-// Used to create an old keygen for getItem only
-export function deprecatedGenerateCacheKey(config: ResolvedConfig): string {
-  if (config.legacyHostCache) {
-    return encodeBase64(`${config.legacyHostCache}/${config.site}`);
-  }
-
-  return encodeBase64(`${config.host}/${config.site}`);
-}
-
-// Used as keygen for setting and getting from localstorage
-export function generateCacheKey(config: ResolvedConfig): string {
-  if (config.node) {
-    return encodeBase64(`${config.host}/${config.node}`);
-  }
-
-  return encodeBase64(config.host);
-}
 
 class LocalStorage {
-  private deprecatedPassportKey: string;
-  private passportKey: string;
-  private targetingKey: string;
-  private siteKey: string;
-
+  private passportKeys: StorageKeys;
+  private targetingKeys: StorageKeys;
+  private siteKeys: StorageKeys;
+  private pairKeys: StorageKeys;
   private storage: LocalStorageProxy;
 
   constructor(private config: ResolvedConfig) {
-    // This is a deprecated keygen, keeping for backwards compatibility
-    const deprecatedBase64ConfigKey = deprecatedGenerateCacheKey(config);
-    const base64ConfigKey = generateCacheKey(config);
-
-    this.deprecatedPassportKey = "OPTABLE_PASS_" + deprecatedBase64ConfigKey;
-    this.passportKey = "OPTABLE_PASSPORT_" + base64ConfigKey;
-    this.targetingKey = "OPTABLE_TARGETING_" + base64ConfigKey;
-    this.siteKey = "OPTABLE_SITE_" + base64ConfigKey;
+    this.passportKeys = generatePassportKeys(config);
+    this.targetingKeys = generateTargetingKeys(config);
+    this.siteKeys = generateSiteKeys(config);
+    this.pairKeys = generatedPairKeys();
     this.storage = new LocalStorageProxy(this.config.consent);
   }
 
   getPassport(): string | null {
-    return this.getFirstExistingItem(this.passportKey, this.deprecatedPassportKey);
-  }
-
-  getTargeting(): TargetingResponse | null {
-    const raw = this.storage.getItem(this.targetingKey);
-    return raw ? JSON.parse(raw) : null;
+    return this.readStorageKeys(this.passportKeys);
   }
 
   setPassport(passport: string) {
-    if (passport && passport.length > 0) {
-      this.storage.setItem(this.passportKey, passport);
-    }
+    this.writeToStorageKeys(this.passportKeys, passport);
+  }
+
+  getTargeting(): TargetingResponse | null {
+    const raw = this.readStorageKeys(this.targetingKeys);
+    return raw ? JSON.parse(raw) : null;
   }
 
   setTargeting(targeting?: TargetingResponse | null) {
@@ -72,8 +39,21 @@ class LocalStorage {
       return;
     }
 
-    this.storage.setItem(this.targetingKey, JSON.stringify(targeting));
+    this.writeToStorageKeys(this.targetingKeys, JSON.stringify(targeting));
     this.setPairIDs(targeting);
+  }
+
+  getSite(): SiteResponse | null {
+    const raw = this.readStorageKeys(this.siteKeys);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  setSite(site?: SiteResponse | null) {
+    if (!site) {
+      return;
+    }
+
+    this.writeToStorageKeys(this.siteKeys, JSON.stringify(site));
   }
 
   setPairIDs(targeting: TargetingResponse) {
@@ -84,51 +64,53 @@ class LocalStorage {
     }
 
     const ids = new Set(uids.map((uid) => uid.id));
-    this.storage.setItem(pairStorageKey, btoa(JSON.stringify({ envelope: [...ids] })));
+    this.writeToStorageKeys(this.pairKeys, btoa(JSON.stringify({ envelope: [...ids] })));
   }
 
   getPairIDs(): string[] | null {
-    const raw = this.storage.getItem(pairStorageKey);
-    const parsed = raw ? JSON.parse(atob(raw))?.envelope : null;
-    return parsed;
+    const raw = this.readStorageKeys(this.pairKeys);
+    return raw ? JSON.parse(atob(raw))?.envelope : null;
   }
 
-  setSite(site?: SiteResponse | null) {
-    if (!site) {
-      return;
-    }
-    this.storage.setItem(this.siteKey, JSON.stringify(site));
-  }
-
-  getSite(): SiteResponse | null {
-    const raw = this.storage.getItem(this.siteKey);
-    const parsed = raw ? JSON.parse(raw) : null;
-    return parsed;
-  }
-
-  getFirstExistingItem(...keys: string[]): string | null {
-    for (const key of keys) {
+  // Returns the first key with data
+  readStorageKeys(keys: StorageKeys): string | null {
+    for (const key of keys.read) {
       const value = this.storage.getItem(key);
       if (value) {
         return value;
       }
     }
+
     return null;
   }
 
+  writeToStorageKeys(keys: StorageKeys, value: string): void {
+    if (value) {
+      for (const key of keys.write) {
+        this.storage.setItem(key, value);
+      }
+    }
+  }
+
+  clearStorageKeys(keys: StorageKeys): void {
+    for (const key of keys.read) {
+      this.storage.removeItem(key);
+    }
+  }
+
   clearPassport() {
-    this.storage.removeItem(this.passportKey);
-    this.storage.removeItem(this.deprecatedPassportKey);
+    this.clearStorageKeys(this.passportKeys);
   }
 
   clearTargeting() {
-    this.storage.removeItem(this.targetingKey);
+    this.clearStorageKeys(this.targetingKeys);
   }
 
   clearSite() {
-    this.storage.removeItem(this.siteKey);
+    this.clearStorageKeys(this.siteKeys);
   }
 }
 
+export type { StorageKeys as PassportKeys, ResolvedConfig };
 export { LocalStorage };
 export default LocalStorage;
