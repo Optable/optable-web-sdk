@@ -1,8 +1,8 @@
-import type { BidRequest } from "iab-openrtb/v26";
 import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
-import { UIDAgentType, User as RTB2User } from "./rtb2";
+import * as ortb2 from "iab-openrtb/v26";
+import * as adcom from "iab-adcom";
 
 type Identifier = {
   id: string;
@@ -23,7 +23,7 @@ type UserIdentifiers = {
 type TargetingResponse = {
   audience?: AudienceIdentifiers[];
   user?: UserIdentifiers[];
-  ortb2: Partial<BidRequest>;
+  ortb2: { user: ortb2.User };
 };
 
 async function Targeting(config: ResolvedConfig, id: string): Promise<TargetingResponse> {
@@ -53,20 +53,19 @@ function TargetingClearCache(config: ResolvedConfig) {
   ls.clearTargeting();
 }
 
-type PrebidORTB2 = { user?: RTB2User };
+// Prebid.js supports setting ortb2 object for compatible bidder adapters.
+//
+// We return the contents to be merged in ortb2 and passed to
+// bidder adapters via mergeConfig(ortb2)... the caller is free
+// to append additional objects before setting the final result.
+//
+// References:
+// https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy
+// https://iabtechlab.com/wp-content/uploads/2021/03/IABTechLab_Taxonomy_and_Data_Transparency_Standards_to_Support_Seller-defined_Audience_and_Context_Signaling_2021-03.pdf
+//
+// Deprecated: prefer the ortb2 field in the targeting response.
+type PrebidORTB2 = { user: ortb2.User };
 
-/*
- * Prebid.js supports passing seller-defined audiences to compatible
- * bidder adapters.
- *
- * We return the contents to be merged in ortb2 and passed to
- * bidder adapters via mergeConfig(ortb2)... the caller is free
- * to append additional objects before setting the final result.
- *
- * References:
- * https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy
- * https://iabtechlab.com/wp-content/uploads/2021/03/IABTechLab_Taxonomy_and_Data_Transparency_Standards_to_Support_Seller-defined_Audience_and_Context_Signaling_2021-03.pdf
- */
 function PrebidORTB2(tdata: TargetingResponse | null): PrebidORTB2 {
   return {
     user: {
@@ -78,14 +77,15 @@ function PrebidORTB2(tdata: TargetingResponse | null): PrebidORTB2 {
       ext: {
         eids: (tdata?.user ?? []).map((identifiers) => ({
           source: identifiers.provider,
-          uids: identifiers.ids.map(({ id }) => ({ id, atype: UIDAgentType.PersonID })),
+          uids: identifiers.ids.map(({ id }) => ({ id, atype: adcom.AgentType.PERSON_BASED })),
         })),
       },
     },
   };
 }
 
-type TargetingKeyValues = { [key: string]: string[] };
+type TargetingKeyValues = Record<string, string[]>;
+
 function TargetingKeyValues(tdata: TargetingResponse | null): TargetingKeyValues {
   const result: TargetingKeyValues = {};
 
