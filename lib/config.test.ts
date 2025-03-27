@@ -11,6 +11,7 @@ describe("getConfig", () => {
       initPassport: true,
       consent: defaultConsent,
       readOnly: false,
+      experiments: [],
     });
   });
 
@@ -25,6 +26,7 @@ describe("getConfig", () => {
         readOnly: true,
         node: "my-node",
         legacyHostCache: "legacy-cache",
+        experiments: ["tokenize-v2"],
       })
     ).toEqual({
       host: "host",
@@ -35,6 +37,7 @@ describe("getConfig", () => {
       readOnly: true,
       node: "my-node",
       legacyHostCache: "legacy-cache",
+      experiments: ["tokenize-v2"],
     });
   });
 

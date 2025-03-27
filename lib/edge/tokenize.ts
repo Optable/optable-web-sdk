@@ -11,10 +11,15 @@ type TokenizeRequest = {
 };
 
 function Tokenize(config: ResolvedConfig, id: string): Promise<TokenizeResponse> {
+  let endpoint = "/v1/tokenize";
+  if (config.experiments.includes("tokenize-v2")) {
+    endpoint = "/v2/tokenize";
+  }
+
   let request: TokenizeRequest = {
     id: id,
   };
-  return fetch("/v1/tokenize", config, {
+  return fetch(endpoint, config, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

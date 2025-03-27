@@ -1,6 +1,8 @@
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 
+type Experiment = "tokenize-v2";
+
 type InitConsent = {
   // A "cmpapi" configuration indicating that consent should be gathered from CMP apis.
   cmpapi?: CMPApiConfig;
@@ -25,6 +27,8 @@ type InitConfig = {
   consent?: InitConsent;
   // Enable read-only mode
   readOnly?: boolean;
+  // Active experiments to test new features
+  experiments?: Experiment[];
 };
 
 type ResolvedConfig = {
@@ -32,16 +36,18 @@ type ResolvedConfig = {
   host: string;
   consent: Consent;
   node?: string;
-  cookies?: boolean;
-  initPassport?: boolean;
-  readOnly?: boolean;
+  cookies: boolean;
+  initPassport: boolean;
+  readOnly: boolean;
   legacyHostCache?: string;
+  experiments: Experiment[];
 };
 
 const DCN_DEFAULTS = {
   cookies: true,
   initPassport: true,
   readOnly: false,
+  experiments: [],
   consent: {
     reg: null,
     deviceAccess: true,
@@ -61,6 +67,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     readOnly: init.readOnly ?? DCN_DEFAULTS.readOnly,
     node: init.node,
     legacyHostCache: init.legacyHostCache,
+    experiments: init.experiments ?? DCN_DEFAULTS.experiments,
   };
 
   if (init.consent?.static) {
