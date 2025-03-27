@@ -223,6 +223,7 @@ describe("behavior testing of", () => {
       cookies: false,
       initPassport: false,
       readOnly: false,
+      experiments: [],
     });
     await sdk["init"];
     expect(localStorage.setItem).toBeCalledTimes(0);
@@ -261,6 +262,7 @@ describe("behavior testing of", () => {
       cookies: true,
       initPassport: true,
       readOnly: false,
+      experiments: [],
     });
     await sdk["init"];
     expect(window.localStorage.setItem).toHaveBeenLastCalledWith(
@@ -464,6 +466,20 @@ describe("behavior testing of", () => {
         method: "POST",
         _bodyText: '{"id":"someId"}',
         url: expect.stringContaining("v1/tokenize"),
+      })
+    );
+  });
+
+  test("tokenize supports v2 experiment", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({ ...defaultConfig, experiments: ["tokenize-v2"] });
+
+    await sdk.tokenize("someId");
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        _bodyText: '{"id":"someId"}',
+        url: expect.stringContaining("v2/tokenize"),
       })
     );
   });
