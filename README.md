@@ -713,3 +713,71 @@ $ docker-compose up
 Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
+
+## Multi-Node Targeting Resolver
+
+Resolves multiple **Node Targeting Rules** based on **priority** or **aggregation**.
+This function is available under `window.optable.utils` as part of a collection of helper methods extending the SDK.
+
+### **Usage**
+
+Define targeting rules:
+
+```typescript
+const rules: NodeTargetingRule[] = [
+  {
+    targetingFn: async () => window.optable.node_sdk_instance_one.targeting(),
+    matcher: "your_domain",
+    mm: 3, // Authenticated
+    priority: 1, // Highest Priority (Optional)
+  },
+  {
+    targetingFn: async () => window.optable.node_sdk_instance_two.targeting("__ip__"),
+    matcher: "third_party_vendor"
+    mm: 5, // inference
+    priority: 2, // Lower Priority (Optional)
+  },
+];
+```
+
+Call the resolver:
+
+```typescript
+const result = await window.optable.utils.resolveMultiNodeTargeting(rules);
+console.log(result);
+```
+
+### **Rules**
+
+- If **any rule has a `priority`**, the function will return the response with the highest priority (1 being the highest). Lower priorities (2, 3, etc.) are considered progressively less important. Any rules with priority values of 0 or below are ignored.
+- If **multiple nodes share the highest priority**, merges their `eids`.
+- If **no priority is set**, aggregates all responses.
+
+### **Return Value**
+
+```typescript
+type MultiNodeTargetingResponse = {
+  // All sources that resolved the response
+  eidSources: Set<string>;
+  // IAB OpenRTB 2.6 Ortb2 User Object (Partial)
+  ortb2: { user: { eids: EID[]; data: Data[] } };
+};
+```
+
+### **Input Type**
+
+```typescript
+type NodeTargetingRule = {
+  // Targeting function to resolve. e.g. window.optable.node_sdk_instance.targeting('__ip__')
+  targetingFn: () => Optable.TargetingFn(targetingArg: string);
+  // Technology provider domain
+  matcher: string;
+  // Match method (mm) based on IAB v26 standards.
+  // Determines how the ID was matched. Possible values:
+  // 0 = unknown, 1 = no_match, 2 = cookie_sync, 3 = authenticated, 4 = observed, 5 = inference.
+  mm: IDMatchMethod;
+  // (Optional) If provided we will only pick one resolved Ortb2Response from the most prioritize matcher.
+  // Any values below 1 will be threated as ignore
+  priority?: number;
+};
+```
