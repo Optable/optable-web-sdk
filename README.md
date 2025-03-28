@@ -486,7 +486,75 @@ You can verify the signal was correctly passed to GAM by searching for its value
 
 ## Integrating Prebid
 
-The Optable Web SDK can fetch targeting data from a DCN and prepare an audience taxonomy object similar to the one described in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `prebidORTB2FromCache()` function returns the object from the targeting data stored by `targeting()` API calls in `LocalStorage`.
+The Optable Web SDK can integrate with Prebid.js to provide targeting data for real-time bidding. There are three main ways to integrate:
+
+### Open Pair ID Prebid Module
+
+For publishers who only need to transmit Optable's cleanroom PAIR IDs in the bid stream, the [Open Pair ID Prebid module](https://docs.prebid.org/dev-docs/modules/userid-submodules/open-pair) provides a simple integration method.
+This approach is recommended when PAIR ID transmission is your only requirement.
+
+Here's how to integrate it:
+
+```html
+<!-- Optable SDK async load: -->
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
+
+<!-- Prebid.js lib async load: -->
+<script async src="prebid.js"></script>
+
+<!-- Initialize Optable SDK and cache PAIR identifiers: -->
+<script>
+  window.optable = window.optable || { cmd: [] };
+  // Init Optable SDK via command:
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
+  });
+  // Call targeting() to cache PAIR identifiers
+  optable.cmd.push(function () {
+    optable.instance.targeting().catch((err) => {
+      // Maybe log error
+    });
+  });
+</script>
+
+<!-- Configure Prebid.js to use the cached PAIR identifiers: -->
+<script>
+  window.pbjs = window.pbjs || { que: [] };
+  pbjs.que.push(function () {
+    // Configure the Open Pair Prebid module to look for our cached PAIR identifiers
+    pbjs.mergeConfig({
+      userSync: {
+        userIds: [
+          {
+            name: "openPairId",
+            inserter: "optable.co",
+            matcher: "<PUBLISHER DOMAIN>", // Replace with your publisher domain
+            params: {
+              optable: { storageKey: "_optable_pairId" },
+            },
+          },
+        ],
+      },
+    });
+    // Request bids - the Open Pair module will automatically include the PAIR identifiers
+    pbjs.requestBids({
+      bidsBackHandler: function (bids) {
+        // Handle bids
+      },
+      timeout: 3000,
+    });
+  });
+</script>
+```
+
+Key points about this integration:
+
+- It only transmits PAIR IDs, making it simpler than the full ORTB2 integration
+- The PAIR IDs are automatically picked up from the Optable SDK's local storage
+- No additional configuration is needed beyond this snippet
+- It's compatible with all bidders that support the Open Pair ID module
+
+If you need to transmit additional targeting data or have more control over what information is sent to bidders, you should use the ORTB2 integration method described in the next section.
 
 ### Seller Defined Audiences
 
