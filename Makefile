@@ -22,7 +22,7 @@ deps:
 export SDK_URI ?= https://localhost:8181/sdk.js
 export DCN_HOST ?= sandbox.optable.co
 export DCN_SITE ?= web-sdk-demo
-export DCN_NODE ?= 
+export DCN_NODE ?=
 export DCN_LEGACY_HOST_CACHE ?=
 export DCN_INIT ?= true
 export DCN_ID ?= optable
@@ -70,6 +70,7 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/ads/topics/publisher.html.tpl > demos/ads/topics/publisher.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
+	envsubst $(DEMO_VARS) < demos/vanilla/pair/index.html.tpl > demos/vanilla/pair/index.html
 
 .PHONY: demo-react
 demo-react: build-lib

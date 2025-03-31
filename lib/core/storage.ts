@@ -3,6 +3,9 @@ import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
 
+const pairEIDSource = "pair-protocol.com";
+const pairStorageKey = "_optable_pairId";
+
 export function encodeBase64(str: string): string {
   const codeUnits = new Uint16Array(str.length);
   for (let i = 0; i < codeUnits.length; i++) {
@@ -70,6 +73,24 @@ class LocalStorage {
     }
 
     this.storage.setItem(this.targetingKey, JSON.stringify(targeting));
+    this.setPairIDs(targeting);
+  }
+
+  setPairIDs(targeting: TargetingResponse) {
+    const eids = targeting.ortb2?.user?.eids?.filter((eid) => eid.source === pairEIDSource);
+    const uids = eids?.flatMap((eid) => eid.uids);
+    if (!uids) {
+      return;
+    }
+
+    const ids = new Set(uids.map((uid) => uid.id));
+    this.storage.setItem(pairStorageKey, btoa(JSON.stringify({ envelope: [...ids] })));
+  }
+
+  getPairIDs(): string[] | null {
+    const raw = this.storage.getItem(pairStorageKey);
+    const parsed = raw ? JSON.parse(atob(raw))?.envelope : null;
+    return parsed;
   }
 
   setSite(site?: SiteResponse | null) {
