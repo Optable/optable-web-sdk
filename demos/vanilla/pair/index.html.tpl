@@ -74,7 +74,7 @@
                 {
                   name: 'openPairId',
                   inserter: 'optable.co',
-                  matcher: 'tony.test',
+                  matcher: window.location.hostname,
                   params: {
                     optable: { storageKey: '_optable_pairId' }
                   },
@@ -89,7 +89,7 @@
               bids: [{
                 bidder: 'appnexus',
                 params: {
-                  placementId: "hello",
+                  placementId: "placementid",
                 }
               }]
             },
