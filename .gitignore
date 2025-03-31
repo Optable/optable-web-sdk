@@ -9,11 +9,4 @@ nginx/templates/*.conf
 
 browser/dist/
 
-demos/vanilla/nocookies/targeting/*.html
-demos/vanilla/nocookies/*.html
-demos/vanilla/targeting/*.html
-demos/vanilla/*.html
-demos/integration/*.html
-demos/vanilla/uid2_token/*.html
-demos/ads/protected-audience/*.html
-demos/ads/topics/*.html
+demos/**/*.html
