@@ -44,6 +44,11 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   const requestInit: RequestInit = { ...init };
   requestInit.credentials = config.consent.deviceAccess ? "include" : "omit";
 
+  if (config.mockedIP) {
+    requestInit.headers = new Headers(requestInit.headers);
+    requestInit.headers.set("X-Forwarded-For", config.mockedIP);
+  }
+
   const request = new Request(url.toString(), requestInit);
 
   return request;

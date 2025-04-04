@@ -29,6 +29,8 @@ type InitConfig = {
   readOnly?: boolean;
   // Active experiments to test new features
   experiments?: Experiment[];
+  // Mock IP address for testing
+  mockedIP?: string;
 };
 
 type ResolvedConfig = {
@@ -41,6 +43,7 @@ type ResolvedConfig = {
   readOnly: boolean;
   legacyHostCache?: string;
   experiments: Experiment[];
+  mockedIP?: string;
 };
 
 const DCN_DEFAULTS = {
@@ -68,6 +71,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     node: init.node,
     legacyHostCache: init.legacyHostCache,
     experiments: init.experiments ?? DCN_DEFAULTS.experiments,
+    mockedIP: init.mockedIP,
   };
 
   if (init.consent?.static) {
