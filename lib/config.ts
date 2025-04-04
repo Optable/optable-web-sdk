@@ -29,6 +29,8 @@ type InitConfig = {
   readOnly?: boolean;
   // Active experiments to test new features
   experiments?: Experiment[];
+  // Mock IP address for testing
+  mockedIP?: string;
   // Session ID to use, defaults to a random value
   sessionID?: string;
 };
@@ -43,6 +45,7 @@ type ResolvedConfig = {
   readOnly: boolean;
   legacyHostCache?: string;
   experiments: Experiment[];
+  mockedIP?: string;
   sessionID: string;
 };
 
@@ -71,6 +74,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     node: init.node,
     legacyHostCache: init.legacyHostCache,
     experiments: init.experiments ?? DCN_DEFAULTS.experiments,
+    mockedIP: init.mockedIP,
     sessionID: init.sessionID ?? generateSessionID(),
   };
 
