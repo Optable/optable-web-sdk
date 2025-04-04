@@ -3,14 +3,18 @@ import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
-  const { site, host, cookies } = config;
+  const { host, cookies } = config;
 
-  const url = new URL(`${site}${path}`, `https://${host}`);
+  const url = new URL(path, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
   url.searchParams.set("sid", config.sessionID);
 
   if (config.node) {
     url.searchParams.set("t", config.node);
+  }
+
+  if (config.site) {
+    url.searchParams.set("o", config.site);
   }
 
   if (typeof config.consent.gpp !== "undefined") {

@@ -236,7 +236,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f5"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&cookies=no&passport=`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=no&passport=`,
       })
     );
 
@@ -246,7 +246,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f6"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&cookies=no&passport=PASSPORT`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=no&passport=PASSPORT`,
       })
     );
   });
@@ -277,7 +277,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "GET",
         bodyUsed: false,
-        url: expect.stringContaining("config?osdk=web-0.0.0-experimental&sid=session&cookies=yes"),
+        url: expect.stringContaining("config?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=yes"),
       })
     );
 
@@ -287,7 +287,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f5"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&cookies=yes`,
+        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=yes`,
       })
     );
   });
