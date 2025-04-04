@@ -4,7 +4,7 @@ const defaultConsent = DCN_DEFAULTS.consent;
 
 describe("getConfig", () => {
   it("returns the default config when no overrides are provided", () => {
-    expect(getConfig({ host: "host", site: "site" })).toEqual({
+    expect(getConfig({ host: "host", site: "site", sessionID: "" })).toEqual({
       host: "host",
       site: "site",
       cookies: true,
@@ -12,6 +12,7 @@ describe("getConfig", () => {
       consent: defaultConsent,
       readOnly: false,
       experiments: [],
+      sessionID: "",
     });
   });
 
@@ -27,6 +28,7 @@ describe("getConfig", () => {
         node: "my-node",
         legacyHostCache: "legacy-cache",
         experiments: ["tokenize-v2"],
+        sessionID: "my-session-id",
       })
     ).toEqual({
       host: "host",
@@ -38,6 +40,7 @@ describe("getConfig", () => {
       node: "my-node",
       legacyHostCache: "legacy-cache",
       experiments: ["tokenize-v2"],
+      sessionID: "my-session-id",
     });
   });
 

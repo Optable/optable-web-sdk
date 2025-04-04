@@ -31,6 +31,8 @@ type InitConfig = {
   experiments?: Experiment[];
   // Mock IP address for testing
   mockedIP?: string;
+  // Session ID to use, defaults to a random value
+  sessionID?: string;
 };
 
 type ResolvedConfig = {
@@ -44,6 +46,7 @@ type ResolvedConfig = {
   legacyHostCache?: string;
   experiments: Experiment[];
   mockedIP?: string;
+  sessionID: string;
 };
 
 const DCN_DEFAULTS = {
@@ -72,6 +75,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     legacyHostCache: init.legacyHostCache,
     experiments: init.experiments ?? DCN_DEFAULTS.experiments,
     mockedIP: init.mockedIP,
+    sessionID: init.sessionID ?? generateSessionID(),
   };
 
   if (init.consent?.static) {
@@ -83,5 +87,16 @@ function getConfig(init: InitConfig): ResolvedConfig {
   return config;
 }
 
+function generateSessionID(): string {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+
+  // Equivalent to esnext arr.toBase64({ omitPadding: true, alphabet: "base64url" })
+  return btoa(String.fromCharCode(...arr))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
 export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig };
-export { getConfig, DCN_DEFAULTS };
+export { getConfig, DCN_DEFAULTS, generateSessionID };
