@@ -33,6 +33,8 @@ type InitConfig = {
   mockedIP?: string;
   // Session ID to use, defaults to a random value
   sessionID?: string;
+  // Skip Enrichment
+  skipEnrichment?: boolean;
 };
 
 type ResolvedConfig = {
@@ -47,6 +49,7 @@ type ResolvedConfig = {
   experiments: Experiment[];
   mockedIP?: string;
   sessionID: string;
+  skipEnrichment?: boolean;
 };
 
 const DCN_DEFAULTS = {
@@ -76,6 +79,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     experiments: init.experiments ?? DCN_DEFAULTS.experiments,
     mockedIP: init.mockedIP,
     sessionID: init.sessionID ?? generateSessionID(),
+    skipEnrichment: init.skipEnrichment,
   };
 
   if (init.consent?.static) {

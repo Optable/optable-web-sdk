@@ -61,6 +61,7 @@ const defaultConfig = {
   host: TEST_HOST,
   site: TEST_SITE,
   sessionID: "session",
+  skipEnrichment: false,
 };
 
 describe("Breaking change detection: if typescript complains or a test fails it's likely a breaking change has occurred.", () => {
@@ -226,6 +227,7 @@ describe("behavior testing of", () => {
       readOnly: false,
       experiments: [],
       sessionID: "session",
+      skipEnrichment: false,
     });
     await sdk["init"];
     expect(localStorage.setItem).toBeCalledTimes(0);
@@ -266,6 +268,7 @@ describe("behavior testing of", () => {
       readOnly: false,
       experiments: [],
       sessionID: "session",
+      skipEnrichment: false,
     });
     await sdk["init"];
     expect(window.localStorage.setItem).toHaveBeenLastCalledWith(

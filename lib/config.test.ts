@@ -13,6 +13,7 @@ describe("getConfig", () => {
       readOnly: false,
       experiments: [],
       sessionID: "",
+      skipEnrichment: undefined,
     });
   });
 
@@ -29,6 +30,7 @@ describe("getConfig", () => {
         legacyHostCache: "legacy-cache",
         experiments: ["tokenize-v2"],
         sessionID: "my-session-id",
+        skipEnrichment: true,
       })
     ).toEqual({
       host: "host",
@@ -41,6 +43,7 @@ describe("getConfig", () => {
       legacyHostCache: "legacy-cache",
       experiments: ["tokenize-v2"],
       sessionID: "my-session-id",
+      skipEnrichment: true,
     });
   });
 
