@@ -13,7 +13,7 @@ describe("getConfig", () => {
       readOnly: false,
       experiments: [],
       sessionID: "",
-      skipEnrichment: false,
+      skipEnrichment: undefined,
     });
   });
 
