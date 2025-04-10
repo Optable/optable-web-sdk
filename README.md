@@ -10,12 +10,12 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 - [Versioning](#versioning)
 - [Domains and Cookies](#domains-and-cookies)
   - [LocalStorage](#localstorage)
-- [Using (npm module)](#using-npm-module)
+- [Using the npm module](#using-the-npm-module)
   - [Identify API](#identify-api)
   - [Profile API](#profile-api)
   - [Targeting API](#targeting-api)
   - [Witness API](#witness-api)
-- [Using (script tag)](#using-script-tag)
+- [Using a script tag](#using-a-script-tag)
 - [Integrating GAM360](#integrating-gam360)
   - [Targeting key values](#targeting-key-values)
   - [Targeting key values from local cache](#targeting-key-values-from-local-cache)
@@ -92,7 +92,7 @@ const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", cookies:
 
 Note that the default is `cookies: true` and will be inferred if you do not specify the `cookies` parameter at all.
 
-# Using (npm module)
+# Using the npm module
 
 ## Initialization Configuration (`InitConfig`)
 
@@ -222,8 +222,8 @@ The `targeting` API will automatically cache resulting key value data in client 
 ```{javascript
 const cachedTargetingData = sdk.targetingFromCache();
 if (cachedTargetingData) {
-  console.log(`Audience targeting: ${targeting.audience}`)
-  console.log(`User targeting: ${targeting.user}`)
+  console.log(`Audience targeting: ${cachedTargetingData.audience}`)
+  console.log(`User targeting: ${cachedTargetingData.user}`)
 }
 ```
 
@@ -262,7 +262,7 @@ type WitnessProperties = {
 };
 ```
 
-## Using (script tag)
+## Using a script tag
 
 For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a web site via a `script` tag.
 
