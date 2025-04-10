@@ -79,7 +79,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     experiments: init.experiments ?? DCN_DEFAULTS.experiments,
     mockedIP: init.mockedIP,
     sessionID: init.sessionID ?? generateSessionID(),
-    skipEnrichment: init.skipEnrichment ?? false,
+    skipEnrichment: init.skipEnrichment,
   };
 
   if (init.consent?.static) {
