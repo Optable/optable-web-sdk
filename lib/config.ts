@@ -29,6 +29,12 @@ type InitConfig = {
   readOnly?: boolean;
   // Active experiments to test new features
   experiments?: Experiment[];
+  // Mock IP address for testing
+  mockedIP?: string;
+  // Session ID to use, defaults to a random value
+  sessionID?: string;
+  // Skip Enrichment
+  skipEnrichment?: boolean;
 };
 
 type ResolvedConfig = {
@@ -41,6 +47,9 @@ type ResolvedConfig = {
   readOnly: boolean;
   legacyHostCache?: string;
   experiments: Experiment[];
+  mockedIP?: string;
+  sessionID: string;
+  skipEnrichment?: boolean;
 };
 
 const DCN_DEFAULTS = {
@@ -68,6 +77,9 @@ function getConfig(init: InitConfig): ResolvedConfig {
     node: init.node,
     legacyHostCache: init.legacyHostCache,
     experiments: init.experiments ?? DCN_DEFAULTS.experiments,
+    mockedIP: init.mockedIP,
+    sessionID: init.sessionID ?? generateSessionID(),
+    skipEnrichment: init.skipEnrichment,
   };
 
   if (init.consent?.static) {
@@ -79,5 +91,16 @@ function getConfig(init: InitConfig): ResolvedConfig {
   return config;
 }
 
+function generateSessionID(): string {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+
+  // Equivalent to esnext arr.toBase64({ omitPadding: true, alphabet: "base64url" })
+  return btoa(String.fromCharCode(...arr))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
 export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig };
-export { getConfig, DCN_DEFAULTS };
+export { getConfig, DCN_DEFAULTS, generateSessionID };
