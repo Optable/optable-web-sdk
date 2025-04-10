@@ -49,7 +49,7 @@ type ResolvedConfig = {
   experiments: Experiment[];
   mockedIP?: string;
   sessionID: string;
-  skipEnrichment: boolean;
+  skipEnrichment?: boolean;
 };
 
 const DCN_DEFAULTS = {
