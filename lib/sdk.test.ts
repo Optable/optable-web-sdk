@@ -280,9 +280,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "GET",
         bodyUsed: false,
-        url: expect.stringContaining(
-          "config?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=yes"
-        ),
+        url: expect.stringContaining("config?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=yes"),
       })
     );
 
