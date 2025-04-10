@@ -8,7 +8,10 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   const url = new URL(path, `https://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
   url.searchParams.set("sid", config.sessionID);
-  url.searchParams.set("skip_enrichment", `${config.skipEnrichment}`);
+
+  if (config.skipEnrichment) {
+    url.searchParams.set("skip_enrichment", `${config.skipEnrichment}`);
+  }
 
   if (config.node) {
     url.searchParams.set("t", config.node);
