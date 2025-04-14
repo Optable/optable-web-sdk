@@ -527,8 +527,8 @@ Here's how to integrate it:
         userIds: [
           {
             name: "openPairId",
-            inserter: "optable.co",
-            matcher: "<PUBLISHER DOMAIN>", // Replace with your publisher domain
+            inserter: "<PUBLISHER DOMAIN>", // Replace with your publisher domain
+            matcher: "optable.co",
             params: {
               optable: { storageKey: "_optable_pairId" },
             },
