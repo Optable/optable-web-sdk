@@ -54,11 +54,6 @@ function generatePassportKeys(config: ResolvedConfig): StorageKeys {
   write.push(writeKey);
   read.push(writeKey);
 
-  // Allows switching from host to host/node without losing cache
-  if (config.node) {
-    read.push(`OPTABLE_PASSPORT_${encodeBase64(`${config.host}`)}`);
-  }
-
   // We keep `OPTABLE_PASS` keys for backward compatibility
   // Once all clients are updated, we can remove them on next tag
   if (config.legacyHostCache) {
