@@ -28,12 +28,19 @@ class OptableSDK {
 
   constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
-    // If initPassport, prefetch site config and cache it, it assigns a passport as a side effect
-    const noop = () => {};
-    this.init = this.dcn.initPassport ? Site(this.dcn).then(noop).catch(noop) : Promise.resolve();
+    this.init = this.initialize();
+  }
 
-    if (this.dcn.targetingOnLoad) {
-      this.targeting();
+  async initialize(): Promise<void> {
+    try {
+      if (this.dcn.initPassport) {
+        await Site(this.dcn);
+      }
+
+      if (this.dcn.initTargeting) {
+        await this.targeting();
+      }
+    } catch { // ignore errors
     }
   }
 

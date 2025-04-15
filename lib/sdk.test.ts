@@ -363,9 +363,9 @@ describe("behavior testing of", () => {
     );
   });
 
-  test("config has targetingOnLoad true then constructor sends a targeting request", async () => {
+  test("config has initTargeting true then constructor sends a targeting request", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
-    const sdk = new OptableSDK({ ...defaultConfig, targetingOnLoad: true });
+    const sdk = new OptableSDK({ ...defaultConfig, initPassport: false, initTargeting: true });
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -379,7 +379,6 @@ describe("behavior testing of", () => {
   test("targeting", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
     const sdk = new OptableSDK({ ...defaultConfig });
-
     const initialResultFromCache = sdk.targetingFromCache();
     expect(initialResultFromCache).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.stringContaining("targeting") }));

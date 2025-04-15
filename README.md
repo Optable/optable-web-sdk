@@ -120,14 +120,15 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`initPassport` (boolean, default: `true`)**
   If `true`, initializes the user passport (identity mechanism) upon SDK load.
 
+- **`initTargeting` (boolean, default: `false`)**
+  If `true`, the SDK will automatically perform a targeting request during initialization and store the response in cache. This ensures the cache is populated with the most up-to-date targeting data as soon as the SDK is loaded.
+
 - **`consent` (`InitConsent`)**
   Defines the consent settings for data collection and processing.
 
 - **`readOnly` (boolean, default: `false`)**
   When set to `true`, puts the SDK in a read-only mode, preventing any data modifications while still allowing API queries.
 
-- **`targetingOnLoad` (boolean, default: `false`)**  
-  If `true`, the SDK will automatically perform a targeting request during initialization and store the response in cache. This ensures the cache is populated with the most up-to-date targeting data as soon as the SDK is loaded.
 
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
