@@ -2,6 +2,7 @@ import { SiteResponse } from "edge/site";
 import OptableSDK from "./sdk";
 import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "./test/mocks";
 import { DCN_DEFAULTS } from "./config";
+import { waitFor } from "./test/utils";
 
 const defaultConsent = DCN_DEFAULTS.consent;
 
@@ -360,6 +361,19 @@ describe("behavior testing of", () => {
         url: expect.stringContaining("witness"),
       })
     );
+  });
+
+  test("config has targetingOnLoad true then constructor sends a targeting request", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({ ...defaultConfig, targetingOnLoad: true });
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "GET",
+          url: expect.stringContaining("v2/targeting?id=__passport__"),
+        })
+      );
+    });
   });
 
   test("targeting", async () => {
