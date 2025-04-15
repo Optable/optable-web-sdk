@@ -40,7 +40,8 @@ class OptableSDK {
       if (this.dcn.initTargeting) {
         await this.targeting();
       }
-    } catch { // ignore errors
+    } catch {
+      // ignore errors
     }
   }
 

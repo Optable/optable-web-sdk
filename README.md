@@ -129,7 +129,6 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`readOnly` (boolean, default: `false`)**
   When set to `true`, puts the SDK in a read-only mode, preventing any data modifications while still allowing API queries.
 
-
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
 ## Usage Example
