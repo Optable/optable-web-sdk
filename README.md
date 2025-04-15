@@ -274,7 +274,9 @@ If you want to avoid manually instantiating the SDK, you can define the `instanc
 
 ```html
 <!-- Define configuration before loading the SDK -->
-<script> window.optable = { cmd: [], instance_config: { host: "dcn.customer.com", site: "my-site" } }; </script>
+<script>
+  window.optable = { cmd: [], instance_config: { host: "dcn.customer.com", site: "my-site" } };
+</script>
 
 <!-- Asynchronously load the SDK -->
 <script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
@@ -284,7 +286,9 @@ If you want to avoid manually instantiating the SDK, you can define the `instanc
   window.addEventListener("DOMContentLoaded", () => {
     optable.cmd.push(() => {
       const emailInput = document.getElementById("email");
-      optable.instance.identify(optable.SDK.eid(emailInput.value)).then(() => { console.log("Identify API Success!"); });
+      optable.instance.identify(optable.SDK.eid(emailInput.value)).then(() => {
+        console.log("Identify API Success!");
+      });
     });
   });
 </script>
