@@ -32,16 +32,12 @@ class OptableSDK {
   }
 
   async initialize(): Promise<void> {
-    try {
-      if (this.dcn.initPassport) {
-        await Site(this.dcn);
-      }
+    if (this.dcn.initPassport) {
+      await Site(this.dcn).catch(() => {});
+    }
 
-      if (this.dcn.initTargeting) {
-        await this.targeting();
-      }
-    } catch {
-      // ignore errors
+    if (this.dcn.initTargeting) {
+      this.targeting().catch(() => {});
     }
   }
 
