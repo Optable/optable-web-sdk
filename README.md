@@ -264,13 +264,35 @@ type WitnessProperties = {
 
 ## Using a script tag
 
-For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a web site via a `script` tag.
+For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack-generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a website via a `script` tag.
 
-As described in the **Installation** section above, in order to avoid having to block the rendering of the page, the recommended way to load the SDK via `script` tag is asynchronously with the `async` attribute. Therefore, to use the SDK you should take care to `push` your _commands_ onto the `window.optable.cmd` array of functions, which are automatically executed by the SDK browser bundle once it has loaded.
+As described in the **Installation** section above, the recommended way to load the SDK via `script` tag is asynchronously using the `async` attribute, to avoid blocking page rendering.
 
-The browser bundle exports the same `OptableSDK` constructor documented in the **npm module** section above in the `optable` window object, as `optable.SDK`
+### Option 1: Automatic Initialization
 
-The following shows an example of how to safely initialize the SDK and dispatch an `identify` API request to a DCN, from an input element after the document was loaded.
+If you want to avoid manually instantiating the SDK, you can define the `instance_config` before loading the SDK bundle. When the script loads, it will automatically initialize the SDK using this configuration and assign the instance to `window.optable.instance`.
+
+```html
+<!-- Define configuration before loading the SDK -->
+<script> window.optable = { cmd: [], instance_config: { host: "dcn.customer.com", site: "my-site" } }; </script>
+
+<!-- Asynchronously load the SDK -->
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
+
+<!-- Optionally identify a client-side user after the page loads -->
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    optable.cmd.push(() => {
+      const emailInput = document.getElementById("email");
+      optable.instance.identify(optable.SDK.eid(emailInput.value)).then(() => { console.log("Identify API Success!"); });
+    });
+  });
+</script>
+```
+
+### Option 2: Manual Initialization with Commands Queue
+
+You can also manually initialize the SDK using the cmd queue. This approach is useful if you prefer full control or are loading the config dynamically.
 
 ```html
 <!-- Asynchronously load the SDK as early as possible: -->
@@ -280,14 +302,12 @@ The following shows an example of how to safely initialize the SDK and dispatch 
 <script>
   // Setup stub that will get replaced once the SDK get loaded
   window.optable = window.optable || { cmd: [] };
-
   optable.cmd.push(() => {
     // At this point optable.SDK is available and can be used to create a new sdk instance.
     // That instance can be stored anywhere for later referencing.
     // One option is to keep it within the global optable object space.
     optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
   });
-
   // Now configure DOM content loaded event listener to dispatch identify() API:
   window.addEventListener("DOMContentLoaded", (event) => {
     optable.cmd.push(() => {
