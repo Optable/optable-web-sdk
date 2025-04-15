@@ -2,7 +2,13 @@ import { SiteResponse } from "../edge/site";
 import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
-import { generatedPairKeys, generatePassportKeys, generateSiteKeys, generateTargetingKeys, StorageKeys } from "./storage-keys";
+import {
+  generatedPairKeys,
+  generatePassportKeys,
+  generateSiteKeys,
+  generateTargetingKeys,
+  StorageKeys,
+} from "./storage-keys";
 
 const pairEIDSource = "pair-protocol.com";
 
