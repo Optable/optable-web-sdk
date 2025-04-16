@@ -16,9 +16,9 @@ type RunAdAuctionOptions = {
 declare module "../sdk" {
   export interface OptableSDK {
     joinAdInterestGroups: () => Promise<void>;
-    auctionConfigFromCache: () => AuctionConfig | null;
+    auctionConfig: () => Promise<AuctionConfig | null>;
     runAdAuction: (domID: string, options?: RunAdAuctionOptions) => Promise<boolean>;
-    installGPTAuctionConfigs: (filter?: GPTSlotFilter) => void;
+    installGPTAuctionConfigs: (filter?: GPTSlotFilter) => Promise<void>;
   }
 }
 
@@ -27,12 +27,12 @@ interface HTMLFencedFrameElement extends HTMLElement {
 }
 
 /*
- * auctionConfigFromCache obtains the cached auction configuration for the current origin
+ * auctionConfig obtains the auction configuration for the current origin
  */
-OptableSDK.prototype.auctionConfigFromCache = function (): AuctionConfig | null {
-  const siteConfig = this.siteFromCache();
+OptableSDK.prototype.auctionConfig = async function (): Promise<AuctionConfig | null> {
+  let siteConfig = this.siteFromCache();
   if (!siteConfig) {
-    return null;
+    siteConfig = await this.site();
   }
 
   return siteConfig.auctionConfig ?? null;
@@ -51,9 +51,16 @@ function elementInnerSize(element: HTMLElement): Size {
  * and installs it into the page GPT slots, optionally filtered.
  */
 
-OptableSDK.prototype.installGPTAuctionConfigs = function (filter?: GPTSlotFilter) {
+OptableSDK.prototype.installGPTAuctionConfigs = async function (filter?: GPTSlotFilter) {
   const sdk = this;
-  sdk.installGPTAuctionConfigs = function () {};
+  sdk.installGPTAuctionConfigs = function () {
+    return Promise.resolve();
+  };
+
+  const siteAuctionConfig = await sdk.auctionConfig();
+  if (!siteAuctionConfig) {
+    return;
+  }
 
   window.googletag = window.googletag || { cmd: [] };
   const gpt = window.googletag;
@@ -62,11 +69,6 @@ OptableSDK.prototype.installGPTAuctionConfigs = function (filter?: GPTSlotFilter
     let slots = gpt.pubads().getSlots();
     if (filter) {
       slots = slots.filter(filter);
-    }
-
-    const siteAuctionConfig = sdk.auctionConfigFromCache();
-    if (!siteAuctionConfig) {
-      return;
     }
 
     for (const slot of slots) {
@@ -108,7 +110,7 @@ OptableSDK.prototype.runAdAuction = async function (domID: string, options?: Run
   }
   const requestedSize = elementInnerSize(spot);
 
-  const siteAuctionConfig = this.auctionConfigFromCache();
+  const siteAuctionConfig = await this.auctionConfig();
   if (!siteAuctionConfig) {
     return false;
   }
