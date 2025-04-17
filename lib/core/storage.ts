@@ -9,6 +9,7 @@ import {
   generateTargetingKeys,
   StorageKeys,
 } from "./storage-keys";
+import { sendTargetingCacheRefreshEvent } from "events/events";
 
 const pairEIDSource = "pair-protocol.com";
 
@@ -47,6 +48,7 @@ class LocalStorage {
 
     this.writeToStorageKeys(this.targetingKeys, JSON.stringify(targeting));
     this.setPairIDs(targeting);
+    sendTargetingCacheRefreshEvent(this.config, targeting);
   }
 
   getSite(): SiteResponse | null {
