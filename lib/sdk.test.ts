@@ -2,6 +2,7 @@ import { SiteResponse } from "edge/site";
 import OptableSDK from "./sdk";
 import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "./test/mocks";
 import { DCN_DEFAULTS } from "./config";
+import { waitFor } from "./test/utils";
 
 const defaultConsent = DCN_DEFAULTS.consent;
 
@@ -362,10 +363,22 @@ describe("behavior testing of", () => {
     );
   });
 
+  test("config has initTargeting true then constructor sends a targeting request", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({ ...defaultConfig, initPassport: false, initTargeting: true });
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "GET",
+          url: expect.stringContaining("v2/targeting?id=__passport__"),
+        })
+      );
+    });
+  });
+
   test("targeting", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
     const sdk = new OptableSDK({ ...defaultConfig });
-
     const initialResultFromCache = sdk.targetingFromCache();
     expect(initialResultFromCache).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.stringContaining("targeting") }));

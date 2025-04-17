@@ -35,6 +35,8 @@ type InitConfig = {
   sessionID?: string;
   // Skip Enrichment
   skipEnrichment?: boolean;
+  // Targeting call on load
+  initTargeting?: boolean;
 };
 
 type ResolvedConfig = {
@@ -50,6 +52,7 @@ type ResolvedConfig = {
   mockedIP?: string;
   sessionID: string;
   skipEnrichment?: boolean;
+  initTargeting?: boolean;
 };
 
 const DCN_DEFAULTS = {
@@ -80,6 +83,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     mockedIP: init.mockedIP,
     sessionID: init.sessionID ?? generateSessionID(),
     skipEnrichment: init.skipEnrichment,
+    initTargeting: init.initTargeting,
   };
 
   if (init.consent?.static) {
