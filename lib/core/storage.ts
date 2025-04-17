@@ -9,7 +9,7 @@ import {
   generateTargetingKeys,
   StorageKeys,
 } from "./storage-keys";
-import { sendTargetingCacheRefreshEvent } from "events/events";
+import { sendTargetingCacheRefreshEvent } from "./events/cache-refresh";
 
 const pairEIDSource = "pair-protocol.com";
 
@@ -26,6 +26,7 @@ class LocalStorage {
     this.siteKeys = generateSiteKeys(config);
     this.pairKeys = generatedPairKeys();
     this.storage = new LocalStorageProxy(this.config.consent);
+    console.log("configs in constructor:", config);
   }
 
   getPassport(): string | null {
@@ -48,6 +49,7 @@ class LocalStorage {
 
     this.writeToStorageKeys(this.targetingKeys, JSON.stringify(targeting));
     this.setPairIDs(targeting);
+    console.log("config in targeting:", this.config);
     sendTargetingCacheRefreshEvent(this.config, targeting);
   }
 
