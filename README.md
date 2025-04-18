@@ -225,8 +225,8 @@ The `targeting` API will automatically cache resulting key value data in client 
 ```javascript
 const cachedTargetingData = sdk.targetingFromCache();
 if (cachedTargetingData) {
-  console.log(`Audience targeting: ${cachedTargetingData.audience}`)
-  console.log(`User targeting: ${cachedTargetingData.user}`)
+  console.log(`Audience targeting: ${cachedTargetingData.audience}`);
+  console.log(`User targeting: ${cachedTargetingData.user}`);
 }
 ```
 
