@@ -135,7 +135,7 @@ These configurations allow fine-tuned control over how the `OptableSDK` interact
 
 To configure an instance of `OptableSDK` integrating with an Optable DCN running at hostname `dcn.customer.com`, from a configured web site origin identified by slug `my-site`, you simply create an instance of the `OptableSDK` class exported by the `@optable/web-sdk` module:
 
-```js
+```javascript
 import OptableSDK from "@optable/web-sdk";
 
 const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site" });
@@ -152,7 +152,7 @@ You can then call various SDK APIs on the instance as shown in the examples belo
 
 To associate a user's browser with an authenticated identifier such as an Email address, optionally linked with other identifiers, such as your own vendor, publisher, or site-level `PPID`, you can call the `identify` API as follows:
 
-```js
+```javascript
 const onSuccess = () => console.log("Identify API success!");
 const onFailure = (err) => console.warn("Identify API error: ${err.message}");
 
@@ -206,7 +206,7 @@ type ProfileTraits = {
 
 To get the targeting information associated by the configured DCN with the user's browser in real-time, you can call the targeting API as follows:
 
-```js
+```javascript
 sdk
   .targeting()
   .then((response) => {
@@ -222,7 +222,7 @@ On success, the resulting targeting data is typically sent as part of a subseque
 
 The `targeting` API will automatically cache resulting key value data in client storage on success. You can subsequently retrieve the cached key value data as follows:
 
-```{javascript
+```javascript
 const cachedTargetingData = sdk.targetingFromCache();
 if (cachedTargetingData) {
   console.log(`Audience targeting: ${cachedTargetingData.audience}`)
@@ -242,7 +242,7 @@ Note that both `targetingFromCache()` and `targetingClearCache()` are synchronou
 
 To send real-time event data from the user's browser to the DCN for eventual audience assembly, you can call the witness API as follows:
 
-```js
+```javascript
 const onSuccess = () => console.log("Witness API success!");
 const onFailure = (err) => console.warn("Witness API error: ${err.message}");
 
@@ -776,8 +776,8 @@ To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `g
 
 It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
 
-```javascript
-// Optable SDK async load:
+```html
+<!-- Optable SDK async load: -->
 <script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
 <script>
   window.optable = window.optable || { cmd: [] };
