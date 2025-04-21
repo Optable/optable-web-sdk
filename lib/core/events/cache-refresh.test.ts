@@ -1,4 +1,4 @@
-import { sendTargetingCacheRefreshEvent } from "./cache-refresh";
+import { sendOrtb2CacheRefreshEvent } from "./cache-refresh";
 import { ResolvedConfig } from "../../config";
 import { TargetingResponse } from "../../edge/targeting";
 
@@ -40,7 +40,7 @@ describe("sendTargetingCacheRefreshEvent", () => {
       });
     });
 
-    await sendTargetingCacheRefreshEvent(mock_configs, mock_response);
+    sendOrtb2CacheRefreshEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
@@ -59,7 +59,7 @@ describe("sendTargetingCacheRefreshEvent", () => {
       });
     });
 
-    await sendTargetingCacheRefreshEvent(mock_configs, mock_response);
+    sendOrtb2CacheRefreshEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
@@ -75,7 +75,7 @@ describe("sendTargetingCacheRefreshEvent", () => {
       });
     });
 
-    await sendTargetingCacheRefreshEvent(mock_configs, mock_response);
+    sendOrtb2CacheRefreshEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
