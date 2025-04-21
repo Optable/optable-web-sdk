@@ -37,12 +37,15 @@ type InitConfig = {
   skipEnrichment?: boolean;
   // Targeting call on load
   initTargeting?: boolean;
+  // (Defaults to 'optable_cache_targeting') Cache Key used to store 'targeting' response
+  optableCacheTargeting?: string;
 };
 
 type ResolvedConfig = {
   site: string;
   host: string;
   consent: Consent;
+  optableCacheTargeting: string;
   node?: string;
   cookies: boolean;
   initPassport: boolean;
@@ -73,6 +76,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
   const config: ResolvedConfig = {
     host: init.host,
     site: init.site,
+    optableCacheTargeting: init.optableCacheTargeting ?? "optable-cache:targeting",
     cookies: init.cookies ?? DCN_DEFAULTS.cookies,
     initPassport: init.initPassport ?? DCN_DEFAULTS.initPassport,
     consent: DCN_DEFAULTS.consent,
