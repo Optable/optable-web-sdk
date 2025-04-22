@@ -14,7 +14,7 @@ describe("getConfig", () => {
       experiments: [],
       sessionID: "",
       skipEnrichment: undefined,
-      optableCacheTargeting: "optable_cache_targeting",
+      optableCacheTargeting: "optable-cache:targeting",
     });
   });
 
