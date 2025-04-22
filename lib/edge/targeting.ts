@@ -3,6 +3,7 @@ import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 import * as ortb2 from "iab-openrtb/v26";
 import * as adcom from "iab-adcom";
+import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
 
 type Identifier = {
   id: string;
@@ -38,6 +39,7 @@ async function Targeting(config: ResolvedConfig, id: string): Promise<TargetingR
   if (response) {
     const ls = new LocalStorage(config);
     ls.setTargeting(response);
+    sendTargetingUpdateEvent(config, response);
   }
 
   return response;
