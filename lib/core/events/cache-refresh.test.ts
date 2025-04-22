@@ -1,24 +1,11 @@
-import { sendOrtb2CacheRefreshEvent } from "./cache-refresh";
+import { sendCacheRefreshEvent } from "./cache-refresh";
 import { ResolvedConfig } from "../../config";
 import { TargetingResponse } from "../../edge/targeting";
 
-const mock_configs: ResolvedConfig = {
-  sessionID: "session-id",
+const mock_configs = {
   host: "host.com",
-  site: "my-site",
   node: "my-node",
-  cookies: true,
-  initPassport: true,
-  readOnly: false,
-  experiments: [],
-  consent: {
-    reg: null,
-    deviceAccess: true,
-    createProfilesForAdvertising: true,
-    useProfilesForAdvertising: true,
-    measureAdvertisingPerformance: true,
-  },
-};
+} as ResolvedConfig;
 
 const mock_response: TargetingResponse = {
   ortb2: {
@@ -40,7 +27,7 @@ describe("sendTargetingCacheRefreshEvent", () => {
       });
     });
 
-    sendOrtb2CacheRefreshEvent(mock_configs, mock_response);
+    sendCacheRefreshEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
@@ -59,7 +46,7 @@ describe("sendTargetingCacheRefreshEvent", () => {
       });
     });
 
-    sendOrtb2CacheRefreshEvent(mock_configs, mock_response);
+    sendCacheRefreshEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
@@ -75,7 +62,7 @@ describe("sendTargetingCacheRefreshEvent", () => {
       });
     });
 
-    sendOrtb2CacheRefreshEvent(mock_configs, mock_response);
+    sendCacheRefreshEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
