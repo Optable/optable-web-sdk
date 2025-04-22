@@ -1,13 +1,13 @@
 import { ResolvedConfig } from "../../config";
 import { TargetingResponse } from "../../edge/targeting";
 
-const cacheRefreshEventName = "optable_cache_refresh";
+const targetingEventName = "optable-targeting:change";
 
-function sendCacheRefreshEvent(config: ResolvedConfig, response: TargetingResponse) {
+function sendTargetingUpdateEvent(config: ResolvedConfig, response: TargetingResponse) {
   const matchers = response.ortb2?.user?.eids?.map((x) => x.matcher);
 
   window.dispatchEvent(
-    new CustomEvent(cacheRefreshEventName, {
+    new CustomEvent(targetingEventName, {
       detail: {
         instance: config.node || config.host,
         resolved: !!response.ortb2?.user?.eids?.length,
@@ -18,4 +18,4 @@ function sendCacheRefreshEvent(config: ResolvedConfig, response: TargetingRespon
   );
 }
 
-export { sendCacheRefreshEvent };
+export { sendTargetingUpdateEvent };

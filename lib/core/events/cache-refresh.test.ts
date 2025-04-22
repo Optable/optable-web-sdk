@@ -1,4 +1,4 @@
-import { sendCacheRefreshEvent } from "./cache-refresh";
+import { sendTargetingUpdateEvent } from "./cache-refresh";
 import { ResolvedConfig } from "../../config";
 import { TargetingResponse } from "../../edge/targeting";
 
@@ -19,15 +19,15 @@ const mock_response: TargetingResponse = {
   },
 };
 
-describe("sendTargetingCacheRefreshEvent", () => {
-  it("should dispatch 'optable_cache_refresh' event with correct details", async () => {
+describe("sendTargetingUpdateEvent", () => {
+  it("should dispatch 'optable-targeting:change' event with correct details", async () => {
     const eventPromise = new Promise<CustomEvent>((resolve) => {
-      window.addEventListener("optable_cache_refresh", (event) => {
+      window.addEventListener("optable-targeting:change", (event) => {
         resolve(event as CustomEvent);
       });
     });
 
-    sendCacheRefreshEvent(mock_configs, mock_response);
+    sendTargetingUpdateEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
@@ -41,12 +41,12 @@ describe("sendTargetingCacheRefreshEvent", () => {
     mock_configs.node = "";
 
     const eventPromise = new Promise<CustomEvent>((resolve) => {
-      window.addEventListener("optable_cache_refresh", (event) => {
+      window.addEventListener("optable-targeting:change", (event) => {
         resolve(event as CustomEvent);
       });
     });
 
-    sendCacheRefreshEvent(mock_configs, mock_response);
+    sendTargetingUpdateEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
@@ -57,12 +57,12 @@ describe("sendTargetingCacheRefreshEvent", () => {
     mock_response.ortb2.user = {};
 
     const eventPromise = new Promise<CustomEvent>((resolve) => {
-      window.addEventListener("optable_cache_refresh", (event) => {
+      window.addEventListener("optable-targeting:change", (event) => {
         resolve(event as CustomEvent);
       });
     });
 
-    sendCacheRefreshEvent(mock_configs, mock_response);
+    sendTargetingUpdateEvent(mock_configs, mock_response);
 
     const event = await eventPromise;
 
