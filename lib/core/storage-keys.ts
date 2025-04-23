@@ -31,9 +31,10 @@ function generateSiteKeys(config: ResolvedConfig): StorageKeys {
 // Generate the keys for the targeting storage
 // The keys are generated based on the host and node configs
 function generateTargetingKeys(config: ResolvedConfig): StorageKeys {
-  const key = `OPTABLE_TARGETING_${getWriteKeyBase64FromConfig(config)}`;
+  const privateKey = `OPTABLE_TARGETING_${getWriteKeyBase64FromConfig(config)}`;
+  const publicKey = config.optableCacheTargeting;
 
-  return { write: [key], read: [key] };
+  return { write: [privateKey, publicKey], read: [privateKey] };
 }
 
 function generatedPairKeys(): StorageKeys {

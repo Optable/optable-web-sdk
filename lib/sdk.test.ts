@@ -229,6 +229,7 @@ describe("behavior testing of", () => {
       experiments: [],
       sessionID: "session",
       skipEnrichment: false,
+      optableCacheTargeting: "optable-cache:targeting",
     });
     await sdk["init"];
     expect(localStorage.setItem).toBeCalledTimes(0);
@@ -270,6 +271,7 @@ describe("behavior testing of", () => {
       experiments: [],
       sessionID: "session",
       skipEnrichment: false,
+      optableCacheTargeting: "optable-cache:targeting",
     });
     await sdk["init"];
     expect(window.localStorage.setItem).toHaveBeenLastCalledWith(

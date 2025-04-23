@@ -14,6 +14,7 @@ describe("getConfig", () => {
       experiments: [],
       sessionID: "",
       skipEnrichment: undefined,
+      optableCacheTargeting: "optable-cache:targeting",
     });
   });
 
@@ -31,6 +32,7 @@ describe("getConfig", () => {
         experiments: ["tokenize-v2"],
         sessionID: "my-session-id",
         skipEnrichment: true,
+        optableCacheTargeting: "my-public-key",
       })
     ).toEqual({
       host: "host",
@@ -44,6 +46,7 @@ describe("getConfig", () => {
       experiments: ["tokenize-v2"],
       sessionID: "my-session-id",
       skipEnrichment: true,
+      optableCacheTargeting: "my-public-key",
     });
   });
 

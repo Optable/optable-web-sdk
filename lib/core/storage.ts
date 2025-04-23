@@ -99,7 +99,7 @@ class LocalStorage {
   }
 
   clearStorageKeys(keys: StorageKeys): void {
-    for (const key of keys.read) {
+    for (const key of [...keys.read, ...keys.write]) {
       this.storage.removeItem(key);
     }
   }
