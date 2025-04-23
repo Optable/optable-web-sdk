@@ -30,6 +30,7 @@ interface HTMLFencedFrameElement extends HTMLElement {
  * auctionConfig obtains the auction configuration for the current origin
  */
 OptableSDK.prototype.auctionConfig = async function (): Promise<AuctionConfig | null> {
+  await this.init;
   let siteConfig = this.siteFromCache();
   if (!siteConfig) {
     siteConfig = await this.site();
@@ -170,7 +171,12 @@ OptableSDK.prototype.joinAdInterestGroups = async function () {
     throw "consent not granted for joining interest groups";
   }
 
-  const siteConfig = await this.site();
+  await this.init;
+  let siteConfig = this.siteFromCache();
+  if (!siteConfig) {
+    siteConfig = await this.site();
+  }
+
   if (!siteConfig.interestGroupPixel) {
     throw "origin not enabled for protected audience apis";
   }
