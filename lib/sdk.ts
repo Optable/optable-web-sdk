@@ -24,7 +24,7 @@ class OptableSDK {
   public static version = buildInfo.version;
 
   public dcn: ResolvedConfig;
-  private init: Promise<void>;
+  protected init: Promise<void>;
 
   constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
