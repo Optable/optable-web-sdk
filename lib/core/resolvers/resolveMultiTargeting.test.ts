@@ -268,4 +268,49 @@ describe("resolveMultiNodeTargeting", () => {
     expect(ortb2.user!.eids).toEqual([]);
     expect(eidSources).toEqual(new Set<string>([]));
   });
+
+  it("Should use matcher from response if provided on aggregate", async () => {
+    const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
+      resolve(createOrtb2Response({ eids: [{ inserter: "optable.co", matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED, source: "example.com", uids: [{ id: "uid456" }] }] }));
+    });
+
+    const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
+      resolve(createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] }));
+    });
+
+    const configs = [
+      { targetingFn: () => mockTargetingFnOne},
+      { targetingFn: () => mockTargetingFnTwo, matcher: "matcher_two", mm: IDMatchMethod.INFERENCE},
+    ];
+
+    const { ortb2, eidSources } = await resolveMultiNodeTargeting(configs);
+
+    expect(ortb2.user!.eids).toEqual([
+      { inserter: "optable.co", matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED, source: "example.com", uids: [{ id: "uid456" }] },
+      { inserter: "optable.co", matcher: "matcher_two", mm: IDMatchMethod.INFERENCE, source: "example.com", uids: [{ id: "uid456" }] },
+    ]);
+    expect(eidSources).toEqual(new Set<string>(["matcher_one", "matcher_two"]));
+  });
+
+  it("Should use matcher from response if provided with priority", async () => {
+    const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
+      resolve(createOrtb2Response({ eids: [{ inserter: "optable.co", matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED, source: "example.com", uids: [{ id: "uid456" }] }] }));
+    });
+
+    const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
+      resolve(createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] }));
+    });
+
+    const configs = [
+      { targetingFn: () => mockTargetingFnOne, priority: 1},
+      { targetingFn: () => mockTargetingFnTwo, matcher: "matcher_two", mm: IDMatchMethod.INFERENCE, priority: 2},
+    ];
+
+    const { ortb2, eidSources } = await resolveMultiNodeTargeting(configs);
+
+    expect(ortb2.user!.eids).toEqual([
+      { inserter: "optable.co", matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED, source: "example.com", uids: [{ id: "uid456" }] },
+    ]);
+    expect(eidSources).toEqual(new Set<string>(["matcher_one"]));
+  });
 });

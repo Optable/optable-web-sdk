@@ -9,11 +9,11 @@ type NodeTargetingRule = {
   // Targeting function to resolve. e.g. window.optable.node_sdk_instance.targeting('__ip__')
   targetingFn: () => Promise<TargetingResponse>;
   // Technology provider domain
-  matcher: string;
+  matcher?: string;
   // Match method (mm) based on IAB v26 standards.
   // Determines how the ID was matched. Possible values:
   // 0 = unknown, 1 = no_match, 2 = cookie_sync, 3 = authenticated, 4 = observed, 5 = inference.
-  mm: IDMatchMethod;
+  mm?: IDMatchMethod;
   // (Optional) If provided we will only pick one resolved Ortb2Response from the most prioritize matcher.
   // Any values below 1 will be threated as ignore
   priority?: number;
@@ -42,15 +42,16 @@ async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<Mu
     },
   };
 
-  function processTokens(response: TargetingResponse, matcher: string, mm: IDMatchMethod) {
+  function processTokens(response: TargetingResponse, matcher?: string, mm?: IDMatchMethod) {
     const { data = [], eids = [] } = response.ortb2?.user ?? {};
     ortb2.user!.data!.push(...data);
 
     eids
       .filter((x) => x.uids.length)
       .forEach(({ ext, ...eid }) => {
-        eidSources.add(matcher);
-        ortb2.user!.eids!.push({ ...eid, mm, matcher });
+        const match = eid.matcher ?? matcher;
+        match && eidSources.add(match);
+        ortb2.user!.eids!.push({ ...eid, mm: eid.mm ?? mm, matcher: eid.matcher ?? matcher });
       });
   }
 
@@ -77,7 +78,7 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
   const sourcesByPriority = new Map<number, string[]>();
   const eidsByPriority = new Map<number, EID[]>();
 
-  function processTokens(response: TargetingResponse, matcher: string, mm: IDMatchMethod, priority: number = 0) {
+  function processTokens(response: TargetingResponse, matcher?: string, mm?: IDMatchMethod, priority: number = 0) {
     const adjustedPriority = Math.max(0, priority);
     const { data = [], eids = [] } = response.ortb2?.user ?? {};
 
@@ -86,11 +87,15 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
     eids
       .filter((x) => x.uids.length)
       .forEach(({ ext, ...eid }) => {
+        const match = eid.matcher ?? matcher;
         const currentSources = sourcesByPriority.get(adjustedPriority) ?? [];
-        sourcesByPriority.set(adjustedPriority, [...currentSources, matcher]);
+        match && sourcesByPriority.set(adjustedPriority, [...currentSources, match]);
 
         const currentEids = eidsByPriority.get(adjustedPriority) ?? [];
-        eidsByPriority.set(adjustedPriority, [...currentEids, { ...eid, matcher, mm }]);
+        eidsByPriority.set(adjustedPriority, [
+          ...currentEids,
+          { ...eid, matcher: eid.matcher ?? matcher, mm: eid.mm ?? mm }
+        ]);
       });
   }
 
