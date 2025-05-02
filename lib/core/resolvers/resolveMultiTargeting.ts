@@ -94,7 +94,7 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
         const currentEids = eidsByPriority.get(adjustedPriority) ?? [];
         eidsByPriority.set(adjustedPriority, [
           ...currentEids,
-          { ...eid, matcher: eid.matcher ?? matcher, mm: eid.mm ?? mm }
+          { ...eid, matcher: eid.matcher ?? matcher, mm: eid.mm ?? mm },
         ]);
       });
   }
