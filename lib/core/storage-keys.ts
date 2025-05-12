@@ -53,6 +53,7 @@ function generatePassportKeys(config: ResolvedConfig): StorageKeys {
   const writeKey = `OPTABLE_PASSPORT_${getWriteKeyBase64FromConfig(config)}`;
 
   write.push(writeKey);
+  read.push(writeKey);
 
   // We keep `OPTABLE_PASS` keys for backward compatibility
   // Once all clients are updated, we can remove them on next tag
@@ -63,7 +64,6 @@ function generatePassportKeys(config: ResolvedConfig): StorageKeys {
     read.push(`OPTABLE_PASS_${encodeBase64(`${config.host}/${config.site}`)}`);
   }
 
-  read.push(writeKey);
   return { write, read };
 }
 
