@@ -128,7 +128,7 @@ class OptableSDK {
       throw new Error("Invalid ppid");
     }
 
-    if (typeof variant !== "number" || isNaN(variant) || variant < 0 || variant > 9) {
+    if (typeof variant !== "number" || isNaN(variant) || variant < 0 || variant > 19) {
       throw new Error("Invalid variant");
     }
 

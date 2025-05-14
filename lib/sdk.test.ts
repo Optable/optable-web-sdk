@@ -40,12 +40,12 @@ describe("cid", () => {
 
   test("accepts a custom variant", () => {
     expect(OptableSDK.cid("abc", 0)).toEqual("c:abc");
-    for (let i = 1; i < 10; i++) {
+    for (let i = 1; i < 20; i++) {
       expect(OptableSDK.cid("abc", i)).toEqual(`c${i}:abc`);
     }
 
     expect(() => OptableSDK.cid("abc", -1)).toThrow();
-    expect(() => OptableSDK.cid("abc", 10)).toThrow();
+    expect(() => OptableSDK.cid("abc", 20)).toThrow();
     expect(() => OptableSDK.cid("abc", "1" as unknown as number)).toThrow();
   });
 
