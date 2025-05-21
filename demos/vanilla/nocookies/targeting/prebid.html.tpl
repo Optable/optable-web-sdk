@@ -29,9 +29,13 @@
           cookies: false,
           node: "${DCN_NODE}",
           legacyHostCache: "${DCN_LEGACY_HOST_CACHE}",
+          initTargeting: true,
         });
 
         optable.instance.tryIdentifyFromParams();
+
+        // Create a ref for RTD module to use SDK.
+        optable.prebid_instance = optable.instance;
       });
     </script>
     <script async src="${SDK_URI}"></script>
@@ -41,13 +45,6 @@
       // Hook GPT event listeners and send events to DCN:
       optable.cmd.push(function () {
         optable.instance.installGPTEventListeners();
-      });
-
-      // Try to fetch and cache targeting data from DCN:
-      optable.cmd.push(function () {
-        optable.instance.targeting().catch((err) => {
-          console.log("[OptableSDK] targeting() exception: " + err.message);
-        });
       });
 
       // Set up GPT:
@@ -75,59 +72,56 @@
         "/22081946781/web-sdk-demo-gam360/footer-ad": [[728, 90]],
       };
 
-      var adUnits = [
-        {
-          code: "/22081946781/web-sdk-demo-gam360/header-ad",
-          mediaTypes: {
-            banner: {
-              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/header-ad"],
-            },
+    var adUnits = [
+      {
+        code: "/22081946781/web-sdk-demo-gam360/header-ad",
+        mediaTypes: {
+          banner: {
+            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/header-ad"],
           },
-          bids: [
-            {
-              bidder: "districtmDMX",
-              params: {
-                dmxid: "/22081946781/web-sdk-demo-gam360/header-ad",
-                memberid: "102034",
-              },
-            },
-          ],
         },
-        {
-          code: "/22081946781/web-sdk-demo-gam360/box-ad",
-          mediaTypes: {
-            banner: {
-              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/box-ad"],
-            },
+        bids: [
+          {
+            bidder: "pubmatic",
+            params: {
+              publisherId: "156209",              // Example: PubMatic test publisher ID
+            }
+          }
+        ],
+      },
+      {
+        code: "/22081946781/web-sdk-demo-gam360/box-ad",
+        mediaTypes: {
+          banner: {
+            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/box-ad"],
           },
-          bids: [
-            {
-              bidder: "districtmDMX",
-              params: {
-                dmxid: "/22081946781/web-sdk-demo-gam360/box-ad",
-                memberid: "102034",
-              },
-            },
-          ],
         },
-        {
-          code: "/22081946781/web-sdk-demo-gam360/footer-ad",
-          mediaTypes: {
-            banner: {
-              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/footer-ad"],
-            },
+        bids: [
+          {
+            bidder: "pubmatic",
+            params: {
+              publisherId: "156209",
+            }
+          }
+        ],
+      },
+      {
+        code: "/22081946781/web-sdk-demo-gam360/footer-ad",
+        mediaTypes: {
+          banner: {
+            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/footer-ad"],
           },
-          bids: [
-            {
-              bidder: "districtmDMX",
-              params: {
-                dmxid: "/22081946781/web-sdk-demo-gam360/footer-ad",
-                memberid: "102034",
-              },
-            },
-          ],
         },
-      ];
+        bids: [
+          {
+            bidder: "pubmatic",
+            params: {
+              publisherId: "156209",
+            }
+          }
+        ],
+      }
+    ];
 
       function initAdserver() {
         if (pbjs.initAdserverSet) return;
@@ -155,14 +149,21 @@
 
       pbjs.que.push(function () {
         optable.cmd.push(function () {
-          const ortb2 = optable.instance.prebidORTB2FromCache();
-
           pbjs.mergeConfig({
-            ortb2,
+            debug: true,
             priceGranularity: "low",
             userSync: {
               iframeEnabled: true,
-              enabledBidders: ["districtmDMX"],
+              enabledBidders: ["pubmatic"],
+            },
+            realTimeData: {
+              auctionDelay: 400,
+              dataProviders: [
+                {
+                  name: 'optable',
+                  waitForIt: true, // should be true, otherwise the auctionDelay will be ignored
+                },
+              ],
             },
           });
           pbjs.addAdUnits(adUnits);
