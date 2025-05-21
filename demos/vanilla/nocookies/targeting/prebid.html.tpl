@@ -29,9 +29,13 @@
           cookies: false,
           node: "${DCN_NODE}",
           legacyHostCache: "${DCN_LEGACY_HOST_CACHE}",
+          initTargeting: true,
         });
 
         optable.instance.tryIdentifyFromParams();
+
+        // Create a ref for RTD module to use SDK.
+        optable.prebid_instance = optable.instance;
       });
     </script>
     <script async src="${SDK_URI}"></script>
@@ -41,13 +45,6 @@
       // Hook GPT event listeners and send events to DCN:
       optable.cmd.push(function () {
         optable.instance.installGPTEventListeners();
-      });
-
-      // Try to fetch and cache targeting data from DCN:
-      optable.cmd.push(function () {
-        optable.instance.targeting().catch((err) => {
-          console.log("[OptableSDK] targeting() exception: " + err.message);
-        });
       });
 
       // Set up GPT:
@@ -75,94 +72,92 @@
         "/22081946781/web-sdk-demo-gam360/footer-ad": [[728, 90]],
       };
 
-      var adUnits = [
-        {
-          code: "/22081946781/web-sdk-demo-gam360/header-ad",
-          mediaTypes: {
-            banner: {
-              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/header-ad"],
-            },
+    var adUnits = [
+      {
+        code: "/22081946781/web-sdk-demo-gam360/header-ad",
+        mediaTypes: {
+          banner: {
+            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/header-ad"],
           },
-          bids: [
-            {
-              bidder: "districtmDMX",
-              params: {
-                dmxid: "/22081946781/web-sdk-demo-gam360/header-ad",
-                memberid: "102034",
-              },
-            },
-          ],
         },
-        {
-          code: "/22081946781/web-sdk-demo-gam360/box-ad",
-          mediaTypes: {
-            banner: {
-              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/box-ad"],
-            },
+        bids: [
+          {
+            bidder: "pubmatic",
+            params: {
+              publisherId: "156209",              // Example: PubMatic test publisher ID
+            }
+          }
+        ],
+      },
+      {
+        code: "/22081946781/web-sdk-demo-gam360/box-ad",
+        mediaTypes: {
+          banner: {
+            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/box-ad"],
           },
-          bids: [
-            {
-              bidder: "districtmDMX",
-              params: {
-                dmxid: "/22081946781/web-sdk-demo-gam360/box-ad",
-                memberid: "102034",
-              },
-            },
-          ],
         },
-        {
-          code: "/22081946781/web-sdk-demo-gam360/footer-ad",
-          mediaTypes: {
-            banner: {
-              sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/footer-ad"],
-            },
+        bids: [
+          {
+            bidder: "pubmatic",
+            params: {
+              publisherId: "156209",
+            }
+          }
+        ],
+      },
+      {
+        code: "/22081946781/web-sdk-demo-gam360/footer-ad",
+        mediaTypes: {
+          banner: {
+            sizes: bannerSizes["/22081946781/web-sdk-demo-gam360/footer-ad"],
           },
-          bids: [
-            {
-              bidder: "districtmDMX",
-              params: {
-                dmxid: "/22081946781/web-sdk-demo-gam360/footer-ad",
-                memberid: "102034",
-              },
-            },
-          ],
         },
-      ];
+        bids: [
+          {
+            bidder: "pubmatic",
+            params: {
+              publisherId: "156209",
+            }
+          }
+        ],
+      }
+    ];
 
       function initAdserver() {
         if (pbjs.initAdserverSet) return;
         pbjs.initAdserverSet = true;
 
+        const disableGamTargeting = localStorage.getItem("disableGamTargeting") === "true";
+        console.log("[OptableSDK] Reading 'disableGamTargeting' from localstorage: " + disableGamTargeting);
+
         googletag.cmd.push(function () {
-          pbjs.setTargetingForGPTAsync && pbjs.setTargetingForGPTAsync();
-
-          // Setup page-level GAM targeting from any cached targeting data, and load GAM ads:
-          optable.cmd.push(function () {
-            const tdata = optable.instance.targetingKeyValuesFromCache();
-
-            if (tdata) {
-              for (const [key, values] of Object.entries(tdata)) {
-                googletag.pubads().setTargeting(key, values);
-                console.log("[OptableSDK] googletag.pubads().setTargeting(" + key + ", [" + values + "])");
-              }
+            if (disableGamTargeting) {
+            console.log("[OptableSDK] Skipping pbjs.setTargetingForGPTAsync() because disableGamTargeting is set to true");
+            } else {
+            pbjs.setTargetingForGPTAsync && pbjs.setTargetingForGPTAsync();
+            console.log("[OptableSDK] pbjs.setTargetingForGPTAsync()");
             }
-
             googletag.pubads().refresh();
-            console.log("[OptableSDK] googletag.pubads().refresh()");
-          });
         });
       }
 
       pbjs.que.push(function () {
         optable.cmd.push(function () {
-          const ortb2 = optable.instance.prebidORTB2FromCache();
-
           pbjs.mergeConfig({
-            ortb2,
+            debug: true,
             priceGranularity: "low",
             userSync: {
               iframeEnabled: true,
-              enabledBidders: ["districtmDMX"],
+              enabledBidders: ["pubmatic"],
+            },
+            realTimeData: {
+              auctionDelay: 400,
+              dataProviders: [
+                {
+                  name: 'optable',
+                  waitForIt: true, // should be true, otherwise the auctionDelay will be ignored
+                },
+              ],
             },
           });
           pbjs.addAdUnits(adUnits);
@@ -223,7 +218,7 @@
           <h4>Example: targeting API: Prebid.js</h4>
           <p>
             Shows how to load active cohorts for a visitor and pass them to Prebid.js via
-            <a href="https://docs.prebid.org/dev-docs/publisher-api-reference/mergeConfig.html">mergeConfig</a>.
+            <a href="https://docs.prebid.org/dev-docs/modules/optableRtdProvider.html">Prebid OptableRTD</a>.
             It's assumed in this example that your primary ad server is
             <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) and that you are integrated with it
             using the
@@ -231,12 +226,30 @@
             we also pass matching active cohorts to GAM.
           </p>
           <p>
-            In this example, we use the <code>prebidORTB2FromCache()</code> API to retrieve any targeting data from browser
-            LocalStorage, in order to pass it to Prebid.js via <a href="https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy">seller defined audiences</a>. We also call the SDK <code>targeting</code> API
-            which will fetch the latest targeting data from our DCN and cache it locally for later use. Since these
-            two events happen asynchronously, it's possible that the targeting data passed to GAM is slightly outdated.
+          In this example we only have to initialize the <code>pbjs</code> module like this
+          <code>
+                    pbjs.mergeConfig({
+            debug: true,
+            priceGranularity: "low",
+            userSync: {
+              iframeEnabled: true,
+              enabledBidders: ["pubmatic"],
+            },
+            realTimeData: {
+              auctionDelay: 400,
+              dataProviders: [
+                {
+                  name: 'optable',
+                  waitForIt: true, // should be true, otherwise the auctionDelay will be ignored
+                },
+              ],
+            },
+          </code>
             To ensure ad targeting accuracy, it is recommended to call <code>targeting</code> to update the local cache on
-            page load.
+            page load. Since the RTD module only calls values from cache.
+          </p>
+          <p>
+           If you want to override GAM targeting you can set localStorage key <code>disableGamTargeting</code> to <code>true</code> before loading the page. This will prevent the SDK from sending any targeting data to GAM.
           </p>
         </div>
       </div>
