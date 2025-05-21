@@ -215,42 +215,55 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: targeting API: Prebid.js</h4>
+          <h4>Prebid.js Integration with OptableRTD</h4>
+
+          <h5>Overview</h5>
           <p>
-            Shows how to load active cohorts for a visitor and pass them to Prebid.js via
-            <a href="https://docs.prebid.org/dev-docs/modules/optableRtdProvider.html">Prebid OptableRTD</a>.
-            It's assumed in this example that your primary ad server is
-            <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) and that you are integrated with it
-            using the
-            <a href="https://developers.google.com/publisher-tag/guides/get-started">Google Publisher Tag</a> (GPT), so
-            we also pass matching active cohorts to GAM.
+            This demo demonstrates how to integrate Optable's targeting capabilities with Prebid.js using the
+            <a href="https://docs.prebid.org/dev-docs/modules/optableRtdProvider.html">OptableRTD module</a>.
+            The implementation assumes Google Ad Manager (GAM) as the primary ad server, integrated via
+            <a href="https://developers.google.com/publisher-tag/guides/get-started">Google Publisher Tag (GPT)</a>.
           </p>
+
+          <h5>Key Features</h5>
+          <ul>
+            <li>Loads active visitor cohorts and passes them to Prebid.js via OptableRTD</li>
+            <li>Automatically forwards matching cohorts to GAM for targeting</li>
+            <li>Supports local cache updates for improved targeting accuracy</li>
+            <li>Configurable GAM targeting override via localStorage</li>
+          </ul>
+
+          <h5>Implementation</h5>
           <p>
-          In this example we only have to initialize the <code>pbjs</code> module like this
-          <code>
-                    pbjs.mergeConfig({
-            debug: true,
-            priceGranularity: "low",
-            userSync: {
-              iframeEnabled: true,
-              enabledBidders: ["pubmatic"],
-            },
-            realTimeData: {
-              auctionDelay: 400,
-              dataProviders: [
-                {
-                  name: 'optable',
-                  waitForIt: true, // should be true, otherwise the auctionDelay will be ignored
-                },
-              ],
-            },
-          </code>
-            To ensure ad targeting accuracy, it is recommended to call <code>targeting</code> to update the local cache on
-            page load. Since the RTD module only calls values from cache.
+            The Prebid.js configuration requires minimal setup. Here's the essential configuration:
           </p>
-          <p>
-           If you want to override GAM targeting you can set localStorage key <code>disableGamTargeting</code> to <code>true</code> before loading the page. This will prevent the SDK from sending any targeting data to GAM.
-          </p>
+          <pre><code>pbjs.mergeConfig({
+  debug: true,
+  priceGranularity: "low",
+  userSync: {
+    iframeEnabled: true,
+    enabledBidders: ["pubmatic"]
+  },
+  realTimeData: {
+    auctionDelay: 400,
+    dataProviders: [{
+      name: 'optable',
+      waitForIt: true  // Required to respect auctionDelay
+    }]
+  }
+});</code></pre>
+
+          <h5>Important Notes</h5>
+          <ul>
+            <li>
+              <strong>Targeting Cache:</strong> For optimal targeting accuracy, call <code>targeting</code>
+              on page load to update the local cache, as the RTD module only uses cached values.
+            </li>
+            <li>
+              <strong>GAM Targeting Override:</strong> Set <code>localStorage.disableGamTargeting = "true"</code>
+              before page load to prevent the SDK from sending targeting data to GAM.
+            </li>
+          </ul>
         </div>
       </div>
 
