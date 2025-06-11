@@ -18,34 +18,18 @@
     <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
 
     <!-- Optable web-sdk loader start -->
-    <script type="text/javascript">
-      window.optable = window.optable || { cmd: [] };
+    
+    <!-- Latest version for development -->
 
-      optable.cmd.push(function () {
-        optable.instance = new optable.SDK({
-          host: "${DCN_HOST}",
-          initPassport: JSON.parse("${DCN_INIT}"),
-          site: "${DCN_SITE}",
-          cookies: false,
-          node: "${DCN_NODE}",
-          legacyHostCache: "${DCN_LEGACY_HOST_CACHE}",
-          initTargeting: true,
-        });
+ 
+     <script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
+   <script async src="bundle.js"></script>
+   
 
-        optable.instance.tryIdentifyFromParams();
-
-        // Create a ref for RTD module to use SDK.
-        optable.prebid_instance = optable.instance;
-      });
-    </script>
-    <script async src="${SDK_URI}"></script>
     <!-- Optable web-sdk loader end -->
 
     <script>
-      // Hook GPT event listeners and send events to DCN:
-      optable.cmd.push(function () {
-        optable.instance.installGPTEventListeners();
-      });
+      
 
       // Set up GPT:
       window.googletag = window.googletag || { cmd: [] };
@@ -82,6 +66,12 @@
         },
         bids: [
           {
+                            bidder: 'appnexus',
+                            params: {
+                                placementId: 13232392,
+                            }
+                        },
+          {
             bidder: "pubmatic",
             params: {
               publisherId: "156209",              // Example: PubMatic test publisher ID
@@ -98,6 +88,12 @@
         },
         bids: [
           {
+                            bidder: 'appnexus',
+                            params: {
+                                placementId: 13232392,
+                            }
+                        },
+          {
             bidder: "pubmatic",
             params: {
               publisherId: "156209",
@@ -113,6 +109,12 @@
           },
         },
         bids: [
+          {
+                            bidder: 'appnexus',
+                            params: {
+                                placementId: 13232392,
+                            }
+                        },
           {
             bidder: "pubmatic",
             params: {
@@ -140,33 +142,41 @@
             googletag.pubads().refresh();
         });
       }
+    
+      function refreshAds() {
+    console.log("[Ad Refresh] Refreshing Prebid and GAM ads");
+
+    // Refresh Prebid ads
+    pbjs.requestBids({
+      bidsBackHandler: function() {
+        googletag.pubads().refresh();
+        console.log("[Ad Refresh] Prebid bids requested and GAM ads refreshed");
+      },
+      timeout: PREBID_TIMEOUT,
+    });
+  }
+
+  // Set an interval to refresh ads every 5 seconds
+  setInterval(refreshAds, 60000);
+
+
 
       pbjs.que.push(function () {
-        optable.cmd.push(function () {
-          pbjs.mergeConfig({
-            debug: true,
-            priceGranularity: "low",
-            userSync: {
-              iframeEnabled: true,
-              enabledBidders: ["pubmatic"],
-            },
-            realTimeData: {
-              auctionDelay: 400,
-              dataProviders: [
-                {
-                  name: 'optable',
-                  waitForIt: true, // should be true, otherwise the auctionDelay will be ignored
-                },
-              ],
-            },
-          });
-          pbjs.addAdUnits(adUnits);
-          pbjs.requestBids({
-            bidsBackHandler: initAdserver,
-            timeout: PREBID_TIMEOUT,
-          });
-          console.log("[OptableSDK] pbjs.requestBids(...)");
+pbjs.mergeConfig({
+      debug: true,
+      priceGranularity: "low",
+      userSync: {
+        iframeEnabled: true,
+        enabledBidders: ["pubmatic","appnexus"],
+      },
+    
+    });
+        pbjs.addAdUnits(adUnits);
+        pbjs.requestBids({
+          bidsBackHandler: initAdserver,
+          timeout: PREBID_TIMEOUT,
         });
+        console.log("[OptableSDK] pbjs.requestBids(...)");
       });
 
       setTimeout(function () {

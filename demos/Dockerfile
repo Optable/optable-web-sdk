@@ -12,6 +12,7 @@ COPY --chmod=0444 ./vanilla/nocookies/targeting/gam360.html ./vanilla/nocookies/
 COPY --chmod=0444 ./vanilla/nocookies/targeting/gam360-cached.html ./vanilla/nocookies/targeting/gam360-cached.html
 COPY --chmod=0444 ./vanilla/nocookies/targeting/prebid.html ./vanilla/nocookies/targeting/prebid.html
 COPY --chmod=0444 ./vanilla/nocookies/targeting/prebid.js ./vanilla/nocookies/targeting/prebid.js
+COPY --chmod=0444 ./vanilla/nocookies/targeting/bundle.js ./vanilla/nocookies/targeting/bundle.js
 COPY --chmod=0444 ./vanilla/nocookies/identify.html ./vanilla/nocookies/identify.html
 COPY --chmod=0444 ./vanilla/nocookies/profile.html ./vanilla/nocookies/profile.html
 COPY --chmod=0444 ./vanilla/nocookies/witness.html ./vanilla/nocookies/witness.html
