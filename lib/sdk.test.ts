@@ -395,13 +395,13 @@ describe("behavior testing of", () => {
       })
     );
 
-    const targetingWithParam = await sdk.targeting("someId");
+    const targetingWithParam = await sdk.targeting("someId", "someOtherId");
     expect(targetingWithParam).toBeDefined();
 
     expect(fetchSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         method: "GET",
-        url: expect.stringContaining("v2/targeting?id=someId"),
+        url: expect.stringContaining("v2/targeting?id=someId&id=someOtherId"),
       })
     );
 
