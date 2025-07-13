@@ -169,6 +169,9 @@ function computeConsent(defaultReg: Regulation | null, cmp: CMPSignals, conf: CM
 
 function getConsent(defaultReg: Regulation | null, conf: CMPApiConfig = {}): Consent {
   const cmp: CMPSignals = {};
+  tcf.cmpapi.installFrameProxy();
+  gpp.cmpapi.installFrameProxy();
+
   const consent = computeConsent(defaultReg, cmp, conf);
 
   onTCFChange((data) => {
