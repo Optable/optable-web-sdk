@@ -1,5 +1,5 @@
 import { SiteResponse } from "edge/site";
-import OptableSDK from "./sdk";
+import { OptableSDK, normalizeTargetingRequest } from "./sdk";
 import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "./test/mocks";
 import { DCN_DEFAULTS } from "./config";
 import { waitFor } from "./test/utils";
@@ -397,6 +397,8 @@ describe("behavior testing of", () => {
 
     await expect(sdk.targeting({ ids: ["someId", "someOtherId"] })).rejects.toMatch(/targeting-cascade/);
 
+    await expect(sdk.targeting(3)).rejects.toMatch(/Expected string or object/);
+
     sdk.dcn.experiments = ["targeting-cascade"];
     const targetingWithParam = await sdk.targeting({ ids: ["someId", "someOtherId"] });
 
@@ -507,3 +509,20 @@ describe("behavior testing of", () => {
     );
   });
 });
+
+describe("normalizeTargetingRequest", () => {
+  test("normalizes string input", () => {
+    const input = "c:123";
+    const result = normalizeTargetingRequest(input);
+    expect(result).toEqual({ ids: ["c:123"] });
+  })
+
+  test("normalizes object input", () => {
+    const result = normalizeTargetingRequest({});
+    expect(result).toEqual({ ids: [] });
+  })
+
+  test("fails for unknown types", () => {
+    expect(() => normalizeTargetingRequest(3)).toThrowError(/Expected string or object/);
+  })
+})
