@@ -395,7 +395,7 @@ describe("behavior testing of", () => {
       })
     );
 
-    await expect(sdk.targeting({ ids: ["someId", "someOtherId"] })).rejects.toMatch(/targeting-cascade/)
+    await expect(sdk.targeting({ ids: ["someId", "someOtherId"] })).rejects.toMatch(/targeting-cascade/);
 
     sdk.dcn.experiments = ["targeting-cascade"];
     const targetingWithParam = await sdk.targeting({ ids: ["someId", "someOtherId"] });

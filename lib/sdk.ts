@@ -20,9 +20,11 @@ import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 
-type TargetingRequest = string | {
-  ids?: string[];
-}
+type TargetingRequest =
+  | string
+  | {
+      ids?: string[];
+    };
 
 class OptableSDK {
   public static version = buildInfo.version;
@@ -37,11 +39,11 @@ class OptableSDK {
 
   async initialize(): Promise<void> {
     if (this.dcn.initPassport) {
-      await Site(this.dcn).catch(() => { });
+      await Site(this.dcn).catch(() => {});
     }
 
     if (this.dcn.initTargeting) {
-      this.targeting().catch(() => { });
+      this.targeting().catch(() => {});
     }
   }
 
@@ -59,10 +61,10 @@ class OptableSDK {
   }
 
   async targeting(request?: TargetingRequest = "__passport__"): Promise<TargetingResponse> {
-    const ids = typeof request === "string" ? [request] : (request?.ids || []);
+    const ids = typeof request === "string" ? [request] : request?.ids || [];
 
     if (ids.length > 1 && !this.dcn.experiments.includes("targeting-cascade")) {
-      throw "Targeting multiple IDs is only available with the 'targeting-cascade' experiment enabled."
+      throw "Targeting multiple IDs is only available with the 'targeting-cascade' experiment enabled.";
     }
 
     await this.init;
