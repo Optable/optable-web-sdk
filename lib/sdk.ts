@@ -54,13 +54,11 @@ class OptableSDK {
     return Uid2Token(this.dcn, id);
   }
 
-  async targeting(...ids: string[]): Promise<TargetingResponse> {
-    if (!ids.length) {
-      ids = ["__passport__"];
-    }
+  async targeting(ids: string | string[] = "__passport__"): Promise<TargetingResponse> {
+    ids = Array.isArray(ids) ? ids : [ids];
 
     await this.init;
-    return Targeting(this.dcn, ...ids);
+    return Targeting(this.dcn, ids);
   }
 
   targetingFromCache(): TargetingResponse | null {

@@ -395,7 +395,7 @@ describe("behavior testing of", () => {
       })
     );
 
-    const targetingWithParam = await sdk.targeting("someId", "someOtherId");
+    const targetingWithParam = await sdk.targeting(["someId", "someOtherId"]);
     expect(targetingWithParam).toBeDefined();
 
     expect(fetchSpy).toHaveBeenLastCalledWith(
