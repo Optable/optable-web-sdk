@@ -27,7 +27,7 @@ type TargetingResponse = {
   ortb2: { user: ortb2.User };
 };
 
-async function Targeting(config: ResolvedConfig, ...ids: readonly string[]): Promise<TargetingResponse> {
+async function Targeting(config: ResolvedConfig, ids: readonly string[]): Promise<TargetingResponse> {
   const searchParams = new URLSearchParams(ids.map((id) => ["id", id]));
   const path = "/v2/targeting?" + searchParams.toString();
 
