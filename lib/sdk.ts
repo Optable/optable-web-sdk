@@ -23,8 +23,8 @@ import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 type TargetingRequest =
   | string
   | {
-    ids?: string[];
-  };
+      ids?: string[];
+    };
 
 class OptableSDK {
   public static version = buildInfo.version;
@@ -39,11 +39,11 @@ class OptableSDK {
 
   async initialize(): Promise<void> {
     if (this.dcn.initPassport) {
-      await Site(this.dcn).catch(() => { });
+      await Site(this.dcn).catch(() => {});
     }
 
     if (this.dcn.initTargeting) {
-      this.targeting().catch(() => { });
+      this.targeting().catch(() => {});
     }
   }
 
