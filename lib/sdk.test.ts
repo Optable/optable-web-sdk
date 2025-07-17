@@ -395,8 +395,10 @@ describe("behavior testing of", () => {
       })
     );
 
-    const targetingWithParam = await sdk.targeting(["someId", "someOtherId"]);
-    expect(targetingWithParam).toBeDefined();
+    await expect(sdk.targeting({ ids: ["someId", "someOtherId"] })).rejects.toMatch(/targeting-cascade/)
+
+    sdk.dcn.experiments = ["targeting-cascade"];
+    const targetingWithParam = await sdk.targeting({ ids: ["someId", "someOtherId"] });
 
     expect(fetchSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
