@@ -218,6 +218,42 @@ sdk
   .catch((err) => console.warn(`Targeting API Error: ${err.message}`));
 ```
 
+The `targeting()` function accepts different parameter formats:
+
+#### Single Identifier (Default)
+```javascript
+// Uses the default passport identifier
+sdk.targeting()
+
+// Uses a specific identifier
+sdk.targeting("some_identifier")
+```
+
+#### Multiple Identifiers
+To target multiple identifiers, use the object parameter format:
+
+```javascript
+// Target multiple identifiers
+sdk.targeting({ ids: ["identifier1", "identifier2", "identifier3"] })
+  .then((response) => {
+    console.log(`Multi-targeting response: ${response}`);
+  })
+  .catch((err) => console.warn(`Targeting API Error: ${err.message}`));
+```
+
+#### TypeScript Types
+
+The targeting function accepts the following parameter types:
+
+```typescript
+type TargetingRequest = string | { ids?: string[] };
+
+// Examples:
+sdk.targeting();                    // Uses default "__passport__"
+sdk.targeting("some_id");          // Single identifier
+sdk.targeting({ ids: ["id1", "id2"] }); // Multiple identifiers
+```
+
 On success, the resulting targeting data is typically sent as part of a subsequent ad call. Therefore we recommend that you either call targeting() before each ad call, or in parallel periodically, caching the resulting targeting data which you then provide in ad calls.
 
 #### Caching Targeting Data
@@ -830,9 +866,17 @@ const rules: NodeTargetingRule[] = [
   },
   {
     targetingFn: async () => window.optable.node_sdk_instance_two.targeting("__ip__"),
-    matcher: "third_party_vendor"
+    matcher: "third_party_vendor",
     mm: 5, // inference
     priority: 2, // Lower Priority (Optional)
+  },
+  {
+    // Example with multiple identifiers
+    targetingFn: async () => window.optable.node_sdk_instance_three.targeting({ 
+      ids: ["identifier1", "identifier2"] 
+    }),
+    matcher: "another_vendor",
+    mm: 5, // inference
   },
 ];
 ```
@@ -866,7 +910,8 @@ type MultiNodeTargetingResponse = {
 ```typescript
 type NodeTargetingRule = {
   // Targeting function to resolve. e.g. window.optable.node_sdk_instance.targeting('__ip__')
-  targetingFn: () => Optable.TargetingFn(targetingArg: string);
+  // For multiple identifiers, use: window.optable.node_sdk_instance.targeting({ ids: ["id1", "id2"] })
+  targetingFn: () => Optable.TargetingFn(targetingArg: string | { ids?: string[] });
   // Technology provider domain
   matcher: string;
   // Match method (mm) based on IAB v26 standards.
