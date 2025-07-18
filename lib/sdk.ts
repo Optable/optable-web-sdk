@@ -10,6 +10,7 @@ import { Site, SiteResponse, SiteFromCache } from "./edge/site";
 import {
   TargetingKeyValues,
   TargetingResponse,
+  TargetingRequest,
   Targeting,
   TargetingFromCache,
   TargetingClearCache,
@@ -19,12 +20,6 @@ import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
-
-type TargetingRequest =
-  | string
-  | {
-      ids?: string[];
-    };
 
 class OptableSDK {
   public static version = buildInfo.version;
@@ -60,15 +55,15 @@ class OptableSDK {
     return Uid2Token(this.dcn, id);
   }
 
-  async targeting(request: TargetingRequest = "__passport__"): Promise<TargetingResponse> {
-    const ids = typeof request === "string" ? [request] : request?.ids || [];
+  async targeting(input: string | TargetingRequest = "__passport__"): Promise<TargetingResponse> {
+    const request = normalizeTargetingRequest(input);
 
-    if (ids.length > 1 && !this.dcn.experiments.includes("targeting-cascade")) {
+    if (request.ids.length > 1 && !this.dcn.experiments.includes("targeting-cascade")) {
       throw "Targeting multiple IDs is only available with the 'targeting-cascade' experiment enabled.";
     }
 
     await this.init;
-    return Targeting(this.dcn, ids);
+    return Targeting(this.dcn, request);
   }
 
   targetingFromCache(): TargetingResponse | null {
@@ -160,6 +155,22 @@ class OptableSDK {
   }
 }
 
-export { OptableSDK };
+function normalizeTargetingRequest(input: string | TargetingRequest): TargetingRequest {
+  if (typeof input === "string") {
+    return { ids: [input] };
+  }
+
+  if (isObject(input)) {
+    return { ids: input?.ids ?? [] };
+  }
+
+  throw "Invalid request type for targeting. Expected string or object.";
+}
+
+function isObject(val: unknown): val is object {
+  return val !== null && typeof val === "object" && !Array.isArray(val);
+}
+
+export { OptableSDK, normalizeTargetingRequest };
 export type { InitConfig };
 export default OptableSDK;

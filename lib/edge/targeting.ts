@@ -21,14 +21,18 @@ type UserIdentifiers = {
   provider: string;
 };
 
+type TargetingRequest = {
+  ids: string[];
+};
+
 type TargetingResponse = {
   audience?: AudienceIdentifiers[];
   user?: UserIdentifiers[];
   ortb2: { user: ortb2.User };
 };
 
-async function Targeting(config: ResolvedConfig, ids: readonly string[]): Promise<TargetingResponse> {
-  const searchParams = new URLSearchParams(ids.map((id) => ["id", id]));
+async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
+  const searchParams = new URLSearchParams(req.ids.map((id) => ["id", id]));
   const path = "/v2/targeting?" + searchParams.toString();
 
   const response: TargetingResponse = await fetch(path, config, {
@@ -109,4 +113,4 @@ function TargetingKeyValues(tdata: TargetingResponse | null): TargetingKeyValues
 
 export { Targeting, TargetingFromCache, TargetingClearCache, PrebidORTB2, TargetingKeyValues };
 export default Targeting;
-export type { TargetingResponse };
+export type { TargetingResponse, TargetingRequest };
