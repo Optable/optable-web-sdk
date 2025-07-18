@@ -23,7 +23,7 @@ type UserIdentifiers = {
 
 type TargetingRequest = {
   ids: string[];
-  hids?: string[];
+  hids: string[];
 };
 
 type TargetingResponse = {
@@ -34,8 +34,8 @@ type TargetingResponse = {
 
 async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
   const searchParams = new URLSearchParams();
-  req.ids?.forEach((id) => searchParams.append("id", id));
-  req.hids?.forEach((id) => searchParams.append("hid", id));
+  req.ids.forEach((id) => searchParams.append("id", id));
+  req.hids.forEach((id) => searchParams.append("hid", id));
   const path = "/v2/targeting?" + searchParams.toString();
 
   const response: TargetingResponse = await fetch(path, config, {
