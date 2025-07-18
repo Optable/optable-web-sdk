@@ -157,11 +157,11 @@ class OptableSDK {
 
 function normalizeTargetingRequest(input: string | TargetingRequest): TargetingRequest {
   if (typeof input === "string") {
-    return { ids: [input] };
+    return { ids: [input], hids: [] };
   }
 
   if (isObject(input)) {
-    return { ids: input?.ids ?? [] };
+    return { ids: input?.ids ?? [], hids: input?.hids ?? [] };
   }
 
   throw "Invalid request type for targeting. Expected string or object.";
