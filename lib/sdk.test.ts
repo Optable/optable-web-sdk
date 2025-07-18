@@ -514,12 +514,12 @@ describe("normalizeTargetingRequest", () => {
   test("normalizes string input", () => {
     const input = "c:123";
     const result = normalizeTargetingRequest(input);
-    expect(result).toEqual({ ids: ["c:123"] });
+    expect(result).toEqual({ ids: ["c:123"], hids: [] });
   });
 
   test("normalizes object input", () => {
     const result = normalizeTargetingRequest({});
-    expect(result).toEqual({ ids: [] });
+    expect(result).toEqual({ ids: [], hids: [] });
   });
 
   test("fails for unknown types", () => {
