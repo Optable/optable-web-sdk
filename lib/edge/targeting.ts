@@ -23,7 +23,7 @@ type UserIdentifiers = {
 
 type TargetingRequest = {
   ids: string[];
-  hids: string[];
+  hids?: string[];
 };
 
 type TargetingResponse = {
