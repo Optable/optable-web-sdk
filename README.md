@@ -221,20 +221,23 @@ sdk
 The `targeting()` function accepts different parameter formats:
 
 #### Single Identifier (Default)
+
 ```javascript
 // Uses the default passport identifier
-sdk.targeting()
+sdk.targeting();
 
 // Uses a specific identifier
-sdk.targeting("some_identifier")
+sdk.targeting("some_identifier");
 ```
 
 #### Multiple Identifiers
+
 To target multiple identifiers, use the object parameter format:
 
 ```javascript
 // Target multiple identifiers
-sdk.targeting({ ids: ["identifier1", "identifier2", "identifier3"] })
+sdk
+  .targeting({ ids: ["identifier1", "identifier2", "identifier3"] })
   .then((response) => {
     console.log(`Multi-targeting response: ${response}`);
   })
@@ -249,8 +252,8 @@ The targeting function accepts the following parameter types:
 type TargetingRequest = string | { ids?: string[] };
 
 // Examples:
-sdk.targeting();                    // Uses default "__passport__"
-sdk.targeting("some_id");          // Single identifier
+sdk.targeting(); // Uses default "__passport__"
+sdk.targeting("some_id"); // Single identifier
 sdk.targeting({ ids: ["id1", "id2"] }); // Multiple identifiers
 ```
 
@@ -872,9 +875,10 @@ const rules: NodeTargetingRule[] = [
   },
   {
     // Example with multiple identifiers
-    targetingFn: async () => window.optable.node_sdk_instance_three.targeting({ 
-      ids: ["identifier1", "identifier2"] 
-    }),
+    targetingFn: async () =>
+      window.optable.node_sdk_instance_three.targeting({
+        ids: ["identifier1", "identifier2"],
+      }),
     matcher: "another_vendor",
     mm: 5, // inference
   },
