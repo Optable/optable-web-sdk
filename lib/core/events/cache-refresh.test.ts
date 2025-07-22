@@ -8,6 +8,7 @@ const mock_configs = {
 } as ResolvedConfig;
 
 const mock_response: TargetingResponse = {
+  resolved_id: "resolved-id",
   ortb2: {
     user: {
       eids: [
@@ -33,6 +34,7 @@ describe("sendTargetingUpdateEvent", () => {
 
     expect(event.detail.instance).toBe("my-node");
     expect(event.detail.resolved).toBe(true);
+    expect(event.detail.resolvedID).toBe("resolved-id");
     expect(event.detail.ortb2).toEqual(mock_response.ortb2);
     expect([...event.detail.provenance]).toEqual(["matcher-a", "matcher-b"]);
   });

@@ -30,6 +30,8 @@ type TargetingResponse = {
   audience?: AudienceIdentifiers[];
   user?: UserIdentifiers[];
   ortb2: { user: ortb2.User };
+  // Identifier that matched and was used to generate the targeting response.
+  resolved_id?: string;
 };
 
 async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
