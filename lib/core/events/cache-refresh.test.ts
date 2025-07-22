@@ -70,4 +70,22 @@ describe("sendTargetingUpdateEvent", () => {
 
     expect(event.detail.resolved).toBe(false); // false if no eids
   });
+
+  it("doesnt expose resolvedID when absent ", async () => {
+    mock_response.ortb2.user = {};
+
+    const eventPromise = new Promise<CustomEvent>((resolve) => {
+      window.addEventListener("optable-targeting:change", (event) => {
+        resolve(event as CustomEvent);
+      });
+    });
+
+    const { resolved_id: _ignore, ...response } = mock_response;
+
+    sendTargetingUpdateEvent(mock_configs, response);
+
+    const event = await eventPromise;
+
+    expect(event.detail.resolvedID).toBeUndefined();
+  });
 });
