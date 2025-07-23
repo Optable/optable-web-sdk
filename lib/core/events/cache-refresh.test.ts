@@ -8,6 +8,7 @@ const mock_configs = {
 } as ResolvedConfig;
 
 const mock_response: TargetingResponse = {
+  resolved_ids: ["resolved-id"],
   ortb2: {
     user: {
       eids: [
@@ -33,6 +34,7 @@ describe("sendTargetingUpdateEvent", () => {
 
     expect(event.detail.instance).toBe("my-node");
     expect(event.detail.resolved).toBe(true);
+    expect(event.detail.resolvedIDs).toEqual(["resolved-id"]);
     expect(event.detail.ortb2).toEqual(mock_response.ortb2);
     expect([...event.detail.provenance]).toEqual(["matcher-a", "matcher-b"]);
   });
@@ -67,5 +69,23 @@ describe("sendTargetingUpdateEvent", () => {
     const event = await eventPromise;
 
     expect(event.detail.resolved).toBe(false); // false if no eids
+  });
+
+  it("doesnt expose resolvedID when absent ", async () => {
+    mock_response.ortb2.user = {};
+
+    const eventPromise = new Promise<CustomEvent>((resolve) => {
+      window.addEventListener("optable-targeting:change", (event) => {
+        resolve(event as CustomEvent);
+      });
+    });
+
+    const { resolved_ids: _ignore, ...response } = mock_response;
+
+    sendTargetingUpdateEvent(mock_configs, response);
+
+    const event = await eventPromise;
+
+    expect(event.detail.resolvedIDs).toEqual([]);
   });
 });

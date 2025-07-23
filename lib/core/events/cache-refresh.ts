@@ -11,6 +11,7 @@ function sendTargetingUpdateEvent(config: ResolvedConfig, response: TargetingRes
       detail: {
         instance: config.node || config.host,
         resolved: !!response.ortb2?.user?.eids?.length,
+        resolvedIDs: response.resolved_ids ?? [],
         ortb2: response.ortb2,
         provenance: new Set(matchers),
       },
