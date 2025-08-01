@@ -69,9 +69,7 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
       });
     }
   }
-  
 
-  
   const path = "/v2/targeting?" + searchParams.toString();
 
   const response: TargetingResponse = await fetch(path, config, {
