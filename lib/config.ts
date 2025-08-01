@@ -3,6 +3,17 @@ import type { CMPApiConfig, Consent } from "./core/regs/consent";
 
 type Experiment = "tokenize-v2" | "targeting-cascade";
 
+type MatcherOverride = {
+  id: string;
+  rank: number;
+};
+
+type ABTestConfig = {
+  id: string;
+  trafficPercentage: number;
+  matcher_override?: MatcherOverride[];
+};
+
 type InitConsent = {
   // A "cmpapi" configuration indicating that consent should be gathered from CMP apis.
   cmpapi?: CMPApiConfig;
@@ -39,6 +50,8 @@ type InitConfig = {
   initTargeting?: boolean;
   // (Defaults to 'optable_cache_targeting') Cache Key used to store 'targeting' response
   optableCacheTargeting?: string;
+  // AB test configuration to define testing configurations
+  abTests?: ABTestConfig[];
 };
 
 type ResolvedConfig = {
@@ -56,6 +69,7 @@ type ResolvedConfig = {
   sessionID: string;
   skipEnrichment?: boolean;
   initTargeting?: boolean;
+  abTests?: ABTestConfig[];
 };
 
 const DCN_DEFAULTS = {
@@ -88,6 +102,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     sessionID: init.sessionID ?? generateSessionID(),
     skipEnrichment: init.skipEnrichment,
     initTargeting: init.initTargeting,
+    abTests: init.abTests,
   };
 
   if (init.consent?.static) {
@@ -110,5 +125,5 @@ function generateSessionID(): string {
     .replace(/=+$/g, "");
 }
 
-export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig };
+export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig, ABTestConfig, MatcherOverride };
 export { getConfig, DCN_DEFAULTS, generateSessionID };
