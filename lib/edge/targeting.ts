@@ -42,7 +42,6 @@ function determineABTest(abTests?: ABTestConfig[]): ABTestConfig | null {
 
   // Simple random number 0-99
   const bucket = Math.floor(Math.random() * 100);
-  
   let cumulative = 0;
   for (const test of abTests) {
     cumulative += test.trafficPercentage;
@@ -58,7 +57,6 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
   req.ids.forEach((id) => searchParams.append("id", id));
   req.hids.forEach((id) => searchParams.append("hid", id));
   const abTest = determineABTest(config.abTests);
-  
   if (abTest) {
     searchParams.append("ab_test_id", abTest.id);
     if (abTest.matcher_override) {
