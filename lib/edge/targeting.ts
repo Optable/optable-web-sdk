@@ -40,6 +40,13 @@ function determineABTest(abTests?: ABTestConfig[]): ABTestConfig | null {
     return null;
   }
 
+  // Skip A/B testing if traffic percentage sum exceeds 100%
+  const totalTrafficPercentage = abTests.reduce((sum, test) => sum + test.trafficPercentage, 0);
+  if (totalTrafficPercentage > 100) {
+    console.error(`AB Test Config Error: Traffic Percentage Sum Exceeds 100%`);
+    return null;
+  }
+
   // Simple random number 0-99
   const bucket = Math.floor(Math.random() * 100);
   let cumulative = 0;
@@ -49,7 +56,7 @@ function determineABTest(abTests?: ABTestConfig[]): ABTestConfig | null {
       return test;
     }
   }
-  return null; // Default behavior (no A/B test)
+  return null;
 }
 
 async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
