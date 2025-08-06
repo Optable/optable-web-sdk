@@ -1,4 +1,4 @@
-import type { ResolvedConfig } from "../config";
+import type { ResolvedConfig, ABTestConfig, MatcherOverride } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 import * as ortb2 from "iab-openrtb/v26";
@@ -34,10 +34,47 @@ type TargetingResponse = {
   resolved_ids?: string[];
 };
 
+// Determine which A/B test (if any) should be used for this request
+function determineABTest(abTests?: ABTestConfig[]): ABTestConfig | null {
+  if (!abTests || abTests.length === 0) {
+    return null;
+  }
+
+  // Skip A/B testing if traffic percentage sum exceeds 100%
+  const totalTrafficPercentage = abTests.reduce((sum, test) => sum + test.trafficPercentage, 0);
+  if (totalTrafficPercentage > 100) {
+    console.error(`AB Test Config Error: Traffic Percentage Sum Exceeds 100%`);
+    return null;
+  }
+
+  // Simple random number 0-99
+  const bucket = Math.floor(Math.random() * 100);
+  let cumulative = 0;
+  for (const test of abTests) {
+    cumulative += test.trafficPercentage;
+    if (bucket < cumulative) {
+      return test;
+    }
+  }
+  return null;
+}
+
 async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
   const searchParams = new URLSearchParams();
   req.ids.forEach((id) => searchParams.append("id", id));
   req.hids.forEach((id) => searchParams.append("hid", id));
+  const abTest = determineABTest(config.abTests);
+  if (abTest) {
+    searchParams.append("ab_test_id", abTest.id);
+    if (abTest.matcher_override) {
+      // Sort by rank to ensure proper order
+      const sortedOverrides = [...abTest.matcher_override].sort((a, b) => a.rank - b.rank);
+      sortedOverrides.forEach((override) => {
+        searchParams.append("matcher_override", override.id);
+      });
+    }
+  }
+
   const path = "/v2/targeting?" + searchParams.toString();
 
   const response: TargetingResponse = await fetch(path, config, {
@@ -116,6 +153,6 @@ function TargetingKeyValues(tdata: TargetingResponse | null): TargetingKeyValues
   return result;
 }
 
-export { Targeting, TargetingFromCache, TargetingClearCache, PrebidORTB2, TargetingKeyValues };
+export { Targeting, TargetingFromCache, TargetingClearCache, PrebidORTB2, TargetingKeyValues, determineABTest };
 export default Targeting;
-export type { TargetingResponse, TargetingRequest };
+export type { TargetingResponse, TargetingRequest, ABTestConfig, MatcherOverride };
