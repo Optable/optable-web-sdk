@@ -14,6 +14,11 @@ type ABTestConfig = {
   matcher_override?: MatcherOverride[];
 };
 
+type TargetingSignals = {
+  // Include the current URL in the targeting call
+  url?: boolean;
+};
+
 type InitConsent = {
   // A "cmpapi" configuration indicating that consent should be gathered from CMP apis.
   cmpapi?: CMPApiConfig;
@@ -52,6 +57,8 @@ type InitConfig = {
   optableCacheTargeting?: string;
   // AB test configuration to define testing configurations
   abTests?: ABTestConfig[];
+  // Additional targeting signals to pass to the targeting call
+  additionalTargetingSignals?: TargetingSignals;
 };
 
 type ResolvedConfig = {
@@ -70,6 +77,7 @@ type ResolvedConfig = {
   skipEnrichment?: boolean;
   initTargeting?: boolean;
   abTests?: ABTestConfig[];
+  additionalTargetingSignals?: TargetingSignals;
 };
 
 const DCN_DEFAULTS = {
@@ -103,6 +111,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     skipEnrichment: init.skipEnrichment,
     initTargeting: init.initTargeting,
     abTests: init.abTests,
+    additionalTargetingSignals: init.additionalTargetingSignals,
   };
 
   if (init.consent?.static) {

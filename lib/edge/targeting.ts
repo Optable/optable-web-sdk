@@ -75,6 +75,10 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
     }
   }
 
+  if (config.additionalTargetingSignals?.url) {
+    searchParams.append("url", `${window.location.protocol}//${window.location.host}${window.location.pathname}`);
+  }
+
   const path = "/v2/targeting?" + searchParams.toString();
 
   const response: TargetingResponse = await fetch(path, config, {
