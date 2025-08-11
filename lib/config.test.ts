@@ -69,4 +69,82 @@ describe("getConfig", () => {
 
     spy.mockRestore();
   });
+
+  describe("additionalTargetingSignals", () => {
+    it("includes additionalTargetingSignals when provided", () => {
+      const config = getConfig({
+        host: "host",
+        site: "site",
+        sessionID: "",
+        additionalTargetingSignals: {
+          url: true,
+        },
+      });
+
+      expect(config.additionalTargetingSignals).toEqual({
+        url: true,
+      });
+    });
+
+    it("includes additionalTargetingSignals with url set to false", () => {
+      const config = getConfig({
+        host: "host",
+        site: "site",
+        sessionID: "",
+        additionalTargetingSignals: {
+          url: false,
+        },
+      });
+
+      expect(config.additionalTargetingSignals).toEqual({
+        url: false,
+      });
+    });
+
+    it("includes additionalTargetingSignals with undefined url", () => {
+      const config = getConfig({
+        host: "host",
+        site: "site",
+        sessionID: "",
+        additionalTargetingSignals: {
+          url: undefined,
+        },
+      });
+
+      expect(config.additionalTargetingSignals).toEqual({
+        url: undefined,
+      });
+    });
+
+    it("does not include additionalTargetingSignals when not provided", () => {
+      const config = getConfig({
+        host: "host",
+        site: "site",
+        sessionID: "",
+      });
+
+      expect(config.additionalTargetingSignals).toBeUndefined();
+    });
+
+    it("preserves additionalTargetingSignals when other properties are overridden", () => {
+      const config = getConfig({
+        host: "host",
+        site: "site",
+        sessionID: "",
+        cookies: false,
+        initPassport: false,
+        readOnly: true,
+        additionalTargetingSignals: {
+          url: true,
+        },
+      });
+
+      expect(config.additionalTargetingSignals).toEqual({
+        url: true,
+      });
+      expect(config.cookies).toBe(false);
+      expect(config.initPassport).toBe(false);
+      expect(config.readOnly).toBe(true);
+    });
+  });
 });
