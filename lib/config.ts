@@ -16,7 +16,7 @@ type ABTestConfig = {
 
 type TargetingSignals = {
   // Include the current URL in the targeting call
-  url?: boolean;
+  ref?: boolean;
 };
 
 type InitConsent = {

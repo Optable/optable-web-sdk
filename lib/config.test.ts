@@ -77,12 +77,12 @@ describe("getConfig", () => {
         site: "site",
         sessionID: "",
         additionalTargetingSignals: {
-          url: true,
+          ref: true,
         },
       });
 
       expect(config.additionalTargetingSignals).toEqual({
-        url: true,
+        ref: true,
       });
     });
 
@@ -92,12 +92,12 @@ describe("getConfig", () => {
         site: "site",
         sessionID: "",
         additionalTargetingSignals: {
-          url: false,
+          ref: false,
         },
       });
 
       expect(config.additionalTargetingSignals).toEqual({
-        url: false,
+        ref: false,
       });
     });
 
@@ -107,7 +107,7 @@ describe("getConfig", () => {
         site: "site",
         sessionID: "",
         additionalTargetingSignals: {
-          url: undefined,
+          ref: undefined,
         },
       });
 
@@ -135,12 +135,12 @@ describe("getConfig", () => {
         initPassport: false,
         readOnly: true,
         additionalTargetingSignals: {
-          url: true,
+          ref: true,
         },
       });
 
       expect(config.additionalTargetingSignals).toEqual({
-        url: true,
+        ref: true,
       });
       expect(config.cookies).toBe(false);
       expect(config.initPassport).toBe(false);
