@@ -1,8 +1,9 @@
 import { resolveMultiNodeTargeting, TargetingResponse } from "./resolveMultiTargeting.ts";
 import { IDMatchMethod } from "iab-adcom";
 
-const createOrtb2Response = ({ data = [], eids = [] }: { data?: any; eids?: any }) => {
+const createOrtb2Response = ({ data = [], eids = [], refs = undefined }: { data?: any; eids?: any, refs?: any }) => {
   return {
+    refs,
     ortb2: {
       user: {
         data,
@@ -359,4 +360,126 @@ describe("resolveMultiNodeTargeting", () => {
     ]);
     expect(eidSources).toEqual(new Set<string>(["matcher_one"]));
   });
+
+  it("Handles extension when priority based", async () => {
+    const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createOrtb2Response({
+          refs: { "1": { some: "private things" } },
+          eids: [{
+            inserter: "optable.co", source: "example.com", ext: { eidOne: "eidOne" },
+            uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
+          }],
+        })
+      );
+    });
+
+    const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createOrtb2Response({
+          refs: { "1": { other: "private things" } },
+          eids: [{
+            inserter: "optable.co", source: "example.com", ext: { eidTwo: "eidTwo" },
+            uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "1" } } }],
+          }],
+        })
+      );
+    });
+
+    const configs = [
+      { targetingFn: () => mockTargetingFnOne, matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED, priority: 1 },
+      { targetingFn: () => mockTargetingFnTwo, matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED, priority: 1 },
+    ];
+
+    const { ortb2, refs } = await resolveMultiNodeTargeting(configs);
+
+    expect(refs).toEqual({
+      "1": { some: "private things" },
+      "2": { other: "private things" },
+    })
+
+    expect(ortb2.user!.eids).toEqual([
+      {
+        inserter: "optable.co",
+        matcher: "matcher_one",
+        mm: IDMatchMethod.AUTHENTICATED,
+        source: "example.com",
+        ext: { eidOne: "eidOne" },
+        uids: [
+          { id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } },
+        ],
+      },
+      {
+        inserter: "optable.co",
+        matcher: "matcher_one",
+        mm: IDMatchMethod.AUTHENTICATED,
+        source: "example.com",
+        ext: { eidTwo: "eidTwo" },
+        uids: [
+          { id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "2" } } },
+        ],
+      },
+    ]);
+  })
+
+  it("Handles extension when aggregate based", async () => {
+    const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createOrtb2Response({
+          refs: { "1": { some: "private things" } },
+          eids: [{
+            inserter: "optable.co", source: "example.com", ext: { eidOne: "eidOne" },
+            uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
+          }],
+        })
+      );
+    });
+
+    const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createOrtb2Response({
+          refs: { "1": { other: "private things" } },
+          eids: [{
+            inserter: "optable.co", source: "example.com", ext: { eidTwo: "eidTwo" },
+            uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "1" } } }],
+          }],
+        })
+      );
+    });
+
+    const configs = [
+      { targetingFn: () => mockTargetingFnOne, matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED },
+      { targetingFn: () => mockTargetingFnTwo, matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED },
+    ];
+
+    const { ortb2, refs } = await resolveMultiNodeTargeting(configs);
+
+    expect(refs).toEqual({
+      "1": { some: "private things" },
+      "2": { other: "private things" },
+    })
+
+    expect(ortb2.user!.eids).toEqual([
+      {
+        inserter: "optable.co",
+        matcher: "matcher_one",
+        mm: IDMatchMethod.AUTHENTICATED,
+        source: "example.com",
+        ext: { eidOne: "eidOne" },
+        uids: [
+          { id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } },
+        ],
+      },
+      {
+        inserter: "optable.co",
+        matcher: "matcher_one",
+        mm: IDMatchMethod.AUTHENTICATED,
+        source: "example.com",
+        ext: { eidTwo: "eidTwo" },
+        uids: [
+          { id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "2" } } },
+        ],
+      },
+    ]);
+  })
 });
