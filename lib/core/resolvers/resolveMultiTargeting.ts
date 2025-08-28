@@ -106,10 +106,7 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
         };
 
         const currentEids = eidsByPriority.get(adjustedPriority) ?? [];
-        eidsByPriority.set(adjustedPriority, [
-          ...currentEids,
-          newEid,
-        ]);
+        eidsByPriority.set(adjustedPriority, [...currentEids, newEid]);
       });
   }
 
@@ -152,14 +149,14 @@ function buildRefsProcessor(): { refs: Record<string, unknown>; process: EIDProc
 
       for (const uid of eid.uids) {
         if (!isObject(uid.ext?.optable)) {
-          continue
+          continue;
         }
 
-        if ('ref' in uid.ext.optable && typeof uid.ext.optable.ref === 'string') {
+        if ("ref" in uid.ext.optable && typeof uid.ext.optable.ref === "string") {
           const refBody = response.refs[uid.ext.optable.ref];
           // Assign new global ref key
           globalRef += 1;
-          const newRefKey = globalRef.toString(10)
+          const newRefKey = globalRef.toString(10);
           // Mutate global refs
           refs[newRefKey] = refBody;
           uid.ext.optable.ref = newRefKey;
@@ -168,9 +165,8 @@ function buildRefsProcessor(): { refs: Record<string, unknown>; process: EIDProc
 
       return eid;
     },
-  }
+  };
 }
-
 
 export { resolveMultiNodeTargeting };
 export type { MultiNodeTargetingResponse, TargetingResponse, NodeTargetingRule };

@@ -1,7 +1,7 @@
 import { resolveMultiNodeTargeting, TargetingResponse } from "./resolveMultiTargeting.ts";
 import { IDMatchMethod } from "iab-adcom";
 
-const createOrtb2Response = ({ data = [], eids = [], refs = undefined }: { data?: any; eids?: any, refs?: any }) => {
+const createOrtb2Response = ({ data = [], eids = [], refs = undefined }: { data?: any; eids?: any; refs?: any }) => {
   return {
     refs,
     ortb2: {
@@ -366,10 +366,14 @@ describe("resolveMultiNodeTargeting", () => {
       resolve(
         createOrtb2Response({
           refs: { "1": { some: "private things" } },
-          eids: [{
-            inserter: "optable.co", source: "example.com", ext: { eidOne: "eidOne" },
-            uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
-          }],
+          eids: [
+            {
+              inserter: "optable.co",
+              source: "example.com",
+              ext: { eidOne: "eidOne" },
+              uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
+            },
+          ],
         })
       );
     });
@@ -378,10 +382,14 @@ describe("resolveMultiNodeTargeting", () => {
       resolve(
         createOrtb2Response({
           refs: { "1": { other: "private things" } },
-          eids: [{
-            inserter: "optable.co", source: "example.com", ext: { eidTwo: "eidTwo" },
-            uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "1" } } }],
-          }],
+          eids: [
+            {
+              inserter: "optable.co",
+              source: "example.com",
+              ext: { eidTwo: "eidTwo" },
+              uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "1" } } }],
+            },
+          ],
         })
       );
     });
@@ -396,7 +404,7 @@ describe("resolveMultiNodeTargeting", () => {
     expect(refs).toEqual({
       "1": { some: "private things" },
       "2": { other: "private things" },
-    })
+    });
 
     expect(ortb2.user!.eids).toEqual([
       {
@@ -405,9 +413,7 @@ describe("resolveMultiNodeTargeting", () => {
         mm: IDMatchMethod.AUTHENTICATED,
         source: "example.com",
         ext: { eidOne: "eidOne" },
-        uids: [
-          { id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } },
-        ],
+        uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
       },
       {
         inserter: "optable.co",
@@ -415,22 +421,24 @@ describe("resolveMultiNodeTargeting", () => {
         mm: IDMatchMethod.AUTHENTICATED,
         source: "example.com",
         ext: { eidTwo: "eidTwo" },
-        uids: [
-          { id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "2" } } },
-        ],
+        uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "2" } } }],
       },
     ]);
-  })
+  });
 
   it("Handles extension when aggregate based", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
         createOrtb2Response({
           refs: { "1": { some: "private things" } },
-          eids: [{
-            inserter: "optable.co", source: "example.com", ext: { eidOne: "eidOne" },
-            uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
-          }],
+          eids: [
+            {
+              inserter: "optable.co",
+              source: "example.com",
+              ext: { eidOne: "eidOne" },
+              uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
+            },
+          ],
         })
       );
     });
@@ -439,10 +447,14 @@ describe("resolveMultiNodeTargeting", () => {
       resolve(
         createOrtb2Response({
           refs: { "1": { other: "private things" } },
-          eids: [{
-            inserter: "optable.co", source: "example.com", ext: { eidTwo: "eidTwo" },
-            uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "1" } } }],
-          }],
+          eids: [
+            {
+              inserter: "optable.co",
+              source: "example.com",
+              ext: { eidTwo: "eidTwo" },
+              uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "1" } } }],
+            },
+          ],
         })
       );
     });
@@ -457,7 +469,7 @@ describe("resolveMultiNodeTargeting", () => {
     expect(refs).toEqual({
       "1": { some: "private things" },
       "2": { other: "private things" },
-    })
+    });
 
     expect(ortb2.user!.eids).toEqual([
       {
@@ -466,9 +478,7 @@ describe("resolveMultiNodeTargeting", () => {
         mm: IDMatchMethod.AUTHENTICATED,
         source: "example.com",
         ext: { eidOne: "eidOne" },
-        uids: [
-          { id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } },
-        ],
+        uids: [{ id: "uid456", ext: { uidOne: "uidOne", optable: { ref: "1" } } }],
       },
       {
         inserter: "optable.co",
@@ -476,10 +486,8 @@ describe("resolveMultiNodeTargeting", () => {
         mm: IDMatchMethod.AUTHENTICATED,
         source: "example.com",
         ext: { eidTwo: "eidTwo" },
-        uids: [
-          { id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "2" } } },
-        ],
+        uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "2" } } }],
       },
     ]);
-  })
+  });
 });
