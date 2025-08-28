@@ -7,6 +7,7 @@ import { Identify } from "./edge/identify";
 import { Uid2Token, Uid2TokenResponse } from "./edge/uid2_token";
 import { Resolve, ResolveResponse } from "./edge/resolve";
 import { Site, SiteResponse, SiteFromCache } from "./edge/site";
+import { isObject } from "./core/utils";
 import {
   TargetingKeyValues,
   TargetingResponse,
@@ -165,10 +166,6 @@ function normalizeTargetingRequest(input: string | TargetingRequest): TargetingR
   }
 
   throw "Invalid request type for targeting. Expected string or object.";
-}
-
-function isObject(val: unknown): val is object {
-  return val !== null && typeof val === "object" && !Array.isArray(val);
 }
 
 export { OptableSDK, normalizeTargetingRequest };

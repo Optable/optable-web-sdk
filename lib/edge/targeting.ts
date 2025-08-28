@@ -30,6 +30,8 @@ type TargetingResponse = {
   audience?: AudienceIdentifiers[];
   user?: UserIdentifiers[];
   ortb2: { user: ortb2.User };
+  // Additional metadata about the targeting response referenced from ortb2.
+  refs?: Record<string, unknown>;
   // Identifiers that matched and were used to generate the targeting response.
   resolved_ids?: string[];
 };

@@ -1,6 +1,7 @@
 import type { EID } from "iab-openrtb/v26";
 import type { IDMatchMethod } from "iab-adcom";
 import { TargetingResponse } from "../../edge/targeting";
+import { isObject } from "../utils";
 
 type MultiNodeTargetingResponse = TargetingResponse & { eidSources: Set<string> };
 type Ortb2 = TargetingResponse["ortb2"];
@@ -35,6 +36,7 @@ async function resolveMultiNodeTargeting(rules: NodeTargetingRule[]): Promise<Mu
 // Aggregate all resolved targeting data
 async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<MultiNodeTargetingResponse> {
   const eidSources = new Set<string>();
+  const { refs, process: refsProcessor } = buildRefsProcessor();
   const ortb2: Ortb2 = {
     user: {
       data: [],
@@ -48,10 +50,15 @@ async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<Mu
 
     eids
       .filter((x) => x.uids.length)
-      .forEach(({ ext, ...eid }) => {
+      .forEach((eid) => {
         const match = eid.matcher ?? matcher;
         match && eidSources.add(match);
-        ortb2.user!.eids!.push({ ...eid, mm: eid.mm ?? mm, matcher: eid.matcher ?? matcher });
+
+        ortb2.user!.eids!.push({
+          ...refsProcessor(response, eid),
+          mm: eid.mm ?? mm,
+          matcher: eid.matcher ?? matcher,
+        });
       });
   }
 
@@ -61,13 +68,14 @@ async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<Mu
 
   await Promise.allSettled(targetingFnPromises);
 
-  return { ortb2, eidSources };
+  return { ortb2, eidSources, refs };
 }
 
 // Resolve the most prioritize targeting node
 // If multiple nodes have the same priority, we will append the eids
 async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<MultiNodeTargetingResponse> {
   const eidSources = new Set<string>();
+  const { refs, process: refsProcessor } = buildRefsProcessor();
   const ortb2: Ortb2 = {
     user: {
       data: [],
@@ -86,16 +94,19 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
 
     eids
       .filter((x) => x.uids.length)
-      .forEach(({ ext, ...eid }) => {
+      .forEach((eid) => {
         const match = eid.matcher ?? matcher;
         const currentSources = sourcesByPriority.get(adjustedPriority) ?? [];
         match && sourcesByPriority.set(adjustedPriority, [...currentSources, match]);
 
+        const newEid = {
+          ...refsProcessor(response, eid),
+          matcher: eid.matcher ?? matcher,
+          mm: eid.mm ?? mm,
+        };
+
         const currentEids = eidsByPriority.get(adjustedPriority) ?? [];
-        eidsByPriority.set(adjustedPriority, [
-          ...currentEids,
-          { ...eid, matcher: eid.matcher ?? matcher, mm: eid.mm ?? mm },
-        ]);
+        eidsByPriority.set(adjustedPriority, [...currentEids, newEid]);
       });
   }
 
@@ -119,6 +130,41 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
   return {
     ortb2,
     eidSources,
+    refs,
+  };
+}
+
+type EIDProcessor = (response: TargetingResponse, eid: EID) => EID;
+
+function buildRefsProcessor(): { refs: Record<string, unknown>; process: EIDProcessor } {
+  const refs: Record<string, unknown> = {};
+  let globalRef = 0;
+
+  return {
+    refs,
+    process: (response: TargetingResponse, eid: EID): EID => {
+      if (!response.refs) {
+        return eid;
+      }
+
+      for (const uid of eid.uids) {
+        if (!isObject(uid.ext?.optable)) {
+          continue;
+        }
+
+        if ("ref" in uid.ext.optable && typeof uid.ext.optable.ref === "string") {
+          const refBody = response.refs[uid.ext.optable.ref];
+          // Assign new global ref key
+          globalRef += 1;
+          const newRefKey = globalRef.toString(10);
+          // Mutate global refs
+          refs[newRefKey] = refBody;
+          uid.ext.optable.ref = newRefKey;
+        }
+      }
+
+      return eid;
+    },
   };
 }
 
