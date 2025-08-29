@@ -1,14 +1,11 @@
 # Optable Prebid Analytics Addon
 
-This addon integrates Optable analytics with Prebid.js, allowing you to send auction and bid data to Optable for analysis. It is designed to be used as a plugin within your Prebid.js setup.
+This addon integrates Optable analytics with Prebid.js, allowing you to send auction and bid data to Optable for analysis. It is designed to be used as a plugin within your Optable SDK setup.
 
 ## Installation
 
-1. **Include the Optable SDK and Analytics Addon**  
-   Make sure the Optable SDK and the analytics addon are loaded on your page, either via a bundler or by including them as scripts.
-
-2. **Configure Analytics**  
-   Use the following code snippet to enable analytics and configure the integration:
+1. **Configure Analytics**  
+   Use the following code snippet to enable analytics and configure the integration withing your Optable SDK wrapper:
 
    ```js
    import OptablePrebidAnalytics from './analytics';
