@@ -4,33 +4,37 @@ This addon integrates Optable analytics with Prebid.js, allowing you to send auc
 
 ## Installation
 
-1. **Configure Analytics**  
+1. **Configure Analytics**
    Use the following code snippet to enable analytics and configure the integration withing your Optable SDK wrapper:
 
    ```js
-   import OptablePrebidAnalytics from './analytics';
+   import OptablePrebidAnalytics from "./analytics";
    // ...
-   const tenant = 'my_tenant';
+   const tenant = "my_tenant";
    const analyticsSample = sessionStorage.optableEnableAnalytics || 0.1;
    window.optable.runAnalytics = analyticsSample > Math.random();
    // ...
 
-   window.optable.customAnalytics = function() {
-      const customAnalyticsObject = {};
-      // ...
-      return customAnalyticsObject;
-   }
+   window.optable.customAnalytics = function () {
+     const customAnalyticsObject = {};
+     // ...
+     return customAnalyticsObject;
+   };
    // ...
    if (window.optable.runAnalytics && tenant) {
      window.optable[`${tenant}_analytics`] = new window.optable.SDK({
-       host: 'na.edge.optable.co',
-       node: 'analytics',
-       site: 'analytics',
+       host: "na.edge.optable.co",
+       node: "analytics",
+       site: "analytics",
        readOnly: true,
        cookies: false,
      });
 
-     window.optable.analytics = new OptablePrebidAnalytics(window.optable[`${tenant}_analytics`], { analytics: true, tenant, debug: !!sessionStorage.optableDebug });
+     window.optable.analytics = new OptablePrebidAnalytics(window.optable[`${tenant}_analytics`], {
+       analytics: true,
+       tenant,
+       debug: !!sessionStorage.optableDebug,
+     });
      window.optable.analytics.hookIntoPrebid(window.pbjs);
    }
    // ...
@@ -41,34 +45,35 @@ This addon integrates Optable analytics with Prebid.js, allowing you to send auc
 
 ## Usage
 
-- **Sampling**:  
+- **Sampling**:
   The `analyticsSample` variable controls the sampling rate. Set it to a float between 0 and 1 to control what fraction of users send analytics.
 
-- **Debugging**:  
+- **Debugging**:
   Set `sessionStorage.optableDebug` to `true` to force analytics to run and enable debug logging.
 
-- **Custom Analytics Data**:  
+- **Custom Analytics Data**:
   Implement `window.optable.customAnalytics` to return an object with custom data to be included in analytics events.
 
 ## API
 
 ### `OptablePrebidAnalytics`
 
-- **Constructor**:  
+- **Constructor**:
   `new OptablePrebidAnalytics(sdkInstance, options)`
+
   - `sdkInstance`: An instance of the Optable SDK.
   - `options`: Object with options such as `debug`, `analytics`, and `tenant`.
 
-- **hookIntoPrebid(pbjs)**:  
+- **hookIntoPrebid(pbjs)**:
   Hooks the analytics into the provided Prebid.js instance.
 
 ## Example
 
 ```js
-window.optable.customAnalytics = function() {
+window.optable.customAnalytics = function () {
   return {
-    pageType: 'homepage',
-    userSegment: 'premium'
+    pageType: "homepage",
+    userSegment: "premium",
   };
 };
 ```
