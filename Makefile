@@ -20,12 +20,11 @@ deps:
 	npm ci
 
 export SDK_URI ?= https://localhost:8181/sdk.js
-export DCN_HOST ?= sandbox.optable.co
+export DCN_HOST ?= ca.edge.optable.co
 export DCN_SITE ?= web-sdk-demo
-export DCN_NODE ?=
-export DCN_LEGACY_HOST_CACHE ?=
+export DCN_NODE ?= optable
+export DCN_LEGACY_HOST_CACHE ?= sandbox.optable.co
 export DCN_INIT ?= true
-export DCN_ID ?= optable
 export UID2_BASE_URL ?= https://operator-integ.uidapi.com
 
 .PHONY: demos
@@ -37,7 +36,6 @@ DEMO_VARS:='\
 	DCN_SITE=$${DCN_SITE} \
 	DCN_NODE=$${DCN_NODE} \
 	DCN_LEGACY_HOST_CACHE=$${DCN_LEGACY_HOST_CACHE} \
-	DCN_ID=$${DCN_ID} \
 	DCN_INIT=$${DCN_INIT} \
 	ADS_SITE=$${ADS_SITE} \
 	ADS_HOST=$${ADS_HOST} \

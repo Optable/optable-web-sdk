@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.27.0",
+    "@optable/web-sdk": "^0.40.0",
     "iab-openrtb": "^1.0.1",
     "js-sha256": "^0.11.0",
     "regenerator-runtime": "^0.13.7"

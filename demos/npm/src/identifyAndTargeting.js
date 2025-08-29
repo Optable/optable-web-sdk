@@ -1,8 +1,12 @@
 import OptableSDK from "@optable/web-sdk";
 
 const sdk = new OptableSDK({
-  // host of the DCN (not of the website that will serve this JS).
-  host: "sandbox.optable.co",
+  // host of the MCI Edge service.
+  host: "ca.edge.optable.co",
+  // node ID of the DCN.
+  node: "optable",
+  // legacy host cache of the DCN (for backwards compatibility).
+  legacyHostCache: "sandbox.optable.co",
   // slug of the site created in the DCN. Make sure the site source you created allows traffic from the
   // domain you are going to serve this JS (tip: for test purposes ONLY, use `.*` as the regular expression
   // for the allowed HTTP origins).
