@@ -60,7 +60,6 @@ This addon integrates Optable analytics with Prebid.js, allowing you to send auc
 
 - **Constructor**:
   `new OptablePrebidAnalytics(sdkInstance, options)`
-
   - `sdkInstance`: An instance of the Optable SDK.
   - `options`: Object with options such as `debug`, `analytics`, and `tenant`.
 
