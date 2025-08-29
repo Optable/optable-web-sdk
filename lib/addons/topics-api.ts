@@ -71,16 +71,19 @@ OptableSDK.prototype.ingestTopics = function () {
         return;
       }
 
-      const traits = topics.reduce((acc, topic) => {
-        const traitKey = `topics_v${topic.taxonomyVersion}`;
-        if (acc[traitKey]) {
-          acc[traitKey] += ",";
-        } else {
-          acc[traitKey] = "";
-        }
-        acc[traitKey] += String(topic.topic);
-        return acc;
-      }, {} as Record<string, string>);
+      const traits = topics.reduce(
+        (acc, topic) => {
+          const traitKey = `topics_v${topic.taxonomyVersion}`;
+          if (acc[traitKey]) {
+            acc[traitKey] += ",";
+          } else {
+            acc[traitKey] = "";
+          }
+          acc[traitKey] += String(topic.topic);
+          return acc;
+        },
+        {} as Record<string, string>
+      );
 
       this.profile(traits);
     })
