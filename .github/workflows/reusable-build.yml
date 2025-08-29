@@ -65,10 +65,10 @@ jobs:
       ADS_HOST: ads.optable.co
       ADS_REGION: ca
       ADS_SITE: ${{ vars.ADS_SITE }}
-      DCN_HOST: sandbox.optable.co
+      DCN_HOST: ca.edge.optable.co
       DCN_SITE: web-sdk-demo
-      DCN_ID: optable
-      DCN_INSECURE: "false"
+      DCN_NODE: optable
+      DCN_LEGACY_HOST_CACHE: sandbox.optable.co
       DCN_INIT: "true"
       UID2_BASE_URL: ${{ vars.UID2_BASE_URL }}
     steps:
