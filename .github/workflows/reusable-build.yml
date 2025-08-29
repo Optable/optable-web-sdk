@@ -62,9 +62,6 @@ jobs:
     env:
       # The ref_name (tag) is not relevant when it runs on something other than a tag so we use latest
       SDK_URI: https://cdn.optable.co/web-sdk/${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}/sdk.js
-      ADS_HOST: ads.optable.co
-      ADS_REGION: ca
-      ADS_SITE: ${{ vars.ADS_SITE }}
       DCN_HOST: sandbox.optable.co
       DCN_SITE: web-sdk-demo
       DCN_ID: optable
