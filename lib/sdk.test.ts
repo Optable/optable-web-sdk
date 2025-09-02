@@ -119,24 +119,6 @@ describe("Breaking change detection: if typescript complains or a test fails it'
     expect(typeof result2).toBe("object");
   });
 
-  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: site", async () => {
-    const result = await new OptableSDK({ ...defaultConfig }).site();
-    ["interestGroupPixel", "auctionConfigURL", "auctionConfig", "getTopicsURL"].forEach((key) =>
-      expect(Object.keys(result)).toContain(key)
-    );
-  });
-
-  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: siteFromCache", async () => {
-    const result = new OptableSDK({ ...defaultConfig }).siteFromCache();
-    expect(result).toBeNull();
-
-    await new OptableSDK({ ...defaultConfig }).site();
-    const result2 = new OptableSDK({ ...defaultConfig }).siteFromCache() as SiteResponse;
-    ["interestGroupPixel", "auctionConfigURL", "auctionConfig", "getTopicsURL"].forEach((key) =>
-      expect(Object.keys(result2)).toContain(key)
-    );
-  });
-
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: targetingClearCache", () => {
     new OptableSDK({ ...defaultConfig }).targetingClearCache();
   });
@@ -425,12 +407,7 @@ describe("behavior testing of", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
 
     const site = await sdk.site();
-    expect(site).toEqual({
-      auctionConfig: null,
-      auctionConfigURL: "",
-      getTopicsURL: "https://ads.optable.co/ca/topics/v1/get?origin=70cc15ee-484c-4d26-8868-c949a5c084b8",
-      interestGroupPixel: "",
-    });
+    expect(site).toEqual({});
 
     expect(fetchSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({

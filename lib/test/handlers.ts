@@ -17,12 +17,7 @@ const passport: EdgePassport = {
 
 const handlers = [
   http.get(`${TEST_BASE_URL}/config`, async ({}) => {
-    const data: SiteResponse = {
-      interestGroupPixel: "",
-      auctionConfigURL: "",
-      auctionConfig: null,
-      getTopicsURL: "https://ads.optable.co/ca/topics/v1/get?origin=70cc15ee-484c-4d26-8868-c949a5c084b8",
-    };
+    const data: SiteResponse = {};
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 

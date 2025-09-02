@@ -16,12 +16,7 @@ type AuctionConfig = {
   auctionSignals?: any;
 };
 
-type SiteResponse = {
-  interestGroupPixel: string;
-  auctionConfig?: AuctionConfig | null;
-  auctionConfigURL?: string;
-  getTopicsURL: string;
-};
+type SiteResponse = {};
 
 // Grab the site configuration from the server and store it in local storage
 async function Site(config: ResolvedConfig): Promise<SiteResponse> {
