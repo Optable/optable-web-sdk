@@ -4,8 +4,6 @@ import { resolveMultiNodeTargeting } from "../lib/core/resolvers/resolveMultiTar
 import OptableSDK, { InitConfig } from "../lib/sdk";
 import "../lib/addons/gpt";
 import "../lib/addons/try-identify";
-import "../lib/addons/paapi";
-import "../lib/addons/topics-api";
 
 type OptableGlobal = {
   cmd: Commands | Function[];
