@@ -26,9 +26,6 @@ export DCN_NODE ?=
 export DCN_LEGACY_HOST_CACHE ?=
 export DCN_INIT ?= true
 export DCN_ID ?= optable
-export ADS_HOST ?= ads.optable.co
-export ADS_REGION ?= ca
-export ADS_SITE ?= 4fe7c1ce-7c7d-4718-a0b8-5195e489319f
 export UID2_BASE_URL ?= https://operator-integ.uidapi.com
 
 .PHONY: demos
@@ -62,12 +59,6 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
-	envsubst $(DEMO_VARS) < demos/ads/protected-audience/advertiser.html.tpl > demos/ads/protected-audience/advertiser.html
-	envsubst $(DEMO_VARS) < demos/ads/protected-audience/publisher.html.tpl > demos/ads/protected-audience/publisher.html
-	envsubst $(DEMO_VARS) < demos/ads/protected-audience/publisher-gam.html.tpl > demos/ads/protected-audience/publisher-gam.html
-	envsubst $(DEMO_VARS) < demos/ads/protected-audience/publisher-prebid.html.tpl > demos/ads/protected-audience/publisher-prebid.html
-	envsubst $(DEMO_VARS) < demos/ads/protected-audience/ad.html.tpl > demos/ads/protected-audience/ad.html
-	envsubst $(DEMO_VARS) < demos/ads/topics/publisher.html.tpl > demos/ads/topics/publisher.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
 	envsubst $(DEMO_VARS) < demos/vanilla/pair/index.html.tpl > demos/vanilla/pair/index.html

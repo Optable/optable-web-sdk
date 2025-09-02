@@ -6,9 +6,4 @@ server {
   ssl_certificate_key /etc/nginx/tls/key.pem;
   ssl_protocols TLSv1.3;
   ssl_prefer_server_ciphers off;
-
-  location /ads/protected-audience/ {
-    add_header Ad-Auction-Allowed true;
-    add_header Supports-Loading-Mode fenced-frame;
-  }
 }
