@@ -9,5 +9,5 @@
     "lib": ["DOM", "DOM.Iterable", "ES6"]
   },
   "include": ["./build.json", "."],
-  "exclude": ["./**/*.test.ts", "./test", "./dist"]
+  "exclude": ["./**/*.test.ts", "./**/*.test.js", "./test", "./dist"]
 }
