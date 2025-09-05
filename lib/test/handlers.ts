@@ -16,16 +16,16 @@ const passport: EdgePassport = {
 };
 
 const handlers = [
-  http.get(`${TEST_BASE_URL}/config`, async ({ }) => {
+  http.get(`${TEST_BASE_URL}/config`, async ({}) => {
     const data: SiteResponse = {};
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
-  http.post(`${TEST_BASE_URL}/identify`, async ({ }) => {
+  http.post(`${TEST_BASE_URL}/identify`, async ({}) => {
     return HttpResponse.json({ ...passport }, ok200);
   }),
 
-  http.post(`${TEST_BASE_URL}/uid2/token`, async ({ }) => {
+  http.post(`${TEST_BASE_URL}/uid2/token`, async ({}) => {
     const data: Uid2TokenResponse = {
       advertising_token: "gfsdgsdfgsdeagdfs",
       RefreshToken: "dasdasdasdas",
@@ -37,22 +37,22 @@ const handlers = [
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
-  http.post(`${TEST_BASE_URL}/witness`, async ({ }) => {
+  http.post(`${TEST_BASE_URL}/witness`, async ({}) => {
     return HttpResponse.json({ ...passport }, ok200);
   }),
 
-  http.post(`${TEST_BASE_URL}/profile`, async ({ }) => {
+  http.post(`${TEST_BASE_URL}/profile`, async ({}) => {
     return HttpResponse.json({ ...passport }, ok200);
   }),
 
-  http.get(`${TEST_BASE_URL}/v1/resolve`, async ({ }) => {
+  http.get(`${TEST_BASE_URL}/v1/resolve`, async ({}) => {
     const data: ResolveResponse = {
       clusters: [],
     };
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
-  http.post(`${TEST_BASE_URL}/v2/tokenize`, async ({ }) => {
+  http.post(`${TEST_BASE_URL}/v2/tokenize`, async ({}) => {
     const data: TokenizeResponse = {
       User: {
         data: [],
@@ -62,7 +62,7 @@ const handlers = [
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
-  http.get(`${TEST_BASE_URL}/v2/targeting`, async ({ }) => {
+  http.get(`${TEST_BASE_URL}/v2/targeting`, async ({}) => {
     const data: TargetingResponse = {
       audience: [],
       user: [],
@@ -70,7 +70,7 @@ const handlers = [
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
-  http.get(`${TEST_BASE_URL}/v1/resolve`, async ({ }) => {
+  http.get(`${TEST_BASE_URL}/v1/resolve`, async ({}) => {
     const data: ResolveResponse = {
       clusters: [],
     };
