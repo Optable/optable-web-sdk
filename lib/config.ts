@@ -1,7 +1,7 @@
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 
-type Experiment = "tokenize-v2" | "targeting-cascade";
+type Experiment = never
 
 type MatcherOverride = {
   id: string;

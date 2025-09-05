@@ -377,11 +377,8 @@ describe("behavior testing of", () => {
       })
     );
 
-    await expect(sdk.targeting({ ids: ["someId", "someOtherId"] })).rejects.toMatch(/targeting-cascade/);
-
     await expect(sdk.targeting(3)).rejects.toMatch(/Expected string or object/);
 
-    sdk.dcn.experiments = ["targeting-cascade"];
     const targetingWithParam = await sdk.targeting({ ids: ["someId", "someOtherId"] });
 
     expect(fetchSpy).toHaveBeenLastCalledWith(
@@ -461,20 +458,6 @@ describe("behavior testing of", () => {
   test("tokenize", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
     const sdk = new OptableSDK({ ...defaultConfig });
-
-    await sdk.tokenize("someId");
-    expect(fetchSpy).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        method: "POST",
-        _bodyText: '{"id":"someId"}',
-        url: expect.stringContaining("v1/tokenize"),
-      })
-    );
-  });
-
-  test("tokenize supports v2 experiment", async () => {
-    const fetchSpy = jest.spyOn(window, "fetch");
-    const sdk = new OptableSDK({ ...defaultConfig, experiments: ["tokenize-v2"] });
 
     await sdk.tokenize("someId");
     expect(fetchSpy).toHaveBeenLastCalledWith(
