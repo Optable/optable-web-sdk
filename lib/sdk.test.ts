@@ -485,6 +485,18 @@ describe("behavior testing of", () => {
       })
     );
   });
+
+  test("supports passing a timeout to edge calls", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({ ...defaultConfig, timeout: "30ms" });
+    await sdk.targeting("someId");
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "GET",
+        url: expect.stringContaining("&timeout=30ms"),
+      })
+    );
+  });
 });
 
 describe("normalizeTargetingRequest", () => {
