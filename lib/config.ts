@@ -59,6 +59,10 @@ type InitConfig = {
   abTests?: ABTestConfig[];
   // Additional targeting signals to pass to the targeting call
   additionalTargetingSignals?: TargetingSignals;
+  // Timeout hint for API calls (must include unit, e.g. '100ms', '2s', '1m')
+  // When provided, the server will attempt to answer within the given time limit.
+  // Some APIs like targeting may return partial responses depending at which stage the timeout occurred.
+  timeout?: string;
 };
 
 type ResolvedConfig = {
@@ -78,6 +82,7 @@ type ResolvedConfig = {
   initTargeting?: boolean;
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
+  timeout?: string;
 };
 
 const DCN_DEFAULTS = {
@@ -112,6 +117,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     initTargeting: init.initTargeting,
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
+    timeout: init.timeout,
   };
 
   if (init.consent?.static) {

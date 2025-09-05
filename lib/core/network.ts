@@ -41,6 +41,10 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     url.searchParams.set("ro", "true");
   }
 
+  if (config.timeout) {
+    url.searchParams.set("timeout", config.timeout);
+  }
+
   if (cookies) {
     url.searchParams.set("cookies", "yes");
   } else {
