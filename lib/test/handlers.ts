@@ -52,16 +52,6 @@ const handlers = [
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
 
-  http.post(`${TEST_BASE_URL}/v1/tokenize`, async ({}) => {
-    const data: TokenizeResponse = {
-      User: {
-        data: [],
-        ext: undefined,
-      },
-    };
-    return HttpResponse.json({ ...data, ...passport }, ok200);
-  }),
-
   http.post(`${TEST_BASE_URL}/v2/tokenize`, async ({}) => {
     const data: TokenizeResponse = {
       User: {

@@ -59,10 +59,6 @@ class OptableSDK {
   async targeting(input: string | TargetingRequest = "__passport__"): Promise<TargetingResponse> {
     const request = normalizeTargetingRequest(input);
 
-    if (request.ids.length > 1 && !this.dcn.experiments.includes("targeting-cascade")) {
-      throw "Targeting multiple IDs is only available with the 'targeting-cascade' experiment enabled.";
-    }
-
     await this.init;
     return Targeting(this.dcn, request);
   }
