@@ -34,6 +34,8 @@ type TargetingResponse = {
   refs?: Record<string, unknown>;
   // Identifiers that matched and were used to generate the targeting response.
   resolved_ids?: string[];
+  // A/B test ID
+  ab_test_id?: string;
 };
 
 // Determine which A/B test (if any) should be used for this request
