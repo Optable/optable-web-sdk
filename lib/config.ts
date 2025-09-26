@@ -12,6 +12,8 @@ type ABTestConfig = {
   id: string;
   trafficPercentage: number;
   matcher_override?: MatcherOverride[];
+  // SkipMatchers specifies the list of matchers (node_id)s to skip. To skip 1p, simply send 1p
+  skipMatchers?: string[];
 };
 
 type TargetingSignals = {
@@ -140,5 +142,5 @@ function generateSessionID(): string {
     .replace(/=+$/g, "");
 }
 
-export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig, ABTestConfig, MatcherOverride };
+export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig, ABTestConfig, MatcherOverride, Experiment };
 export { getConfig, DCN_DEFAULTS, generateSessionID };

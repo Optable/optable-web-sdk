@@ -1,4 +1,4 @@
-import { DCN_DEFAULTS, getConfig } from "./config";
+import { DCN_DEFAULTS, Experiment, getConfig } from "./config";
 
 const defaultConsent = DCN_DEFAULTS.consent;
 
@@ -29,7 +29,7 @@ describe("getConfig", () => {
         readOnly: true,
         node: "my-node",
         legacyHostCache: "legacy-cache",
-        experiments: ["tokenize-v2"],
+        experiments: ["tokenize-v2"] as Experiment[],
         sessionID: "my-session-id",
         skipEnrichment: true,
         optableCacheTargeting: "my-public-key",
@@ -51,11 +51,14 @@ describe("getConfig", () => {
   });
 
   it("infers regulation and gathers consent when using cmpapi", () => {
-    const spy = jest.spyOn(Intl, "DateTimeFormat").mockImplementation(() => ({
-      resolvedOptions: () => ({
-        timeZone: "America/New_York",
-      }),
-    }));
+    const spy = jest.spyOn(Intl, "DateTimeFormat").mockImplementation(
+      () =>
+        ({
+          resolvedOptions: () => ({
+            timeZone: "America/New_York",
+          }),
+        }) as Intl.DateTimeFormat
+    );
 
     const config = getConfig({
       host: "host",
