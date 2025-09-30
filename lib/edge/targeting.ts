@@ -77,6 +77,9 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
         searchParams.append("matcher_override", override.id);
       });
     }
+    if (abTest.skipMatchers) {
+      searchParams.append("skip_matchers", abTest.skipMatchers.join(","));
+    }
   }
 
   if (config.additionalTargetingSignals?.ref) {
