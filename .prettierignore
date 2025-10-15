@@ -8,3 +8,7 @@ lib/dist
 demos
 *.svg
 prebid.js
+
+# rtd module
+# temporary to keep git history when moving to web-sdk repo
+lib/core/rtd/rtd.js
