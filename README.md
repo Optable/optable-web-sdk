@@ -114,9 +114,6 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`cookies` (boolean, default: `true`)**
   If `true`, enables the use of browser cookies for storage.
 
-- **`legacyHostCache` (string)**
-  Used when migrating from one DCN host to another. If specified, it retains the previous cache state when switching hosts.
-
 - **`initPassport` (boolean, default: `true`)**
   If `true`, initializes the user passport (identity mechanism) upon SDK load.
 

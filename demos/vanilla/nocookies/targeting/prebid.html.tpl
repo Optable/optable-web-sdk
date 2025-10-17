@@ -28,7 +28,6 @@
           site: "${DCN_SITE}",
           cookies: false,
           node: "${DCN_NODE}",
-          legacyHostCache: "${DCN_LEGACY_HOST_CACHE}",
           initTargeting: true,
         });
 
