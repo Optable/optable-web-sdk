@@ -46,13 +46,10 @@ async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<Mu
   };
 
   function processTokens(response: TargetingResponse, matcher?: string, mm?: IDMatchMethod) {
-    const { resolved_ids = [] } = response;
     const { data = [], eids = [] } = response.ortb2?.user ?? {};
     ortb2.user!.data!.push(...data);
 
-    for (const id of resolved_ids) {
-      resolvedIds.add(id);
-    }
+    response.resolved_ids?.forEach((id) => resolvedIds.add(id));
 
     eids
       .filter((x) => x.uids.length)
