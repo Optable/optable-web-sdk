@@ -24,3 +24,4 @@ COPY --chmod=0444 ./index.html ./index.html
 COPY --chmod=0444 ./index-nocookies.html ./index-nocookies.html
 COPY --chmod=0444 ./css/ ./css/
 COPY --chmod=0444 ./images/ ./images/
+COPY --chmod=0444 ./well-known/adagents.json ./well-known/adagents.json
