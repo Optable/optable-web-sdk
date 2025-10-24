@@ -89,7 +89,7 @@
         <div class="twelve column" style="font-size: 0.8rem; padding: 10px;">
           <center>
             <a href="https://www.optable.co/">Home</a> | <a href="https://www.optable.co/company/contact">Contact</a> |
-            <a href="https://optable.co/privacy">Privacy</a> |
+            <a href="https://terms.optable.co/">Terms</a> |
             <a href="https://www.linkedin.com/company/optableco/">LinkedIn</a> |
             <a href="https://twitter.com/optable_co">Twitter</a>
           </center>
