@@ -16,7 +16,8 @@ interface EID {
 }
 
 interface EIDSource {
-  route: string;
+  routes?: string[];
+  route?: string;
   mergeStrategy?: MergeStrategy;
 }
 
@@ -134,31 +135,31 @@ function appendNewMergeStrategy(
 }
 
 const defaultEIDSources: { [source: string]: EIDSource } = {
-  "adnxs.com": { route: "appnexus" },
-  "adsrvr.org": { route: "global" },
-  "adserver.org": { route: "global" },
-  "audigent.com": { route: "global" },
-  "bidswitch.net": { route: "global" },
-  "bridge.criteo.com": { route: "global" },
-  "criteo-hemapi.com": { route: "global" },
-  "epsilon.com": { route: "global" },
-  "gumgum.com": { route: "gumgum" },
-  "indexexchange.com": { route: "ix" },
-  "kargo.com": { route: "kargo" },
-  "openx.com": { route: "openx" },
-  "pubmatic.com": { route: "pubmatic" },
-  "rubiconproject.com": { route: "rubicon" },
-  "smartadserver.com": { route: "smartadserver" },
-  "sovrn.com": { route: "sovrn" },
-  "triplelift.com": { route: "triplelift" },
-  "uidapi.com": { route: "global" },
-  "yahoo.com": { route: "global" },
-  "yieldmo.com": { route: "yieldmo" },
+  "adnxs.com": { routes: ["appnexus", "appnexus_s2s", "appnexus-s2s"] },
+  "adsrvr.org": { routes: ["global"] },
+  "adserver.org": { routes: ["global"] },
+  "audigent.com": { routes: ["global"] },
+  "bidswitch.net": { routes: ["global"] },
+  "bridge.criteo.com": { routes: ["global"] },
+  "criteo-hemapi.com": { routes: ["global"] },
+  "epsilon.com": { routes: ["global"] },
+  "gumgum.com": { routes: ["gumgum", "gumgum_s2s", "gumgum-s2s"] },
+  "indexexchange.com": { routes: ["ix", "ix_s2s", "ix-s2s"] },
+  "kargo.com": { routes: ["kargo", "kargo_s2s", "kargo-s2s"] },
+  "openx.com": { routes: ["openx", "openx_s2s", "openx-s2s"] },
+  "pubmatic.com": { routes: ["pubmatic", "pubmatic_s2s", "pubmatic-s2s"] },
+  "rubiconproject.com": { routes: ["rubicon", "rubicon_s2s", "rubicon-s2s"] },
+  "smartadserver.com": { routes: ["smartadserver", "smartadserver_s2s", "smartadserver-s2s"] },
+  "sovrn.com": { routes: ["sovrn", "sovrn_s2s", "sovrn-s2s"] },
+  "triplelift.com": { routes: ["triplelift", "triplelift_s2s", "triplelift-s2s"] },
+  "uidapi.com": { routes: ["global"] },
+  "yahoo.com": { routes: ["global"] },
+  "yieldmo.com": { routes: ["yieldmo", "yieldmo_s2s", "yieldmo-s2s"] },
 };
 
 function forceGlobalRouting(): void {
   Object.values(defaultEIDSources).forEach((source) => {
-    source.route = "global";
+    source.routes = ["global"];
   });
 }
 
@@ -269,17 +270,19 @@ function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, target
       return;
     }
 
-    const route = config.eidSources[eid.source]?.route;
-    if (!route) {
-      config.log("warn", `EID with unsupported source: ${eid.source}`);
+    const eidSourceConfig = config.eidSources[eid.source];
+    const routes = eidSourceConfig?.routes ?? (eidSourceConfig?.route ? [eidSourceConfig.route] : null);
+    if (!routes || !Array.isArray(routes) || routes.length === 0) {
+      config.log("warn", `EID with source ${eid.source} has no supported routes`);
       skippedEids += 1;
       return;
     }
 
-    eidsPerRoute[route] = eidsPerRoute[route] ?? { user: { ext: { eids: [] } } };
-    eidsPerRoute[route].user!.ext!.eids!.push(eid);
-
-    config.log("info", `EID with source ${eid.source} routed to ${route}`);
+    routes.forEach((route) => {
+      eidsPerRoute[route] = eidsPerRoute[route] ?? { user: { ext: { eids: [] } } };
+      eidsPerRoute[route].user!.ext!.eids!.push(eid);
+      config.log("info", `EID with source ${eid.source} routed to ${route}`);
+    });
     processedEids += 1;
   });
 
