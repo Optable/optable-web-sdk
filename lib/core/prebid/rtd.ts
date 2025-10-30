@@ -92,11 +92,7 @@ function prependMergeStrategy(existingEids: EID[], newEids: EID[]): EID[] {
   return [...newEids, ...existingEids];
 }
 
-function replaceMergeStrategy(
-  existingEids: EID[], 
-  newEids: EID[], 
-  key: (e: EID) => string = (e) => e.source
-): EID[] {
+function replaceMergeStrategy(existingEids: EID[], newEids: EID[], key: (e: EID) => string = (e) => e.source): EID[] {
   const existingByKey = existingEids.reduce((acc: { [key: string]: EID[] }, eid) => {
     acc[key(eid)] = acc[key(eid)] ?? [];
     acc[key(eid)].push(eid);
@@ -113,11 +109,7 @@ function replaceMergeStrategy(
   return result.flat();
 }
 
-function appendNewMergeStrategy(
-  existingEids: EID[], 
-  newEids: EID[], 
-  key: (e: EID) => string = (e) => e.source
-): EID[] {
+function appendNewMergeStrategy(existingEids: EID[], newEids: EID[], key: (e: EID) => string = (e) => e.source): EID[] {
   const existingByKey = existingEids.reduce((acc: { [key: string]: EID[] }, eid) => {
     acc[key(eid)] = acc[key(eid)] ?? [];
     acc[key(eid)].push(eid);
@@ -219,11 +211,12 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
   /* eslint-enable no-param-reassign */
   let skipped = 0;
 
-  const eidsBySource = sourceORTB2.user?.ext?.eids?.reduce((acc: { [source: string]: EID[] }, eid) => {
-    acc[eid.source] = acc[eid.source] ?? [];
-    acc[eid.source].push(eid);
-    return acc;
-  }, {}) || {};
+  const eidsBySource =
+    sourceORTB2.user?.ext?.eids?.reduce((acc: { [source: string]: EID[] }, eid) => {
+      acc[eid.source] = acc[eid.source] ?? [];
+      acc[eid.source].push(eid);
+      return acc;
+    }, {}) || {};
 
   Object.entries(eidsBySource).forEach(([eidSource, eids]) => {
     if (config.skipMerge(targetORTB2, eidSource)) {
@@ -309,9 +302,11 @@ function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, target
 }
 
 function liveIntentUID2(ortb2: ORTB2): boolean {
-  return ortb2.user?.ext?.eids?.some(
-    (eid) => eid.source === "uidapi.com" && eid.uids.some((uid) => uid.ext?.provider === "liveintent.com")
-  ) || false;
+  return (
+    ortb2.user?.ext?.eids?.some(
+      (eid) => eid.source === "uidapi.com" && eid.uids.some((uid) => uid.ext?.provider === "liveintent.com")
+    ) || false
+  );
 }
 
 function buildRTD(options: RTDOptions = {}): RTDConfig {
