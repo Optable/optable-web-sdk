@@ -25,7 +25,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "jest-localstorage-mock": "^2.4.26",
     "msw": "^2.6.9",
-    "prettier": "3.6.2",
+    "prettier": "^3.6.2",
     "shellcheck": "^3.0.0",
     "typescript": "^5.2.2",
     "webpack": "^5.97.1",
