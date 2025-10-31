@@ -8,11 +8,9 @@ interface EID {
     atype?: number;
     ext?: {
       provider?: string;
-      [key: string]: any;
     };
   }>;
   matcher?: string;
-  [key: string]: any;
 }
 
 interface EIDSource {
@@ -25,13 +23,11 @@ interface ORTB2User {
   eids?: EID[];
   ext?: {
     eids?: EID[];
-    [key: string]: any;
   };
 }
 
 interface ORTB2 {
   user?: ORTB2User;
-  [key: string]: any;
 }
 
 interface TargetingData {
@@ -40,7 +36,6 @@ interface TargetingData {
       eids?: EID[];
     };
   };
-  [key: string]: any;
 }
 
 interface ReqBidsConfigObj {
@@ -50,7 +45,6 @@ interface ReqBidsConfigObj {
       [bidderName: string]: ORTB2;
     };
   };
-  [key: string]: any;
 }
 
 type MergeStrategy = (existingEids: EID[], newEids: EID[], key?: (eid: EID) => string) => EID[];
@@ -63,6 +57,7 @@ interface RTDConfig {
   optableCacheTargeting: string;
   matcherFilter: string[];
   matcherExclude: string[];
+  mergeStrategy?: MergeStrategy;
   appendMergeStrategy: MergeStrategy;
   prependMergeStrategy: MergeStrategy;
   replaceMergeStrategy: MergeStrategy;
@@ -194,7 +189,7 @@ function readTargetingData(config: RTDConfig): TargetingData {
 }
 
 function mergeStrategy(config: RTDConfig, eidSource: string): MergeStrategy {
-  const strategy = config.eidSources[eidSource]?.mergeStrategy || (config as any).mergeStrategy;
+  const strategy = config.eidSources[eidSource]?.mergeStrategy || config.mergeStrategy;
   if (strategy) {
     return strategy;
   }
@@ -330,6 +325,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     optableCacheTargeting: options.optableCacheTargeting ?? "OPTABLE_RESOLVED",
     matcherFilter: options.matcherFilter ?? [],
     matcherExclude: options.matcherExclude ?? [],
+    mergeStrategy: options.mergeStrategy,
     appendMergeStrategy,
     prependMergeStrategy,
     replaceMergeStrategy,
