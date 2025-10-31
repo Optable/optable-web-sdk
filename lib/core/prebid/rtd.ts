@@ -1,22 +1,100 @@
 // RTD (Real-Time Data) module for Prebid.js integration
-//
+
+// Type definitions
+interface EID {
+  source: string;
+  uids: Array<{
+    id?: string;
+    atype?: number;
+    ext?: {
+      provider?: string;
+    };
+  }>;
+  matcher?: string;
+}
+
+interface EIDSource {
+  routes?: string[];
+  route?: string;
+  mergeStrategy?: MergeStrategy;
+}
+
+interface ORTB2User {
+  eids?: EID[];
+  ext?: {
+    eids?: EID[];
+  };
+}
+
+interface ORTB2 {
+  user?: ORTB2User;
+}
+
+interface TargetingData {
+  ortb2?: {
+    user?: {
+      eids?: EID[];
+    };
+  };
+}
+
+interface ReqBidsConfigObj {
+  ortb2Fragments: {
+    global: ORTB2;
+    bidder: {
+      [bidderName: string]: ORTB2;
+    };
+  };
+}
+
+type MergeStrategy = (existingEids: EID[], newEids: EID[], key?: (eid: EID) => string) => EID[];
+
+interface RTDConfig {
+  enableLogging: boolean;
+  log: (level: string, message: string, ...args: any[]) => void;
+  eidSources: { [source: string]: EIDSource };
+  skipMerge: (targetORTB2: ORTB2, eidSource: string) => boolean;
+  optableCacheTargeting: string;
+  matcherFilter: string[];
+  matcherExclude: string[];
+  mergeStrategy?: MergeStrategy;
+  appendMergeStrategy: MergeStrategy;
+  prependMergeStrategy: MergeStrategy;
+  replaceMergeStrategy: MergeStrategy;
+  appendNewMergeStrategy: MergeStrategy;
+  targetingFromCache: (config?: RTDConfig) => TargetingData | null;
+  handleRtd: (reqBidsConfigObj: ReqBidsConfigObj) => Promise<void | null>;
+}
+
+interface RTDOptions {
+  enableLogging?: boolean;
+  eidSources?: { [source: string]: EIDSource };
+  skipMerge?: (targetORTB2: ORTB2, eidSource: string) => boolean;
+  optableCacheTargeting?: string;
+  matcherFilter?: string[];
+  matcherExclude?: string[];
+  targetingData?: TargetingData;
+  forceGlobalRouting?: boolean;
+  mergeStrategy?: MergeStrategy;
+}
+
 // Merge strategies for EIDs
-function appendMergeStrategy(existingEids, newEids) {
+function appendMergeStrategy(existingEids: EID[], newEids: EID[]): EID[] {
   return [...existingEids, ...newEids];
 }
 
-function prependMergeStrategy(existingEids, newEids) {
+function prependMergeStrategy(existingEids: EID[], newEids: EID[]): EID[] {
   return [...newEids, ...existingEids];
 }
 
-function replaceMergeStrategy(existingEids, newEids, key = (e) => e.source) {
-  const existingByKey = existingEids.reduce((acc, eid) => {
+function replaceMergeStrategy(existingEids: EID[], newEids: EID[], key: (e: EID) => string = (e) => e.source): EID[] {
+  const existingByKey = existingEids.reduce((acc: { [key: string]: EID[] }, eid) => {
     acc[key(eid)] = acc[key(eid)] ?? [];
     acc[key(eid)].push(eid);
     return acc;
   }, {});
 
-  const newByKey = newEids.reduce((acc, eid) => {
+  const newByKey = newEids.reduce((acc: { [key: string]: EID[] }, eid) => {
     acc[key(eid)] = acc[key(eid)] ?? [];
     acc[key(eid)].push(eid);
     return acc;
@@ -26,14 +104,14 @@ function replaceMergeStrategy(existingEids, newEids, key = (e) => e.source) {
   return result.flat();
 }
 
-function appendNewMergeStrategy(existingEids, newEids, key = (e) => e.source) {
-  const existingByKey = existingEids.reduce((acc, eid) => {
+function appendNewMergeStrategy(existingEids: EID[], newEids: EID[], key: (e: EID) => string = (e) => e.source): EID[] {
+  const existingByKey = existingEids.reduce((acc: { [key: string]: EID[] }, eid) => {
     acc[key(eid)] = acc[key(eid)] ?? [];
     acc[key(eid)].push(eid);
     return acc;
   }, {});
 
-  const newByKey = newEids.reduce((acc, eid) => {
+  const newByKey = newEids.reduce((acc: { [key: string]: EID[] }, eid) => {
     acc[key(eid)] = acc[key(eid)] ?? [];
     acc[key(eid)].push(eid);
     return acc;
@@ -43,7 +121,7 @@ function appendNewMergeStrategy(existingEids, newEids, key = (e) => e.source) {
   return result.flat();
 }
 
-const defaultEIDSources = {
+const defaultEIDSources: { [source: string]: EIDSource } = {
   "adnxs.com": { routes: ["appnexus", "appnexus_s2s", "appnexus-s2s"] },
   "adsrvr.org": { routes: ["global"] },
   "adserver.org": { routes: ["global"] },
@@ -66,24 +144,24 @@ const defaultEIDSources = {
   "yieldmo.com": { routes: ["yieldmo", "yieldmo_s2s", "yieldmo-s2s"] },
 };
 
-function forceGlobalRouting() {
+function forceGlobalRouting(): void {
   Object.values(defaultEIDSources).forEach((source) => {
     source.routes = ["global"];
   });
 }
 
 // Simple logging utility
-function log(level, message, ...args) {
+function log(level: string, message: string, ...args: any[]): void {
   const prefix = "Optable RTD:";
 
   const logMethod = ["error", "warn", "info"].includes(level) ? level : "log";
-  console[logMethod](`${prefix} ${message}`, ...args); // eslint-disable-line no-console
+  (console as any)[logMethod](`${prefix} ${message}`, ...args); // eslint-disable-line no-console
 }
 
 // Helper function to get targeting data from cache
-function targetingFromCache(config = {}) {
+function targetingFromCache(config: RTDConfig = {} as RTDConfig): TargetingData | null {
   try {
-    return JSON.parse(localStorage.getItem(config.optableCacheTargeting ?? "OPTABLE_RESOLVED"));
+    return JSON.parse(localStorage.getItem(config.optableCacheTargeting ?? "OPTABLE_RESOLVED") || "null");
   } catch (error) {
     config.log("error", "Failed to parse cached targeting data:", error);
     return null;
@@ -91,7 +169,7 @@ function targetingFromCache(config = {}) {
 }
 
 // Get targeting data from cache, if available
-function readTargetingData(config) {
+function readTargetingData(config: RTDConfig): TargetingData {
   const cachedData = targetingFromCache(config);
   if (!cachedData) {
     config.log("info", "No cached targeting data found");
@@ -110,7 +188,7 @@ function readTargetingData(config) {
   return targetingData;
 }
 
-function mergeStrategy(config, eidSource) {
+function mergeStrategy(config: RTDConfig, eidSource: string): MergeStrategy {
   const strategy = config.eidSources[eidSource]?.mergeStrategy || config.mergeStrategy;
   if (strategy) {
     return strategy;
@@ -120,7 +198,7 @@ function mergeStrategy(config, eidSource) {
   return appendMergeStrategy;
 }
 
-function merge(config, targetORTB2, sourceORTB2) {
+function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): number {
   /* eslint-disable no-param-reassign */
   targetORTB2.user = targetORTB2.user ?? {};
   targetORTB2.user.ext = targetORTB2.user.ext ?? {};
@@ -128,11 +206,12 @@ function merge(config, targetORTB2, sourceORTB2) {
   /* eslint-enable no-param-reassign */
   let skipped = 0;
 
-  const eidsBySource = sourceORTB2.user.ext.eids.reduce((acc, eid) => {
-    acc[eid.source] = acc[eid.source] ?? [];
-    acc[eid.source].push(eid);
-    return acc;
-  }, {});
+  const eidsBySource =
+    sourceORTB2.user?.ext?.eids?.reduce((acc: { [source: string]: EID[] }, eid) => {
+      acc[eid.source] = acc[eid.source] ?? [];
+      acc[eid.source].push(eid);
+      return acc;
+    }, {}) || {};
 
   Object.entries(eidsBySource).forEach(([eidSource, eids]) => {
     if (config.skipMerge(targetORTB2, eidSource)) {
@@ -142,17 +221,17 @@ function merge(config, targetORTB2, sourceORTB2) {
 
     const mergeFn = mergeStrategy(config, eidSource);
     // eslint-disable-next-line no-param-reassign
-    targetORTB2.user.ext.eids = mergeFn(targetORTB2.user.ext.eids, eids);
+    targetORTB2.user!.ext!.eids = mergeFn(targetORTB2.user!.ext!.eids!, eids);
   });
   return skipped;
 }
 
 // Custom handleRtd function to merge targeting data into the reqBidsConfigObj
-function handleRtd(config, reqBidsConfigObj, targetingData) {
+function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, targetingData: TargetingData): void {
   config.log("info", "Starting handleRtd function");
 
   // Filter EIDs for global ORTB2 and collect bidder-specific EIDs
-  const eidsPerRoute = {};
+  const eidsPerRoute: { [route: string]: ORTB2 } = {};
   let processedEids = 0;
   let skippedEids = 0;
 
@@ -166,14 +245,14 @@ function handleRtd(config, reqBidsConfigObj, targetingData) {
     }
 
     // Apply matcher filter
-    if (config.matcherFilter.length > 0 && !config.matcherFilter.includes(eid.matcher)) {
+    if (config.matcherFilter.length > 0 && !config.matcherFilter.includes(eid.matcher || "")) {
       config.log("info", `EID with source ${eid.source} filtered out by matcher filter (matcher: ${eid.matcher})`);
       skippedEids += 1;
       return;
     }
 
     // Apply matcher exclusions
-    if (config.matcherExclude.length > 0 && config.matcherExclude.includes(eid.matcher)) {
+    if (config.matcherExclude.length > 0 && config.matcherExclude.includes(eid.matcher || "")) {
       config.log("info", `EID with source ${eid.source} excluded (matcher: ${eid.matcher})`);
       skippedEids += 1;
       return;
@@ -189,7 +268,7 @@ function handleRtd(config, reqBidsConfigObj, targetingData) {
 
     routes.forEach((route) => {
       eidsPerRoute[route] = eidsPerRoute[route] ?? { user: { ext: { eids: [] } } };
-      eidsPerRoute[route].user.ext.eids.push(eid);
+      eidsPerRoute[route].user!.ext!.eids!.push(eid);
       config.log("info", `EID with source ${eid.source} routed to ${route}`);
     });
     processedEids += 1;
@@ -199,7 +278,7 @@ function handleRtd(config, reqBidsConfigObj, targetingData) {
   let bidderEidsCount = 0;
 
   Object.entries(eidsPerRoute).forEach(([route, ortb2]) => {
-    const count = ortb2.user.ext.eids.length;
+    const count = ortb2.user?.ext?.eids?.length || 0;
     if (route === "global") {
       globalEidsCount += count;
       skippedEids += merge(config, reqBidsConfigObj.ortb2Fragments.global, ortb2);
@@ -217,22 +296,25 @@ function handleRtd(config, reqBidsConfigObj, targetingData) {
   config.log("info", "Successfully completed handleRtd function");
 }
 
-function liveIntentUID2(ortb2) {
-  return ortb2.user?.ext?.eids?.some(
-    (eid) => eid.source === "uidapi.com" && eid.uids.some((uid) => uid.ext?.provider === "liveintent.com")
+// @ts-ignore
+function liveIntentUID2(ortb2: ORTB2): boolean {
+  return (
+    ortb2.user?.ext?.eids?.some(
+      (eid) => eid.source === "uidapi.com" && eid.uids.some((uid) => uid.ext?.provider === "liveintent.com")
+    ) || false
   );
 }
 
-function buildRTD(options = {}) {
+function buildRTD(options: RTDOptions = {}): RTDConfig {
   if (sessionStorage.optableForceGlobalRouting || options.forceGlobalRouting) {
     forceGlobalRouting();
   }
 
   return {
     enableLogging: sessionStorage.optableDebug ?? options.enableLogging ?? false,
-    log(...args) {
+    log(level: string, message: string, ...args: any[]) {
       if (this.enableLogging) {
-        log(...args);
+        log(level, message, ...args);
       }
     },
     eidSources: options.eidSources ?? { ...defaultEIDSources },
@@ -244,12 +326,13 @@ function buildRTD(options = {}) {
     optableCacheTargeting: options.optableCacheTargeting ?? "OPTABLE_RESOLVED",
     matcherFilter: options.matcherFilter ?? [],
     matcherExclude: options.matcherExclude ?? [],
+    mergeStrategy: options.mergeStrategy,
     appendMergeStrategy,
     prependMergeStrategy,
     replaceMergeStrategy,
     appendNewMergeStrategy,
     targetingFromCache,
-    async handleRtd(reqBidsConfigObj) {
+    async handleRtd(reqBidsConfigObj: ReqBidsConfigObj): Promise<void | null> {
       const targetingData = options.targetingData ?? readTargetingData(this);
       try {
         return handleRtd(this, reqBidsConfigObj, targetingData);
@@ -269,4 +352,13 @@ export {
   replaceMergeStrategy,
   appendNewMergeStrategy,
   defaultEIDSources,
+  type EID,
+  type EIDSource,
+  type ORTB2,
+  type ORTB2User,
+  type TargetingData,
+  type ReqBidsConfigObj,
+  type RTDConfig,
+  type RTDOptions,
+  type MergeStrategy,
 };
