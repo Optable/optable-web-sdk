@@ -296,6 +296,7 @@ function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, target
   config.log("info", "Successfully completed handleRtd function");
 }
 
+// @ts-ignore
 function liveIntentUID2(ortb2: ORTB2): boolean {
   return (
     ortb2.user?.ext?.eids?.some(
