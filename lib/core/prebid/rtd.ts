@@ -123,13 +123,6 @@ function appendNewMergeStrategy(existingEids: EID[], newEids: EID[], key: (e: EI
 
 const defaultEIDSources: { [source: string]: EIDSource } = {
   "adnxs.com": { routes: ["appnexus", "appnexus_s2s", "appnexus-s2s"] },
-  "adsrvr.org": { routes: ["global"] },
-  "adserver.org": { routes: ["global"] },
-  "audigent.com": { routes: ["global"] },
-  "bidswitch.net": { routes: ["global"] },
-  "bridge.criteo.com": { routes: ["global"] },
-  "criteo-hemapi.com": { routes: ["global"] },
-  "epsilon.com": { routes: ["global"] },
   "gumgum.com": { routes: ["gumgum", "gumgum_s2s", "gumgum-s2s"] },
   "indexexchange.com": { routes: ["ix", "ix_s2s", "ix-s2s"] },
   "kargo.com": { routes: ["kargo", "kargo_s2s", "kargo-s2s"] },
@@ -139,8 +132,6 @@ const defaultEIDSources: { [source: string]: EIDSource } = {
   "smartadserver.com": { routes: ["smartadserver", "smartadserver_s2s", "smartadserver-s2s"] },
   "sovrn.com": { routes: ["sovrn", "sovrn_s2s", "sovrn-s2s"] },
   "triplelift.com": { routes: ["triplelift", "triplelift_s2s", "triplelift-s2s"] },
-  "uidapi.com": { routes: ["global"] },
-  "yahoo.com": { routes: ["global"] },
   "yieldmo.com": { routes: ["yieldmo", "yieldmo_s2s", "yieldmo-s2s"] },
 };
 
@@ -259,7 +250,7 @@ function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, target
     }
 
     const eidSourceConfig = config.eidSources[eid.source];
-    const routes = eidSourceConfig?.routes ?? (eidSourceConfig?.route ? [eidSourceConfig.route] : null);
+    const routes = eidSourceConfig?.routes ?? (eidSourceConfig?.route ? [eidSourceConfig.route] : ["global"]);
     if (!routes || !Array.isArray(routes) || routes.length === 0) {
       config.log("warn", `EID with source ${eid.source} has no supported routes`);
       skippedEids += 1;
