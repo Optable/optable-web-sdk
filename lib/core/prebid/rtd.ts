@@ -186,7 +186,7 @@ function mergeStrategy(config: RTDConfig, eidSource: string): MergeStrategy {
   }
 
   config.log("warn", `No merge strategy defined globally or for EID source: ${eidSource}. Using append.`);
-  return appendMergeStrategy;
+  return appendNewMergeStrategy;
 }
 
 function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): number {
