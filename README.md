@@ -290,7 +290,7 @@ const eventProperties = {
   property_three: false,
 };
 
-sdk.witness("event.type.here", eventProperties).then(onSuccess).catch(onFailure);
+sdk.witness("event_type_here", eventProperties).then(onSuccess).catch(onFailure);
 ```
 
 The specified event type and properties are associated with the logged event and which can be used for matching during audience assembly.
@@ -518,6 +518,8 @@ To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.co
   });
 </script>
 ```
+
+The emitted event types are `googletag_events_slotRenderEnded` and `googletag_events_impressionViewable`.
 
 Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
 
