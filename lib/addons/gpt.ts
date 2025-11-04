@@ -38,10 +38,10 @@ OptableSDK.prototype.installGPTEventListeners = function () {
 
   gpt.cmd.push(function () {
     gpt.pubads().addEventListener("slotRenderEnded", function (event: any) {
-      sdk.witness("googletag.events.slotRenderEnded", toWitnessProperties(event));
+      sdk.witness("googletag_events_slotRenderEnded", toWitnessProperties(event));
     });
     gpt.pubads().addEventListener("impressionViewable", function (event: any) {
-      sdk.witness("googletag.events.impressionViewable", toWitnessProperties(event));
+      sdk.witness("googletag_events_impressionViewable", toWitnessProperties(event));
     });
   });
 };
