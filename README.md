@@ -519,7 +519,7 @@ To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.co
 </script>
 ```
 
-The emitted event types are `googletag_events_slotRenderEnded` and `googletag_events_impressionViewable`.
+The emitted event types are `gpt_events_slotRenderEnded` and `gpt_events_impressionViewable`.
 
 Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
 
