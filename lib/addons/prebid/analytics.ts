@@ -322,7 +322,7 @@ class OptablePrebidAnalytics {
     const payload = await this.toWitness(auction.auctionEnd, event, missed);
     payload["auctionEndAt"] = auction.createdAt.toISOString();
     payload["bidWonAt"] = new Date().toISOString();
-    payload["missed"] = missed;
+    payload["optableLoaded"] = !missed;
 
     this.sendToWitnessAPI("optable.prebid.auction", payload);
   }
@@ -377,7 +377,7 @@ class OptablePrebidAnalytics {
         bidderCode,
         bidderRequestId,
         domain,
-        hasOptable: optableEIDS.length > 0,
+        optableTargetingDone: optableEIDS.length > 0,
         optableMatchers,
         optableSources,
         status: STATUS.REQUESTED,
@@ -409,6 +409,7 @@ class OptablePrebidAnalytics {
         br.optableSources.forEach((s: unknown) => oSourcesSet.add(s));
 
         return {
+          optableTargetingDone: br.optableTargetingDone,
           bidderCode: br.bidderCode,
           bids: br.bids.map((b: any) => {
             adUnitCode = adUnitCode || b.adUnitCode;
@@ -423,6 +424,8 @@ class OptablePrebidAnalytics {
       adUnitCode,
       totalRequests: bidderRequests.length,
       totalBids,
+      optableSampling: this.config.samplingRate || 1,
+      optableTargetingDone: oMatchersSet.size || oSourcesSet.size,
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
       bidWon: {
@@ -442,6 +445,7 @@ class OptablePrebidAnalytics {
       tenant: this.config.tenant!,
       // eslint-disable-next-line no-undef
       optableWrapperVersion: SDK_WRAPPER_VERSION || "unknown",
+      userAgent: window.navigator.userAgent,
     };
 
     // Log summary with bid counts
