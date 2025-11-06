@@ -52,6 +52,7 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/gam360-adcp.html.tpl > demos/vanilla/targeting/gam360-adcp.html
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
+	envsubst $(DEMO_VARS) < demos/vanilla/targeting/prebid-rtd.html.tpl > demos/vanilla/targeting/prebid-rtd.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
