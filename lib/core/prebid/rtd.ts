@@ -1,7 +1,5 @@
 // RTD (Real-Time Data) module for Prebid.js integration
 
-import OptableSDK from "sdk";
-
 // Type definitions
 interface EID {
   source: string;
@@ -66,7 +64,7 @@ interface RTDConfig {
   appendNewMergeStrategy: MergeStrategy;
   targetingFromCache: (config?: RTDConfig) => TargetingData | null;
   handleRtd: (reqBidsConfigObj: ReqBidsConfigObj) => Promise<void | null>;
-  instance: OptableSDK;
+  instance: string;
 }
 
 interface RTDOptions {
@@ -79,7 +77,7 @@ interface RTDOptions {
   targetingData?: TargetingData;
   forceGlobalRouting?: boolean;
   mergeStrategy?: MergeStrategy;
-  instance?: OptableSDK;
+  instance?: string;
 }
 
 // Merge strategies for EIDs
