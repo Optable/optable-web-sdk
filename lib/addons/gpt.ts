@@ -10,16 +10,16 @@ declare module "../sdk" {
 
 function toWitnessProperties(event: any): WitnessProperties {
   return {
-    advertiserId: event.advertiserId?.toString() as string,
-    campaignId: event.campaignId?.toString() as string,
-    creativeId: event.creativeId?.toString() as string,
-    isEmpty: event.isEmpty?.toString() as string,
-    lineItemId: event.lineItemId?.toString() as string,
-    serviceName: event.serviceName?.toString() as string,
+    advertiser_id: event.advertiserId?.toString() as string,
+    campaign_id: event.campaignId?.toString() as string,
+    creative_id: event.creativeId?.toString() as string,
+    is_empty: event.isEmpty?.toString() as string,
+    line_item_id: event.lineItemId?.toString() as string,
+    service_name: event.serviceName?.toString() as string,
     size: event.size?.toString() as string,
-    slotElementId: event.slot?.getSlotElementId() as string,
-    sourceAgnosticCreativeId: event.sourceAgnosticCreativeId?.toString() as string,
-    sourceAgnosticLineItemId: event.sourceAgnosticLineItemId?.toString() as string,
+    slot_element_id: event.slot?.getSlotElementId() as string,
+    source_agnostic_creative_id: event.sourceAgnosticCreativeId?.toString() as string,
+    source_agnostic_line_item_id: event.sourceAgnosticLineItemId?.toString() as string,
   };
 }
 
