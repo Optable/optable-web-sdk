@@ -335,12 +335,14 @@ class OptablePrebidAnalytics {
     };
     this.log("bidWon filtered event", filteredEvent);
 
-    this.log("bidWon event", event);
-
     const auction = this.auctions.get(event.auctionId);
     if (!auction) {
       this.log("Missing 'auctionEnd' event. Skipping.");
       return;
+    }
+
+    if (auction.auctionEndTimeoutId) {
+      clearTimeout(auction.auctionEndTimeoutId);
     }
 
     const payload = await this.toWitness(auction.auctionEnd, event, missed);
@@ -349,6 +351,8 @@ class OptablePrebidAnalytics {
     payload["optableLoaded"] = !missed;
 
     this.sendToWitnessAPI("optable.prebid.auction", payload);
+
+    this.auctions.delete(event.auctionId);
   }
 
   /**
