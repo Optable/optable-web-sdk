@@ -3,6 +3,8 @@
 import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
 
+import * as Bowser from "bowser";
+
 declare const SDK_WRAPPER_VERSION: string;
 
 declare global {
@@ -19,10 +21,14 @@ const STATUS = {
   TIMEOUT: "TIMEOUT",
 };
 
+const SESSION_SAMPLE_KEY = "optable:prebid:analytics:sample-number";
+
 interface OptablePrebidAnalyticsConfig {
   debug?: boolean;
   analytics?: boolean;
   tenant?: string;
+  bidWinTimeout?: number;
+  samplingVolume?: "session" | "event";
   samplingSeed?: string;
   samplingRate?: number;
   samplingRateFn?: () => boolean;
@@ -30,6 +36,7 @@ interface OptablePrebidAnalyticsConfig {
 
 interface AuctionItem {
   auctionEnd: unknown | null;
+  auctionEndTimeoutId: NodeJS.Timeout | null;
   missed: boolean;
   createdAt: Date;
 }
@@ -44,14 +51,22 @@ class OptablePrebidAnalytics {
 
   constructor(
     private readonly optableInstance: OptableSDK,
-    private config: OptablePrebidAnalyticsConfig = {}
+    private config: OptablePrebidAnalyticsConfig = { samplingRate: 1, samplingVolume: "event", bidWinTimeout: 10_000 }
   ) {
     if (!optableInstance || typeof optableInstance.witness !== "function") {
       throw new Error("OptablePrebidAnalytics requires a valid optable instance with witness() method");
     }
 
     this.config.debug = config.debug ?? false;
+    this.config.bidWinTimeout = config.bidWinTimeout ?? 10_000;
     this.config.samplingRate = config.samplingRate ?? 1;
+    this.config.samplingVolume = config.samplingVolume ?? "event";
+
+    if (this.config.samplingVolume === "session") {
+      sessionStorage.setItem(SESSION_SAMPLE_KEY, Math.random().toFixed(2));
+    } else {
+      sessionStorage.removeItem(SESSION_SAMPLE_KEY);
+    }
 
     this.isInitialized = true;
 
@@ -76,6 +91,11 @@ class OptablePrebidAnalytics {
 
     if (this.config.samplingRateFn) {
       return this.config.samplingRateFn();
+    }
+
+    if (this.config.samplingVolume === "session") {
+      const samplingNumber = Number(sessionStorage.getItem(SESSION_SAMPLE_KEY) || "1");
+      return samplingNumber < this.config.samplingRate!;
     }
 
     // Optional: deterministic sampling by seed (e.g., user ID)
@@ -168,17 +188,9 @@ class OptablePrebidAnalytics {
       auctionId,
       timeout,
       bidderRequests: bidderRequests.map((br: any) => {
-        const {
-          bidderCode,
-          bidderRequestId,
-          ortb2: {
-            site: { domain },
-            user: {
-              ext: { eids },
-            },
-          },
-          bids = [],
-        } = br;
+        const { bidderCode, bidderRequestId, bids = [] } = br;
+        const domain = br.ortb2.site?.domain ?? "unknown";
+        const eids = br.ortb2.user?.eids ?? [];
 
         // Optable EIDs
         const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
@@ -296,8 +308,18 @@ class OptablePrebidAnalytics {
       });
     });
 
+    const createdAt = new Date();
+    const auctionEndTimeoutId = setTimeout(async () => {
+      const payload = await this.toWitness(event, null, missed);
+      payload["auctionEndAt"] = createdAt.toISOString();
+      payload["bidWonAt"] = null;
+      payload["optableLoaded"] = !missed;
+
+      this.sendToWitnessAPI("optable.prebid.auction", payload);
+    }, this.config.bidWinTimeout);
+
     // Store the processed auction
-    this.auctions.set(auctionId, { auctionEnd: event, createdAt: new Date(), missed });
+    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId });
 
     // Clean up old auctions
     this.cleanupOldAuctions();
@@ -312,6 +334,8 @@ class OptablePrebidAnalytics {
       missed,
     };
     this.log("bidWon filtered event", filteredEvent);
+
+    this.log("bidWon event", event);
 
     const auction = this.auctions.get(event.auctionId);
     if (!auction) {
@@ -347,7 +371,7 @@ class OptablePrebidAnalytics {
     this.log("All analytics data cleared");
   }
 
-  async toWitness(auctionEndEvent: any, bidWonEvent: any, missed = false): Promise<Record<string, any>> {
+  async toWitness(auctionEndEvent: any, bidWonEvent: any | null, missed = false): Promise<Record<string, any>> {
     const { auctionId, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = auctionEndEvent;
 
     const oMatchersSet = new Set();
@@ -356,17 +380,9 @@ class OptablePrebidAnalytics {
     let totalBids = 0;
 
     const requests = bidderRequests.map((br: any) => {
-      const {
-        bidderCode,
-        bidderRequestId,
-        ortb2: {
-          site: { domain },
-          user: {
-            ext: { eids },
-          },
-        },
-        bids = [],
-      } = br;
+      const { bidderCode, bidderRequestId, bids = [] } = br;
+      const domain = br.ortb2.site?.domain ?? "unknown";
+      const eids = br.ortb2.user?.eids ?? [];
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
@@ -377,6 +393,7 @@ class OptablePrebidAnalytics {
         bidderCode,
         bidderRequestId,
         domain,
+        device: br.ortb2.device,
         optableTargetingDone: optableEIDS.length > 0,
         optableMatchers,
         optableSources,
@@ -408,44 +425,36 @@ class OptablePrebidAnalytics {
         br.optableMatchers.forEach((m: unknown) => oMatchersSet.add(m));
         br.optableSources.forEach((s: unknown) => oSourcesSet.add(s));
 
-        return {
-          optableTargetingDone: br.optableTargetingDone,
-          bidderCode: br.bidderCode,
-          bids: br.bids.map((b: any) => {
-            adUnitCode = adUnitCode || b.adUnitCode;
-
-            if (b.cpm != null) totalBids += 1;
-
-            return { floorMin: b.floorMin, cpm: b.cpm, size: b.size, bidId: b.bidId };
-          }),
-        };
+        return br;
       }),
       auctionId,
       adUnitCode,
       totalRequests: bidderRequests.length,
-      totalBids,
       optableSampling: this.config.samplingRate || 1,
       optableTargetingDone: oMatchersSet.size || oSourcesSet.size,
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
-      bidWon: {
-        message:
-          bidWonEvent.bidderCode +
-          " won the ad server auction for ad unit " +
-          bidWonEvent.adUnitCode +
-          " at " +
-          bidWonEvent.cpm +
-          " CPM",
-        bidderCode: bidWonEvent.bidderCode,
-        adUnitCode: bidWonEvent.adUnitCode,
-        cpm: bidWonEvent.cmp,
-      },
+      bidWon: bidWonEvent
+        ? {
+            message:
+              bidWonEvent.bidderCode +
+              " won the ad server auction for ad unit " +
+              bidWonEvent.adUnitCode +
+              " at " +
+              bidWonEvent.cpm +
+              " CPM",
+            bidderCode: bidWonEvent.bidderCode,
+            adUnitCode: bidWonEvent.adUnitCode,
+            cpm: bidWonEvent.cpm,
+          }
+        : null,
       missed,
       url: `${window.location.hostname}${window.location.pathname}`,
       tenant: this.config.tenant!,
       // eslint-disable-next-line no-undef
       optableWrapperVersion: SDK_WRAPPER_VERSION || "unknown",
-      userAgent: window.navigator.userAgent,
+      userAgentRaw: window.navigator.userAgent,
+      userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
     };
 
     // Log summary with bid counts

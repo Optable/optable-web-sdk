@@ -165,9 +165,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
-                },
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
               },
             },
             bids: [
@@ -199,7 +197,6 @@ describe("OptablePrebidAnalytics", () => {
         auctionId: "auction-123",
         adUnitCode: "unknown",
         totalRequests: 1,
-        totalBids: 0,
         optableMatchers: ["matcher1"],
         optableSources: ["source1"],
         tenant: "test-tenant",
@@ -235,9 +232,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -277,9 +272,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -309,9 +302,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -362,9 +353,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -410,9 +399,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -551,9 +538,7 @@ describe("OptablePrebidAnalytics", () => {
               ortb2: {
                 site: { domain: "example.com" },
                 user: {
-                  ext: {
-                    eids: [],
-                  },
+                  eids: [],
                 },
               },
               bids: [],
@@ -592,9 +577,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -667,9 +650,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [
@@ -714,9 +695,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -744,9 +723,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -781,9 +758,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
-                },
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
               },
             },
             bids: [],
@@ -794,9 +769,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [{ inserter: "optable.co", matcher: "matcher2", source: "source2" }],
-                },
+                eids: [{ inserter: "optable.co", matcher: "matcher2", source: "source2" }],
               },
             },
             bids: [],
@@ -831,12 +804,10 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [
-                    { inserter: "optable.co", matcher: "matcher1", source: "source1" },
-                    { inserter: "other.com", matcher: "other-matcher", source: "other-source" },
-                  ],
-                },
+                eids: [
+                  { inserter: "optable.co", matcher: "matcher1", source: "source1" },
+                  { inserter: "other.com", matcher: "other-matcher", source: "other-source" },
+                ],
               },
             },
             bids: [],
@@ -875,9 +846,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -925,9 +894,7 @@ describe("OptablePrebidAnalytics", () => {
                   ortb2: {
                     site: { domain: "example.com" },
                     user: {
-                      ext: {
-                        eids: [],
-                      },
+                      eids: [],
                     },
                   },
                   bids: [],
@@ -972,9 +939,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -1045,9 +1010,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [],
@@ -1083,9 +1046,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [
@@ -1133,9 +1094,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [
@@ -1171,9 +1130,7 @@ describe("OptablePrebidAnalytics", () => {
             ortb2: {
               site: { domain: "example.com" },
               user: {
-                ext: {
-                  eids: [],
-                },
+                eids: [],
               },
             },
             bids: [
