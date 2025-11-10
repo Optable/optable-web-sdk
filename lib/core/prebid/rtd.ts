@@ -325,7 +325,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     replaceMergeStrategy,
     appendNewMergeStrategy,
     targetingFromCache,
-    instance: options.instance ?? 'instance',
+    instance: options.instance ?? "instance",
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj): Promise<void | null> {
       const targetingData = options.targetingData ?? readTargetingData(this);
       try {
