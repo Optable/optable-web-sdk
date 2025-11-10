@@ -64,6 +64,7 @@ interface RTDConfig {
   appendNewMergeStrategy: MergeStrategy;
   targetingFromCache: (config?: RTDConfig) => TargetingData | null;
   handleRtd: (reqBidsConfigObj: ReqBidsConfigObj) => Promise<void | null>;
+  instance: string;
 }
 
 interface RTDOptions {
@@ -76,6 +77,7 @@ interface RTDOptions {
   targetingData?: TargetingData;
   forceGlobalRouting?: boolean;
   mergeStrategy?: MergeStrategy;
+  instance?: string;
 }
 
 // Merge strategies for EIDs
@@ -323,6 +325,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     replaceMergeStrategy,
     appendNewMergeStrategy,
     targetingFromCache,
+    instance: options.instance ?? "instance",
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj): Promise<void | null> {
       const targetingData = options.targetingData ?? readTargetingData(this);
       try {
