@@ -220,7 +220,13 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
 }
 
 // Custom handleRtd function to merge targeting data into the reqBidsConfigObj
-function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, targetingData: TargetingData, _optableExtraData?: any, _mergeFn?: any): void {
+function handleRtd(
+  config: RTDConfig,
+  reqBidsConfigObj: ReqBidsConfigObj,
+  targetingData: TargetingData,
+  _optableExtraData?: any,
+  _mergeFn?: any
+): void {
   config.log("info", "Starting handleRtd function");
 
   // Filter EIDs for global ORTB2 and collect bidder-specific EIDs
