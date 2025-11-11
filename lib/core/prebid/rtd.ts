@@ -63,7 +63,7 @@ interface RTDConfig {
   replaceMergeStrategy: MergeStrategy;
   appendNewMergeStrategy: MergeStrategy;
   targetingFromCache: (config?: RTDConfig) => TargetingData | null;
-  handleRtd: (reqBidsConfigObj: ReqBidsConfigObj) => Promise<void | null>;
+  handleRtd: (reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any) => Promise<void | null>;
   instance: string;
 }
 
@@ -326,7 +326,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     appendNewMergeStrategy,
     targetingFromCache,
     instance: options.instance ?? "instance",
-    async handleRtd(reqBidsConfigObj: ReqBidsConfigObj): Promise<void | null> {
+    async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
       const targetingData = options.targetingData ?? readTargetingData(this);
       try {
         return handleRtd(this, reqBidsConfigObj, targetingData);
