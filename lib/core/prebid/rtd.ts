@@ -220,7 +220,7 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
 }
 
 // Custom handleRtd function to merge targeting data into the reqBidsConfigObj
-function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, targetingData: TargetingData): void {
+function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, targetingData: TargetingData, _optableExtraData?: any, _mergeFn?: any): void {
   config.log("info", "Starting handleRtd function");
 
   // Filter EIDs for global ORTB2 and collect bidder-specific EIDs
@@ -329,7 +329,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
       const targetingData = options.targetingData ?? readTargetingData(this);
       try {
-        return handleRtd(this, reqBidsConfigObj, targetingData);
+        return handleRtd(this, reqBidsConfigObj, targetingData, optableExtraData, mergeFn);
       } catch (error) {
         this.log("error", "Unexpected error in handleRtd function:", error);
       }
