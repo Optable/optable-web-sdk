@@ -1,5 +1,6 @@
 import Commands from "./commands";
 import { resolveMultiNodeTargeting } from "../lib/core/resolvers/resolveMultiTargeting";
+import { buildRTD } from "../lib/core/prebid/rtd";
 
 import OptableSDK, { InitConfig } from "../lib/sdk";
 import "../lib/addons/gpt";
@@ -24,8 +25,8 @@ declare global {
 //
 window.optable = window.optable || {};
 window.optable.SDK = OptableSDK;
+window.optable.utils = { resolveMultiNodeTargeting, buildRTD };
 window.optable.cmd = new Commands(window.optable.cmd || []);
-window.optable.utils = { resolveMultiNodeTargeting };
 
 if (window.optable.instance_config) {
   window.optable.instance = new OptableSDK(window.optable.instance_config);
