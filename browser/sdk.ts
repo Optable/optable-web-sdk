@@ -2,6 +2,7 @@ import Commands from "./commands";
 import { resolveMultiNodeTargeting } from "../lib/core/resolvers/resolveMultiTargeting";
 
 import OptableSDK, { InitConfig } from "../lib/sdk";
+import OptablePrebidAnalytics from "../lib/addons/prebid/analytics";
 import "../lib/addons/gpt";
 import "../lib/addons/try-identify";
 
@@ -15,6 +16,7 @@ type OptableGlobal = {
 
 declare global {
   interface Window {
+    // @ts-ignore
     optable?: Partial<OptableGlobal>;
   }
 }
@@ -24,6 +26,7 @@ declare global {
 //
 window.optable = window.optable || {};
 window.optable.SDK = OptableSDK;
+window.optable.OptablePrebidAnalytics = OptablePrebidAnalytics;
 window.optable.cmd = new Commands(window.optable.cmd || []);
 window.optable.utils = { resolveMultiNodeTargeting };
 
