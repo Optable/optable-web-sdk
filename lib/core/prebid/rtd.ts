@@ -63,8 +63,9 @@ interface RTDConfig {
   replaceMergeStrategy: MergeStrategy;
   appendNewMergeStrategy: MergeStrategy;
   targetingFromCache: (config?: RTDConfig) => TargetingData | null;
-  handleRtd: (reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any) => Promise<void | null>;
+  handleRtd: (reqBidsConfigObj: ReqBidsConfigObj) => Promise<void | null>;
   instance: string;
+  waitForCache: boolean;
 }
 
 interface RTDOptions {
@@ -78,6 +79,7 @@ interface RTDOptions {
   forceGlobalRouting?: boolean;
   mergeStrategy?: MergeStrategy;
   instance?: string;
+  waitForCache?: boolean;
 }
 
 // Merge strategies for EIDs
@@ -162,14 +164,63 @@ function targetingFromCache(config: RTDConfig = {} as RTDConfig): TargetingData 
 }
 
 // Get targeting data from cache, if available
-function readTargetingData(config: RTDConfig): TargetingData {
+async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   const cachedData = targetingFromCache(config);
-  if (!cachedData) {
-    config.log("info", "No cached targeting data found");
-    return {};
+
+  // Get auction delay from pbjs config
+  const delay = (window as any)?.pbjs?.getConfig?.()?.realTimeData?.auctionDelay;
+
+  // If waitForCache is disabled, cache is not empty, or no delay configured, return immediately
+  if (!config.waitForCache || cachedData || !delay) {
+    if (!cachedData) {
+      config.log("info", "No cached targeting data found");
+      return {};
+    }
+
+    // Validate targeting data structure
+    if (!cachedData?.ortb2?.user?.eids || !Array.isArray(cachedData?.ortb2?.user?.eids)) {
+      config.log("info", "No valid targeting data found");
+      return {};
+    }
+
+    config.log("info", `Found targeting data with ${cachedData.ortb2.user.eids.length} EIDs`);
+    return cachedData;
   }
 
-  let targetingData = cachedData;
+  // Cache is empty and delay is configured - wait for event or timeout
+  config.log("info", `Waiting for targeting data (max ${delay}ms)`);
+
+  const targetingData = await new Promise<TargetingData | null>((resolve) => {
+    let resolved = false;
+
+    const eventHandler = () => {
+      if (!resolved) {
+        resolved = true;
+        config.log("info", "Received optable_resolved event");
+        const data = targetingFromCache(config);
+        resolve(data);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        config.log("warn", `Auction delay timeout (${delay}ms) - no targeting data available`);
+        window.removeEventListener("optable_resolved", eventHandler);
+        resolve(null);
+      }
+    }, delay);
+
+    window.addEventListener("optable_resolved", eventHandler, { once: true });
+
+    // Clean up timeout if event fires first
+    window.addEventListener("optable_resolved", () => clearTimeout(timeoutId), { once: true });
+  });
+
+  if (!targetingData) {
+    config.log("info", "No targeting data available after waiting");
+    return {};
+  }
 
   // Validate targeting data structure
   if (!targetingData?.ortb2?.user?.eids || !Array.isArray(targetingData?.ortb2?.user?.eids)) {
@@ -177,7 +228,7 @@ function readTargetingData(config: RTDConfig): TargetingData {
     return {};
   }
 
-  config.log("info", `Found targeting data with ${targetingData.ortb2.user.eids.length} EIDs`);
+  config.log("info", `Found targeting data with ${targetingData.ortb2.user.eids.length} EIDs after waiting`);
   return targetingData;
 }
 
@@ -220,13 +271,7 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
 }
 
 // Custom handleRtd function to merge targeting data into the reqBidsConfigObj
-function handleRtd(
-  config: RTDConfig,
-  reqBidsConfigObj: ReqBidsConfigObj,
-  targetingData: TargetingData,
-  _optableExtraData?: any,
-  _mergeFn?: any
-): void {
+function handleRtd(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj, targetingData: TargetingData): void {
   config.log("info", "Starting handleRtd function");
 
   // Filter EIDs for global ORTB2 and collect bidder-specific EIDs
@@ -332,10 +377,11 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     appendNewMergeStrategy,
     targetingFromCache,
     instance: options.instance ?? "instance",
-    async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
-      const targetingData = options.targetingData ?? readTargetingData(this);
+    waitForCache: options.waitForCache ?? false,
+    async handleRtd(reqBidsConfigObj: ReqBidsConfigObj): Promise<void | null> {
+      const targetingData = options.targetingData ?? (await readTargetingData(this));
       try {
-        return handleRtd(this, reqBidsConfigObj, targetingData, optableExtraData, mergeFn);
+        return handleRtd(this, reqBidsConfigObj, targetingData);
       } catch (error) {
         this.log("error", "Unexpected error in handleRtd function:", error);
       }
