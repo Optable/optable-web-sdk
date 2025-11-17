@@ -277,7 +277,8 @@ function handleRtd(
   targetingData: TargetingData,
   _optableExtraData?: any,
   _mergeFn?: any
-): void {  config.log("info", "Starting handleRtd function");
+): void {
+  config.log("info", "Starting handleRtd function");
 
   // Filter EIDs for global ORTB2 and collect bidder-specific EIDs
   const eidsPerRoute: { [route: string]: ORTB2 } = {};
@@ -384,7 +385,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     instance: options.instance ?? "instance",
     waitForCache: options.waitForCache ?? false,
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
-      const targetingData = options.targetingData ?? await readTargetingData(this);
+      const targetingData = options.targetingData ?? (await readTargetingData(this));
       try {
         return handleRtd(this, reqBidsConfigObj, targetingData, optableExtraData, mergeFn);
       } catch (error) {
