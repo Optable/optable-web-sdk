@@ -65,7 +65,7 @@ interface RTDConfig {
   targetingFromCache: (config?: RTDConfig) => TargetingData | null;
   handleRtd: (reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any) => Promise<void | null>;
   instance: string;
-  waitForCache: boolean;
+  waitForTargeting: boolean;
 }
 
 interface RTDOptions {
@@ -79,7 +79,7 @@ interface RTDOptions {
   forceGlobalRouting?: boolean;
   mergeStrategy?: MergeStrategy;
   instance?: string;
-  waitForCache?: boolean;
+  waitForTargeting?: boolean;
 }
 
 // Merge strategies for EIDs
@@ -170,8 +170,8 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   // Get auction delay from pbjs config
   const delay = (window as any)?.pbjs?.getConfig?.()?.realTimeData?.auctionDelay;
 
-  // If waitForCache is disabled, cache is not empty, or no delay configured, return immediately
-  if (!config.waitForCache || cachedData || !delay) {
+  // If waitForTargeting is disabled, cache is not empty, or no delay configured, return immediately
+  if (!config.waitForTargeting || cachedData || !delay) {
     if (!cachedData) {
       config.log("info", "No cached targeting data found");
       return {};
@@ -383,7 +383,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     appendNewMergeStrategy,
     targetingFromCache,
     instance: options.instance ?? "instance",
-    waitForCache: options.waitForCache ?? false,
+    waitForTargeting: options.waitForTargeting ?? false,
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
       const targetingData = options.targetingData ?? (await readTargetingData(this));
       try {
