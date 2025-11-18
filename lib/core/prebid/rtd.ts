@@ -178,7 +178,7 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
     }
 
     // Validate targeting data structure
-    if (!cachedData?.ortb2?.user?.eids || !Array.isArray(cachedData?.ortb2?.user?.eids)) {
+    if (!cachedData?.ortb2?.user?.eids || !Array.isArray(cachedData?.ortb2?.user?.eids) && Object.keys(cachedData?.ortb2?.user ?? {}).length > 0) {
       config.log("info", "No valid targeting data found");
       return {};
     }
