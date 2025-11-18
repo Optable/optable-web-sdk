@@ -65,6 +65,7 @@ interface RTDConfig {
   targetingFromCache: (config?: RTDConfig) => TargetingData | null;
   handleRtd: (reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any) => Promise<void | null>;
   instance: string;
+  waitForTargeting: boolean;
 }
 
 interface RTDOptions {
@@ -78,6 +79,7 @@ interface RTDOptions {
   forceGlobalRouting?: boolean;
   mergeStrategy?: MergeStrategy;
   instance?: string;
+  waitForTargeting?: boolean;
 }
 
 // Merge strategies for EIDs
@@ -162,14 +164,66 @@ function targetingFromCache(config: RTDConfig = {} as RTDConfig): TargetingData 
 }
 
 // Get targeting data from cache, if available
-function readTargetingData(config: RTDConfig): TargetingData {
+async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   const cachedData = targetingFromCache(config);
-  if (!cachedData) {
-    config.log("info", "No cached targeting data found");
-    return {};
+
+  // Get auction delay from pbjs config
+  const delay = (window as any)?.pbjs?.getConfig?.()?.realTimeData?.auctionDelay;
+
+  // If waitForTargeting is disabled, cache is not empty, or no delay configured, return immediately
+  if (!config.waitForTargeting || cachedData || !delay) {
+    if (!cachedData) {
+      config.log("info", "No cached targeting data found");
+      return {};
+    }
+
+    // Validate targeting data structure
+    if (
+      !cachedData?.ortb2?.user?.eids ||
+      (!Array.isArray(cachedData?.ortb2?.user?.eids) && Object.keys(cachedData?.ortb2?.user ?? {}).length > 0)
+    ) {
+      config.log("info", "No valid targeting data found");
+      return {};
+    }
+
+    config.log("info", `Found targeting data with ${cachedData.ortb2.user.eids.length} EIDs`);
+    return cachedData;
   }
 
-  let targetingData = cachedData;
+  // Cache is empty and delay is configured - wait for event or timeout
+  config.log("info", `Waiting for targeting data (max ${delay}ms)`);
+
+  const targetingData = await new Promise<TargetingData | null>((resolve) => {
+    let resolved = false;
+
+    const eventHandler = () => {
+      if (!resolved) {
+        resolved = true;
+        config.log("info", "Received optableResolved event");
+        const data = targetingFromCache(config);
+        resolve(data);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        config.log("warn", `Auction delay timeout (${delay}ms) - no targeting data available`);
+        window.removeEventListener("optableResolved", eventHandler);
+        resolve(null);
+      }
+    }, delay);
+
+    window.addEventListener("optableResolved", eventHandler, { once: true });
+
+    // Clean up timeout if event fires first
+    window.addEventListener("optableResolved", () => clearTimeout(timeoutId), { once: true });
+  });
+
+  if (!targetingData) {
+    config.log("info", "No targeting data available after waiting");
+    return {};
+  }
 
   // Validate targeting data structure
   if (!targetingData?.ortb2?.user?.eids || !Array.isArray(targetingData?.ortb2?.user?.eids)) {
@@ -177,7 +231,7 @@ function readTargetingData(config: RTDConfig): TargetingData {
     return {};
   }
 
-  config.log("info", `Found targeting data with ${targetingData.ortb2.user.eids.length} EIDs`);
+  config.log("info", `Found targeting data with ${targetingData.ortb2.user.eids.length} EIDs after waiting`);
   return targetingData;
 }
 
@@ -332,8 +386,9 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     appendNewMergeStrategy,
     targetingFromCache,
     instance: options.instance ?? "instance",
+    waitForTargeting: options.waitForTargeting ?? false,
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
-      const targetingData = options.targetingData ?? readTargetingData(this);
+      const targetingData = options.targetingData ?? (await readTargetingData(this));
       try {
         return handleRtd(this, reqBidsConfigObj, targetingData, optableExtraData, mergeFn);
       } catch (error) {
