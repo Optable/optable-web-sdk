@@ -8,12 +8,12 @@ type ProfileTraits = {
 function Profile(config: ResolvedConfig, traits: ProfileTraits, id: string | null = null, neighbors: string[] | null = null): Promise<void> {
   const profile: {
     traits: ProfileTraits;
-    id?: string | null;
-    neighbors?: string[] | null;
+    id?: string;
+    neighbors?: string[];
   } = {
     traits: traits,
-    id: id,
-    neighbors: neighbors,
+    ...(id && { id: id }),
+    ...(neighbors && { neighbors: neighbors }),
   };
 
   return fetch("/profile", config, {
