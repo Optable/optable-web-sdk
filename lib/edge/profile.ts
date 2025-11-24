@@ -5,9 +5,15 @@ type ProfileTraits = {
   [key: string]: string | number | boolean;
 };
 
-function Profile(config: ResolvedConfig, traits: ProfileTraits): Promise<void> {
-  const profile = {
+function Profile(config: ResolvedConfig, traits: ProfileTraits, id: string | null = null, neighbors: string[] | null = null): Promise<void> {
+  const profile: {
+    traits: ProfileTraits;
+    id?: string | null;
+    neighbors?: string[] | null;
+  } = {
     traits: traits,
+    id: id,
+    neighbors: neighbors,
   };
 
   return fetch("/profile", config, {
