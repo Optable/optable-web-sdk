@@ -536,16 +536,7 @@ optable.instance.installGPTEventListeners({
 ```
 The value for each event key can be "all" (to include all witness properties) or an array of property names from the set below (as mapped by the SDK):
 
-advertiser_id
-campaign_id
-creative_id
-is_empty
-line_item_id
-service_name
-size
-slot_element_id
-source_agnostic_creative_id
-source_agnostic_line_item_id
+`advertiser_id`, `campaign_id`, `creative_id`, `is_empty`, `line_item_id`, `service_name`, `size`, `slot_element_id`, `source_agnostic_creative_id`, `source_agnostic_line_item_id`.
 If no argument is provided, the default behavior is unchanged and both slotRenderEnded and impressionViewable are captured with all properties.
 
 Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
