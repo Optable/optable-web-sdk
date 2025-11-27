@@ -42,7 +42,7 @@ If you're building a web application or want to bundle the SDK functionality wit
 
 ```shell
 # latest stable release:
-$ npm install @optable/web-sdk
+npm install @optable/web-sdk
 ```
 
 And then simply `import` and use the `OptableSDK` class as shown in the _Usage_ section below.
@@ -92,7 +92,7 @@ const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", cookies:
 
 Note that the default is `cookies: true` and will be inferred if you do not specify the `cookies` parameter at all.
 
-# Using the npm module
+## Using the npm module
 
 ## Initialization Configuration (`InitConfig`)
 
@@ -125,6 +125,7 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 
 - **`readOnly` (boolean, default: `false`)**
   When set to `true`, puts the SDK in a read-only mode, preventing any data modifications while still allowing API queries.
+
 - **`optableCacheTargeting` (string, defaults: `optable-cache:targeting`)**
   Local storage cache key used to store latest targeting response.
 
@@ -199,6 +200,28 @@ Note that visitor traits are key value pairs and have type `ProfileTraits`:
 type ProfileTraits = {
   [key: string]: string | number | boolean;
 };
+```
+
+You can also override the main identifier (replacing the Optable Visitor ID) as the second argument of the function.
+The third argument is to provide additional identifier(s) that you want to associate to that profile.
+
+```javascript
+const onSuccess = () => console.log("Profile API success!");
+const onFailure = (err) => console.warn("Profile API error: ${err.message}");
+
+const visitorTraits = {
+  gender: "M",
+  age: 44,
+  favColor: "blue",
+  hasAccount: true,
+};
+
+const emailID = OptableSDK.eid("some.email@address.com");
+const additionalIDs = [];
+additionalIDs.push(OptableSDK.cid("id1"));
+additionalIDs.push(OptableSDK.cid("id2", "c2"));
+
+sdk.profile(visitorTraits, emailID, additionalIDs).then(onSuccess).catch(onFailure);
 ```
 
 ### Targeting API
@@ -774,7 +797,7 @@ If you send Email newsletters that contain links to your website, then you may w
 
 To enable automatic identification of visitors originating from your Email newsletter, you first need to include an **oeid** parameter in the query string of all links to your website in your Email newsletter template. The value of the **oeid** parameter should be set to the SHA256 hash of the lowercased Email address of the recipient. For example, if you are using [Braze](https://www.braze.com/) to send your newsletters, you can easily encode the SHA256 hash value of the recipient's Email address by setting the **oeid** parameter in the query string of any links to your website as follows:
 
-```
+```javascript
 oeid={{${email_address} | downcase | sha2}}
 ```
 
@@ -833,16 +856,16 @@ It is recommended to call this method before making ad calls to ensure that the 
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
 
-You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found [here](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
+You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found in the [demos directory](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
 
-Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described [here](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
+Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described in [this section](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
 
 To build and run the demos locally, you will need [Docker](https://www.docker.com/), `docker-compose` and `make`:
 
-```
-$ cd path/to/optable-web-sdk
-$ make
-$ docker-compose up
+```shell
+cd path/to/optable-web-sdk
+make
+docker-compose up
 ```
 
 Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
