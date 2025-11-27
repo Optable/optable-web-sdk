@@ -49,18 +49,53 @@ OptableSDK.prototype.installGPTEventListeners = function () {
 /*
  * Pass user-defined signals to GAM Secure Signals
  */
-OptableSDK.prototype.installGPTSecureSignals = function (...signals: Array<{ provider: string; id: string }>) {
-  window.googletag = window.googletag || { cmd: [] };
-  const gpt = window.googletag;
+type GptEventSpec = Partial<Record<string, string[] | "all">>;
 
-  if (signals && signals.length > 0) {
-    gpt.cmd.push(() => {
-      signals.forEach(({ provider, id }) => {
-        gpt.secureSignalProviders.push({
-          id: provider,
-          collectorFunction: () => Promise.resolve(id),
-        });
-      });
-    });
+OptableSDK.prototype.installGPTEventListeners = function (eventSpec?: GptEventSpec) {
+  // Next time we get called is a no-op:
+  const sdk = this;
+  sdk.installGPTEventListeners = function () {};
+
+  window.googletag = window.googletag || { cmd: [] };
+  const gpt = (window as any).googletag;
+
+  const DEFAULT_EVENTS = ["slotRenderEnded", "impressionViewable"];
+
+  function snakeCase(name: string) {
+    return name.replace(/[A-Z]/g, (m) => "_" + m.toLowerCase());
   }
+
+  function filterProps(obj: any, keys: string[]) {
+    if (!obj || !keys || !keys.length) return {};
+    const out: any = {};
+    for (const k of keys) {
+      if (Object.prototype.hasOwnProperty.call(obj, k)) {
+        out[k] = obj[k];
+      }
+    }
+    return out;
+  }
+
+  gpt.cmd.push(function () {
+    try {
+      const pubads = gpt.pubads && gpt.pubads();
+      if (!pubads || typeof pubads.addEventListener !== "function") return;
+
+      const eventsToRegister = eventSpec ? Object.keys(eventSpec) : DEFAULT_EVENTS;
+
+      for (const eventName of eventsToRegister) {
+        const keysOrAll = eventSpec ? eventSpec[eventName] : "all";
+
+        pubads.addEventListener(eventName, function (event: any) {
+          const fullProps = toWitnessProperties(event);
+          const propsToSend =
+            Array.isArray(keysOrAll) && keysOrAll.length ? filterProps(fullProps, keysOrAll) : fullProps;
+
+          sdk.witness("gpt_events_" + snakeCase(eventName), propsToSend);
+        });
+      }
+    } catch (e) {
+      // fail silently to avoid breaking host page
+    }
+  });
 };
