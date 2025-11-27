@@ -1,7 +1,7 @@
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 
-type Experiment = "tokenize-v2" | "targeting-cascade";
+type Experiment = never;
 
 type MatcherOverride = {
   id: string;
@@ -12,6 +12,8 @@ type ABTestConfig = {
   id: string;
   trafficPercentage: number;
   matcher_override?: MatcherOverride[];
+  // SkipMatchers specifies the list of matchers (node_id)s to skip. To skip 1p, simply send 1p
+  skipMatchers?: string[];
 };
 
 type TargetingSignals = {
@@ -59,6 +61,10 @@ type InitConfig = {
   abTests?: ABTestConfig[];
   // Additional targeting signals to pass to the targeting call
   additionalTargetingSignals?: TargetingSignals;
+  // Timeout hint for API calls (must include unit, e.g. '100ms', '2s', '1m')
+  // When provided, the server will attempt to answer within the given time limit.
+  // Some APIs like targeting may return partial responses depending at which stage the timeout occurred.
+  timeout?: string;
 };
 
 type ResolvedConfig = {
@@ -78,6 +84,7 @@ type ResolvedConfig = {
   initTargeting?: boolean;
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
+  timeout?: string;
 };
 
 const DCN_DEFAULTS = {
@@ -112,6 +119,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     initTargeting: init.initTargeting,
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
+    timeout: init.timeout,
   };
 
   if (init.consent?.static) {
@@ -134,5 +142,5 @@ function generateSessionID(): string {
     .replace(/=+$/g, "");
 }
 
-export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig, ABTestConfig, MatcherOverride };
+export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig, ABTestConfig, MatcherOverride, Experiment };
 export { getConfig, DCN_DEFAULTS, generateSessionID };

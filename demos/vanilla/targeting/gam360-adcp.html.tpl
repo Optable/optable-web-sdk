@@ -52,21 +52,7 @@
 
       googletag.cmd.push(function () {
         headerAd = googletag
-          .defineSlot("/22081946781/web-sdk-demo-gam360/header-ad", [728, 90], "div-gpt-ad-1598295788551-0")
-          .addService(googletag.pubads());
-        boxAd = googletag
-          .defineSlot(
-            "/22081946781/web-sdk-demo-gam360/box-ad",
-            [
-              [250, 250],
-              [300, 250],
-              [200, 200],
-            ],
-            "div-gpt-ad-1598295897480-0"
-          )
-          .addService(googletag.pubads());
-        footerAd = googletag
-          .defineSlot("/22081946781/web-sdk-demo-gam360/footer-ad", [728, 90], "div-gpt-ad-1598296001655-0")
+          .defineSlot('/22081946781/agentic-buyer-demo', [728, 90], 'div-gpt-ad-1761329463906-0')
           .addService(googletag.pubads());
 
         // Setup page-level GAM targeting from any cached targeting data and load ads as usual:
@@ -100,7 +86,7 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: targeting API: GAM360 (cached data)</h4>
+          <h4>Example: targeting API: GAM360 (AdCP)</h4>
           <p>
             Shows how to load and cache active cohorts in a visitor's browser. Separately, cached cohorts are passed to
             <a href="https://admanager.google.com/home/">Google Ad Manager</a> (GAM) via the
@@ -125,23 +111,9 @@
 
       <div class="row">
         <div class="twelve column">
-          <h5>web-sdk-demo-gam360/header-ad</h5>
-          <!-- GAM360 Ad Unit slot: web-sdk-demo-gam360/header-ad -->
-          <div id="div-gpt-ad-1598295788551-0" style="width: 728px; height: 90px;"></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="twelve column" style="margin-top: 2%;">
-          <h5>web-sdk-demo-gam360/box-ad</h5>
-          <!-- GAM360 Ad Unit slot: web-sdk-demo-gam360/box-ad -->
-          <div id="div-gpt-ad-1598295897480-0"></div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="twelve column" style="margin-top: 2%;">
-          <h5>web-sdk-demo-gam360/footer-ad</h5>
-          <!-- GAM360 Ad Unit slot: web-sdk-demo-gam360/footer-ad -->
-          <div id="div-gpt-ad-1598296001655-0"></div>
+          <h5>agentic-buyer-demo/728x90</h5>
+          <!-- GAM360 Ad Unit slot: agentic-buyer-demo/728x90 -->
+          <div id="div-gpt-ad-1761329463906-0" style="width: 728px; height: 90px;"></div>
         </div>
       </div>
       <div class="row">
@@ -160,8 +132,6 @@
     <script>
       googletag.cmd.push(function () {
         googletag.display(headerAd);
-        googletag.display(boxAd);
-        googletag.display(footerAd);
 
         console.log("[GPT] googletag.display() all slots");
       });

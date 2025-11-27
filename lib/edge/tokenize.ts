@@ -11,10 +11,7 @@ type TokenizeRequest = {
 };
 
 function Tokenize(config: ResolvedConfig, id: string): Promise<TokenizeResponse> {
-  let endpoint = "/v1/tokenize";
-  if (config.experiments.includes("tokenize-v2")) {
-    endpoint = "/v2/tokenize";
-  }
+  const endpoint = "/v2/tokenize";
 
   let request: TokenizeRequest = {
     id: id,

@@ -114,9 +114,6 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`cookies` (boolean, default: `true`)**
   If `true`, enables the use of browser cookies for storage.
 
-- **`legacyHostCache` (string)**
-  Used when migrating from one DCN host to another. If specified, it retains the previous cache state when switching hosts.
-
 - **`initPassport` (boolean, default: `true`)**
   If `true`, initializes the user passport (identity mechanism) upon SDK load.
 
@@ -293,7 +290,7 @@ const eventProperties = {
   property_three: false,
 };
 
-sdk.witness("event.type.here", eventProperties).then(onSuccess).catch(onFailure);
+sdk.witness("event_type_here", eventProperties).then(onSuccess).catch(onFailure);
 ```
 
 The specified event type and properties are associated with the logged event and which can be used for matching during audience assembly.
@@ -538,6 +535,7 @@ The value for each event key can be "all" (to include all witness properties) or
 
 `advertiser_id`, `campaign_id`, `creative_id`, `is_empty`, `line_item_id`, `service_name`, `size`, `slot_element_id`, `source_agnostic_creative_id`, `source_agnostic_line_item_id`.
 If no argument is provided, the default behavior is unchanged and both slotRenderEnded and impressionViewable are captured with all properties.
+
 
 Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
 

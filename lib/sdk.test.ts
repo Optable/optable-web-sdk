@@ -377,11 +377,8 @@ describe("behavior testing of", () => {
       })
     );
 
-    await expect(sdk.targeting({ ids: ["someId", "someOtherId"] })).rejects.toMatch(/targeting-cascade/);
-
     await expect(sdk.targeting(3)).rejects.toMatch(/Expected string or object/);
 
-    sdk.dcn.experiments = ["targeting-cascade"];
     const targetingWithParam = await sdk.targeting({ ids: ["someId", "someOtherId"] });
 
     expect(fetchSpy).toHaveBeenLastCalledWith(
@@ -467,21 +464,19 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '{"id":"someId"}',
-        url: expect.stringContaining("v1/tokenize"),
+        url: expect.stringContaining("v2/tokenize"),
       })
     );
   });
 
-  test("tokenize supports v2 experiment", async () => {
+  test("supports passing a timeout to edge calls", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
-    const sdk = new OptableSDK({ ...defaultConfig, experiments: ["tokenize-v2"] });
-
-    await sdk.tokenize("someId");
+    const sdk = new OptableSDK({ ...defaultConfig, timeout: "30ms" });
+    await sdk.targeting("someId");
     expect(fetchSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        method: "POST",
-        _bodyText: '{"id":"someId"}',
-        url: expect.stringContaining("v2/tokenize"),
+        method: "GET",
+        url: expect.stringContaining("&timeout=30ms"),
       })
     );
   });
