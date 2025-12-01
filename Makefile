@@ -2,22 +2,22 @@
 
 .PHONY: test-sdk
 test: deps
-	npm run test
+	pnpm test
 
 .PHONY: build-web
 build-web: deps
-	npm run build-web -- --mode=production
+	pnpm build-web -- --mode=production
 
 .PHONY: build-lib
 build-lib: deps
-	npm run build-lib
+	pnpm build-lib
 
 .PHONY: build
 build: build-web build-lib
 
 .PHONY: deps
 deps:
-	npm ci
+	pnpm install --frozen-lockfile
 
 export SDK_URI ?= https://localhost:8181/sdk.js
 export DCN_HOST ?= ca.edge.optable.co
@@ -65,13 +65,13 @@ demo-html:
 
 .PHONY: demo-react
 demo-react: build-lib
-	npm --prefix demos/react ci
-	npm --prefix demos/react run build
+	pnpm --prefix demos/react install --frozen-lockfile
+	pnpm --prefix demos/react run build
 
 .PHONY: demo-npm
 demo-npm:
-	npm --prefix demos/npm ci
-	npm --prefix demos/npm run build
+	pnpm --prefix demos/npm install --frozen-lockfile
+	pnpm --prefix demos/npm run build
 
 .PHONY: certs
 certs:

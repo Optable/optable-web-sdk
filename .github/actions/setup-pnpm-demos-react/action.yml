@@ -1,0 +1,31 @@
+name: "Setup react demo pnpm"
+description: "A composite action to setup pnpm for react demo"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Node.js version
+      id: get-node-version
+      shell: bash
+      run: echo "node_version=$(grep node .tool-versions | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ steps.get-node-version.outputs.node_version }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9
+    - name: Get pnpm store directory
+      id: pnpm-cache
+      shell: bash
+      run: echo "pnpm_cache_dir=$(pnpm store path)" >> $GITHUB_OUTPUT
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-cache.outputs.pnpm_cache_dir }}
+        key: ${{ runner.os }}-pnpm-store-react-demo-${{ hashFiles('demos/react/pnpm-lock.yaml') }}
+        restore-keys: ${{ runner.os }}-pnpm-store-
+    - name: Install dependencies
+      shell: bash
+      run: pnpm --prefix demos/react install --frozen-lockfile
