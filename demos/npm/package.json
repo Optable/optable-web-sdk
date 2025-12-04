@@ -8,6 +8,7 @@
   },
   "author": "Optable Technologies Inc.",
   "license": "Apache-2.0",
+  "packageManager": "pnpm@10.11.0",
   "dependencies": {
     "@optable/web-sdk": "^0.10.0",
     "html-webpack-plugin": "^5.3.2",

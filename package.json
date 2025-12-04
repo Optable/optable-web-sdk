@@ -9,6 +9,7 @@
   },
   "homepage": "https://optable.co",
   "license": "SEE LICENSE IN LICENSE",
+  "packageManager": "pnpm@10.11.0",
   "version": "0.0.0-experimental",
   "devDependencies": {
     "@babel/core": "^7.12.3",
