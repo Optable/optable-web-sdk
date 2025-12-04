@@ -8,3 +8,4 @@ lib/dist
 demos
 *.svg
 prebid.js
+pnpm-lock.yaml
