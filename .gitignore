@@ -11,5 +11,4 @@ demos/**/*.html
 !demos/index.html
 
 # pnpm
-pnpm-lock.yaml
 .pnpm-debug.log
