@@ -77,10 +77,8 @@ jobs:
       - name: Patch version
         run: ./scripts/patch-version.sh "${{ github.ref_name }}"
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
       - name: Setup registry access
         run: |
