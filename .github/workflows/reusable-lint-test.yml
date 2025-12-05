@@ -8,11 +8,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup npm
-        uses: ./.github/actions/setup-npm
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
       - name: Test
-        run: npm run test
+        run: pnpm test
 
   prettier:
     runs-on: ubuntu-22.04
@@ -20,11 +20,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup npm
-        uses: ./.github/actions/setup-npm
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
       - name: Run prettier
-        run: npm run format
+        run: pnpm format
 
       - name: Check if prettier changed files
         run: git diff --exit-code || (echo "ESLint fixed some files. Please commit the changes." && exit 1)

@@ -5,12 +5,12 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 ## Contents
 
 - [Installing](#installing)
-  - [npm module](#npm-module)
-  - [script tag](#script-tag)
+  - [NPM module](#npm-module)
+  - [Script tag](#script-tag)
 - [Versioning](#versioning)
 - [Domains and Cookies](#domains-and-cookies)
   - [LocalStorage](#localstorage)
-- [Using the npm module](#using-the-npm-module)
+- [Using the NPM module](#using-the-npm-module)
   - [Identify API](#identify-api)
   - [Profile API](#profile-api)
   - [Targeting API](#targeting-api)
@@ -32,22 +32,25 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 
 ## Installing
 
-The [Optable](https://optable.co/) web SDK can be installed as a ES6 compatible [npm](https://www.npmjs.com/) module paired with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/), or can be loaded on a webpage directly by referencing a release build from the page HTML via a `<script>` tag.
+The [Optable](https://optable.co/) web SDK can be installed as a ES6 compatible [npm](https://www.npmjs.com/) module using package managers such as [pnpm](https://pnpm.io/), paired with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/), or can be loaded on a webpage directly by referencing a release build from the page HTML via a `<script>` tag.
 
 > :warning: **CORS Configuration**: Regardless of how you install the SDK, make sure that the _Allowed HTTP Origins_ setting in the Optable DCN that you are integrating with contains the URL(s) of any web site(s) where the SDK is being used, otherwise your browser may block communication with the DCN.
 
-### npm module
+### NPM module
 
-If you're building a web application or want to bundle the SDK functionality with your own JavaScript, then [npm](https://www.npmjs.com/) is the recommended installation method. It pairs nicely with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/) and exports types for applications using the [typescript](https://www.typescriptlang.org/) language and type checker. To use it simply install the package:
+If you're building a web application or want to bundle the SDK functionality with your own JavaScript, then using a package manager like [pnpm](https://pnpm.io/) or [npm](https://www.npmjs.com/) is the recommended installation method. It pairs nicely with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/) and exports types for applications using the [typescript](https://www.typescriptlang.org/) language and type checker. To use it simply install the package:
 
 ```shell
-# latest stable release:
+# latest stable release (using pnpm):
+pnpm install @optable/web-sdk
+
+# or using npm:
 npm install @optable/web-sdk
 ```
 
 And then simply `import` and use the `OptableSDK` class as shown in the _Usage_ section below.
 
-### script tag
+### Script tag
 
 For simple integrations from your web site, you can load the SDK built for the browser from Optable's CDN via a HTML `script` tag. In production it's advised to lock your SDK bundle to a specific major version identified by `vX` or a specific minor version with `vX.Y`, while in development you may want to experiment with `latest`.
 
@@ -92,7 +95,7 @@ const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", cookies:
 
 Note that the default is `cookies: true` and will be inferred if you do not specify the `cookies` parameter at all.
 
-## Using the npm module
+## Using the NPM module
 
 ## Initialization Configuration (`InitConfig`)
 
@@ -328,7 +331,7 @@ type WitnessProperties = {
 
 ## Using a script tag
 
-For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack-generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a website via a `script` tag.
+For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack-generated browser bundle targeting the browsers list described by `pnpm dlx browserslist "> 0.25%, not dead"` can be loaded on a website via a `script` tag.
 
 As described in the **Installation** section above, the recommended way to load the SDK via `script` tag is asynchronously using the `async` attribute, to avoid blocking page rendering.
 

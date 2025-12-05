@@ -9,6 +9,7 @@
   },
   "homepage": "https://optable.co",
   "license": "SEE LICENSE IN LICENSE",
+  "packageManager": "pnpm@10.11.0",
   "version": "0.0.0-experimental",
   "devDependencies": {
     "@babel/core": "^7.12.3",
@@ -35,6 +36,7 @@
   "dependencies": {
     "@babel/runtime": "^7.27.0",
     "@optable/web-sdk": "^0.40.0",
+    "iab-adcom": "^1.0.6",
     "iab-openrtb": "^1.0.1",
     "js-sha256": "^0.11.0",
     "regenerator-runtime": "^0.13.7"
@@ -47,12 +49,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "npm run build-lib && npm run build-web",
+    "build": "pnpm build-lib && pnpm build-web",
     "start": "tsc -b browser --watch & webpack --config=./browser/webpack.config.js --mode=development --watch --devtool=source-map",
     "build-lib": "tsc -b lib",
     "build-web": "tsc -b browser && webpack --config=./browser/webpack.config.js",
     "test": "jest",
     "format": "prettier . --write",
-    "lint-scripts": "npx shellcheck scripts/*.sh"
+    "lint-scripts": "pnpm exec shellcheck scripts/*.sh"
   }
 }

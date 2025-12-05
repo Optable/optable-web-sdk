@@ -19,14 +19,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup npm
-        uses: ./.github/actions/setup-npm
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
       - name: Patch build.json version
         run: ./scripts/patch-version.sh "${{ inputs.version }}"
 
       - name: Build web production
-        run: npm run build-web -- --mode=production
+        run: pnpm build-web --mode=production
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -41,14 +41,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup npm
-        uses: ./.github/actions/setup-npm
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
       - name: Patch build.json version
         run: ./scripts/patch-version.sh "${{ inputs.version }}"
 
       - name: Transpile lib
-        run: npm run build-lib
+        run: pnpm build-lib
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -99,14 +99,14 @@ jobs:
           path: lib/dist
 
       # SDK has a dependency on third-party js-sha256, we need to install node_modules in the root directory
-      - name: Setup npm
-        uses: ./.github/actions/setup-npm
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
-      - name: Setup npm react demo
-        uses: ./.github/actions/setup-npm-demos-react
+      - name: Setup pnpm react demo
+        uses: ./.github/actions/setup-pnpm-demos-react
 
       - name: Build react demo
-        run: npm run build
+        run: pnpm run build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -124,11 +124,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup npm demos npm
-        uses: ./.github/actions/setup-npm-demos-npm
+      - name: Setup pnpm demos npm
+        uses: ./.github/actions/setup-pnpm-demos-npm
 
       - name: Build npm-demo
-        run: npm run build
+        run: pnpm run build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
