@@ -382,6 +382,7 @@ class OptablePrebidAnalytics {
     const oSourcesSet = new Set();
     let adUnitCode: string = "unknown";
     let totalBids = 0;
+    let device = null;
 
     const requests = bidderRequests.map((br: any) => {
       const { bidderCode, bidderRequestId, bids = [] } = br;
@@ -393,11 +394,12 @@ class OptablePrebidAnalytics {
       const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
       const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
 
+      device = br.ortb2.device;
+
       return {
         bidderCode,
         bidderRequestId,
         domain,
-        device: br.ortb2.device,
         optableTargetingDone: optableEIDS.length > 0,
         optableMatchers,
         optableSources,
@@ -457,8 +459,8 @@ class OptablePrebidAnalytics {
       tenant: this.config.tenant!,
       // eslint-disable-next-line no-undef
       optableWrapperVersion: SDK_WRAPPER_VERSION || "unknown",
-      userAgentRaw: window.navigator.userAgent,
       userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
+      device,
     };
 
     // Log summary with bid counts
