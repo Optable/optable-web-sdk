@@ -6,7 +6,7 @@
     "baseUrl": ".",
     "outDir": "./dist/",
     "target": "es6",
-    "lib": ["DOM", "DOM.Iterable", "ES6"]
+    "lib": ["dom", "dom.iterable", "es2020"]
   },
   "include": ["./build.json", "."],
   "exclude": ["./**/*.test.ts", "./**/*.test.js", "./test", "./dist"]

@@ -9,3 +9,6 @@ demos/**/*.html
 !demos/react/src/index.html
 !demos/index-nocookies.html
 !demos/index.html
+
+# pnpm
+.pnpm-debug.log
