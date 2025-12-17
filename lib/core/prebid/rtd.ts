@@ -45,6 +45,7 @@ interface ReqBidsConfigObj {
       [bidderName: string]: ORTB2;
     };
   };
+  adUnits?: any[];
 }
 
 type MergeStrategy = (existingEids: EID[], newEids: EID[], key?: (eid: EID) => string) => EID[];
@@ -199,7 +200,7 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
     const eventHandler = () => {
       if (!resolved) {
         resolved = true;
-        config.log("info", "Received optableResolved event");
+        config.log("info", "Received optable-targeting:change event");
         const data = targetingFromCache(config);
         resolve(data);
       }
@@ -209,15 +210,15 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
       if (!resolved) {
         resolved = true;
         config.log("warn", `Auction delay timeout (${delay}ms) - no targeting data available`);
-        window.removeEventListener("optableResolved", eventHandler);
+        window.removeEventListener("optable-targeting:change", eventHandler);
         resolve(null);
       }
     }, delay);
 
-    window.addEventListener("optableResolved", eventHandler, { once: true });
+    window.addEventListener("optable-targeting:change", eventHandler, { once: true });
 
     // Clean up timeout if event fires first
-    window.addEventListener("optableResolved", () => clearTimeout(timeoutId), { once: true });
+    window.addEventListener("optable-targeting:change", () => clearTimeout(timeoutId), { once: true });
   });
 
   if (!targetingData) {
@@ -248,6 +249,7 @@ function mergeStrategy(config: RTDConfig, eidSource: string): MergeStrategy {
 function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): number {
   /* eslint-disable no-param-reassign */
   targetORTB2.user = targetORTB2.user ?? {};
+  targetORTB2.user.eids = targetORTB2.user.eids ?? [];
   targetORTB2.user.ext = targetORTB2.user.ext ?? {};
   targetORTB2.user.ext.eids = targetORTB2.user.ext.eids ?? [];
   /* eslint-enable no-param-reassign */
@@ -269,6 +271,9 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
     const mergeFn = mergeStrategy(config, eidSource);
     // eslint-disable-next-line no-param-reassign
     targetORTB2.user!.ext!.eids = mergeFn(targetORTB2.user!.ext!.eids!, eids);
+    // Also populate user.eids for ORTB 2.6 compatibility
+    // eslint-disable-next-line no-param-reassign
+    targetORTB2.user!.eids = mergeFn(targetORTB2.user!.eids!, eids);
   });
   return skipped;
 }
@@ -346,6 +351,50 @@ function handleRtd(
 
   config.log("info", `Processed ${processedEids} EIDs, skipped ${skippedEids} EIDs`);
   config.log("info", `Merged ${globalEidsCount} global EIDs and ${bidderEidsCount} bidder-specific EID sets`);
+
+  // Populate userIdAsEids on each bid in adUnits
+  const adUnitsToProcess = reqBidsConfigObj.adUnits || [];
+  if (adUnitsToProcess.length > 0) {
+    const globalEids = reqBidsConfigObj.ortb2Fragments.global.user?.eids || [];
+    let totalBidsProcessed = 0;
+
+    adUnitsToProcess.forEach((adUnit) => {
+      if (adUnit.bids && Array.isArray(adUnit.bids)) {
+        adUnit.bids.forEach((bid: any) => {
+          // Get bidder-specific EIDs if they exist
+          const bidderEids = reqBidsConfigObj.ortb2Fragments.bidder[bid.bidder]?.user?.eids || [];
+
+          // Initialize userIdAsEids if it doesn't exist
+          // eslint-disable-next-line no-param-reassign
+          bid.userIdAsEids = bid.userIdAsEids || [];
+
+          // Merge global and bidder-specific EIDs, deduplicating by source and inserter
+          const combinedEids = [...globalEids, ...bidderEids];
+
+          combinedEids.forEach((eid) => {
+            // Check if duplicate exists (by source and inserter)
+            const isDuplicate = bid.userIdAsEids.some(
+              (e: any) => e.source === eid.source && e.inserter === (eid as any).inserter
+            );
+            if (!isDuplicate) {
+              // eslint-disable-next-line no-param-reassign
+              bid.userIdAsEids.push(eid);
+            }
+          });
+
+          totalBidsProcessed += 1;
+
+          config.log("info", `Populated userIdAsEids for ${bid.bidder} with ${bid.userIdAsEids.length} EIDs`);
+        });
+      }
+    });
+
+    config.log(
+      "info",
+      `Populated userIdAsEids on ${totalBidsProcessed} bids across ${adUnitsToProcess.length} ad units`
+    );
+  }
+
   config.log("info", "Successfully completed handleRtd function");
 }
 
