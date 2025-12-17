@@ -200,7 +200,7 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
     const eventHandler = () => {
       if (!resolved) {
         resolved = true;
-        config.log("info", "Received optable-targeting:change event");
+        config.log("info", "Received optableResolved event");
         const data = targetingFromCache(config);
         resolve(data);
       }
@@ -210,15 +210,15 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
       if (!resolved) {
         resolved = true;
         config.log("warn", `Auction delay timeout (${delay}ms) - no targeting data available`);
-        window.removeEventListener("optable-targeting:change", eventHandler);
+        window.removeEventListener("optableResolved", eventHandler);
         resolve(null);
       }
     }, delay);
 
-    window.addEventListener("optable-targeting:change", eventHandler, { once: true });
+    window.addEventListener("optableResolved", eventHandler, { once: true });
 
     // Clean up timeout if event fires first
-    window.addEventListener("optable-targeting:change", () => clearTimeout(timeoutId), { once: true });
+    window.addEventListener("optableResolved", () => clearTimeout(timeoutId), { once: true });
   });
 
   if (!targetingData) {
