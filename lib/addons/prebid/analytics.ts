@@ -9,7 +9,6 @@ declare const SDK_WRAPPER_VERSION: string;
 
 declare global {
   interface Window {
-    optable?: any;
     pbjs?: any;
   }
 }
@@ -49,6 +48,11 @@ class OptablePrebidAnalytics {
 
   private auctions = new Map<string, AuctionItem>();
 
+  /**
+   * Create a new OptablePrebidAnalytics instance.
+   * @param optableInstance - An initialized Optable SDK instance that exposes a `witness()` method.
+   * @param config - Optional configuration for sampling, debug and analytics behavior.
+   */
   constructor(
     private readonly optableInstance: OptableSDK,
     private config: OptablePrebidAnalyticsConfig = { samplingRate: 1, samplingVolume: "event", bidWinTimeout: 10_000 }
@@ -77,7 +81,9 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Log messages if debug is enabled
+   * Log messages to the console when debugging is enabled.
+   * @param args - Values to log.
+   * @returns void
    */
   log(...args: unknown[]) {
     if (this.config.debug) {
@@ -85,6 +91,11 @@ class OptablePrebidAnalytics {
     }
   }
 
+  /**
+   * Determine whether the current event/session should be sampled according to
+   * the configured sampling rate, seed or function.
+   * @returns true if the event should be sampled and analytics calls may proceed.
+   */
   shouldSample(): boolean {
     if (this.config.samplingRate! <= 0) return false;
     if (this.config.samplingRate! >= 1) return true;
@@ -110,7 +121,10 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Send event to Witness API
+   * Send an event to the Witness API when analytics are enabled and sampling passes.
+   * @param eventName - The name of the event to send (e.g. "optable.prebid.auction").
+   * @param properties - An object of event properties to include in the payload.
+   * @returns A small result object indicating whether the call was disabled or sent.
    */
   async sendToWitnessAPI(eventName: string, properties: Record<string, any> = {}) {
     if (!this.config.analytics) {
@@ -134,6 +148,12 @@ class OptablePrebidAnalytics {
     return { disabled: false, eventName, properties };
   }
 
+  /**
+   * Attach listeners to a Prebid.js instance and process any missed events.
+   * This will replay past `auctionEnd` and `bidWon` events and then register live handlers.
+   * @param pbjs - The Prebid.js global instance (or equivalent) to hook into.
+   * @returns void
+   */
   setHooks(pbjs: any) {
     this.log("Processing missed auctionEnd");
     pbjs.getEvents().forEach((event: any) => {
@@ -159,7 +179,10 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Hook into Prebid.js events
+   * Hook into Prebid.js by attaching event hooks either immediately or by
+   * queueing callbacks when `pbjs.onEvent` is not available yet.
+   * @param prebidInstance - Optional Prebid.js instance to use (defaults to `window.pbjs`).
+   * @returns true when a hook has been registered, false when Prebid is not present.
    */
   hookIntoPrebid(prebidInstance = window.pbjs) {
     const pbjs = prebidInstance;
@@ -178,6 +201,14 @@ class OptablePrebidAnalytics {
     return true;
   }
 
+  /**
+   * Process a Prebid `auctionEnd` event: build an internal representation of
+   * requests, merge in received bids and schedule a delayed Witness API call
+   * (to allow `bidWon` to be received) or mark as missed.
+   * @param event - The raw Prebid auctionEnd event object.
+   * @param missed - True when the event was previously emitted (missed replay).
+   * @returns void
+   */
   async trackAuctionEnd(event: any, missed: boolean = false) {
     const { auctionId, timeout, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = event;
 
@@ -325,6 +356,13 @@ class OptablePrebidAnalytics {
     this.cleanupOldAuctions();
   }
 
+  /**
+   * Handle a Prebid `bidWon` event by finalizing the matching auction, clearing
+   * the pending timeout and sending the combined payload to Witness.
+   * @param event - The raw Prebid bidWon event object.
+   * @param missed - True when the event was previously emitted (missed replay).
+   * @returns void
+   */
   async trackBidWon(event: any, missed: boolean = false) {
     const filteredEvent = {
       auctionId: event.auctionId,
@@ -356,7 +394,9 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Clean up old auctions to prevent memory leaks
+   * Clean up old auctions to prevent memory leaks.
+   * Removes the oldest auction when the internal store grows past the configured size.
+   * @returns void
    */
   cleanupOldAuctions() {
     const auctionIds = [...this.auctions.keys()];
@@ -368,13 +408,22 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Clear all stored data (useful for testing)
+   * Clear all stored analytics data (useful for tests).
+   * @returns void
    */
   clearData() {
     this.auctions.clear();
     this.log("All analytics data cleared");
   }
 
+  /**
+   * Convert internal auction state and optional bidWon event into a Witness payload.
+   * This collects matcher/source metadata, bid counts and optional custom analytics.
+   * @param auctionEndEvent - The `auctionEnd` event object from Prebid.js.
+   * @param bidWonEvent - Optional `bidWon` event when a winning bid exists.
+   * @param missed - True when the original events were already emitted (replayed).
+   * @returns A payload object compatible with the Witness API.
+   */
   async toWitness(auctionEndEvent: any, bidWonEvent: any | null, missed = false): Promise<Record<string, any>> {
     const { auctionId, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = auctionEndEvent;
 
@@ -468,8 +517,8 @@ class OptablePrebidAnalytics {
       `Auction ${auctionId} processed: ${bidderRequests.length} requests, ${totalBids} total bids, ${bidsReceived.length} received, ${noBids.length} no-bids, ${timeoutBids.length} timeouts`
     );
 
-    if (window.optable?.customAnalytics) {
-      await window.optable.customAnalytics().then((response: any) => {
+    if ((window as any).optable?.customAnalytics) {
+      await (window as any).optable.customAnalytics().then((response: any) => {
         this.log(`Adding custom data to payload ${JSON.stringify(response)}`);
         Object.assign(witnessData, response);
       });

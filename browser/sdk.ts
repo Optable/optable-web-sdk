@@ -9,6 +9,7 @@ import "../lib/addons/try-identify";
 type OptableGlobal = {
   cmd: Commands | Function[];
   SDK: OptableSDK["constructor"];
+  OptablePrebidAnalytics: typeof OptablePrebidAnalytics;
   utils: Record<string, Function>;
   instance?: OptableSDK;
   instance_config?: InitConfig;
@@ -16,7 +17,6 @@ type OptableGlobal = {
 
 declare global {
   interface Window {
-    // @ts-ignore
     optable?: Partial<OptableGlobal>;
   }
 }
