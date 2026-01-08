@@ -2,22 +2,22 @@
 
 .PHONY: test-sdk
 test: deps
-	npm run test
+	pnpm test
 
 .PHONY: build-web
 build-web: deps
-	npm run build-web -- --mode=production
+	pnpm build-web -- --mode=production
 
 .PHONY: build-lib
 build-lib: deps
-	npm run build-lib
+	pnpm build-lib
 
 .PHONY: build
 build: build-web build-lib
 
 .PHONY: deps
 deps:
-	npm ci
+	pnpm install --frozen-lockfile
 
 export SDK_URI ?= https://localhost:8181/sdk.js
 export DCN_HOST ?= ca.edge.optable.co
@@ -50,12 +50,14 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/vanilla/profile.html.tpl > demos/vanilla/profile.html
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/gam360.html.tpl > demos/vanilla/targeting/gam360.html
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
+	envsubst $(DEMO_VARS) < demos/vanilla/targeting/gam360-adcp.html.tpl > demos/vanilla/targeting/gam360-adcp.html
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360.html.tpl > demos/vanilla/nocookies/targeting/gam360.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
+	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360-adcp.html.tpl > demos/vanilla/nocookies/targeting/gam360-adcp.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
@@ -63,13 +65,13 @@ demo-html:
 
 .PHONY: demo-react
 demo-react: build-lib
-	npm --prefix demos/react ci
-	npm --prefix demos/react run build
+	pnpm --prefix demos/react install --frozen-lockfile
+	pnpm --prefix demos/react run build
 
 .PHONY: demo-npm
 demo-npm:
-	npm --prefix demos/npm ci
-	npm --prefix demos/npm run build
+	pnpm --prefix demos/npm install --frozen-lockfile
+	pnpm --prefix demos/npm run build
 
 .PHONY: certs
 certs:

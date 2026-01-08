@@ -3,7 +3,7 @@ import type { IDMatchMethod } from "iab-adcom";
 import { TargetingResponse } from "../../edge/targeting";
 import { isObject } from "../utils";
 
-type MultiNodeTargetingResponse = TargetingResponse & { eidSources: Set<string> };
+type MultiNodeTargetingResponse = TargetingResponse & { eidSources: Set<string>; resolvedIds: Set<string> };
 type Ortb2 = TargetingResponse["ortb2"];
 
 type NodeTargetingRule = {
@@ -36,6 +36,7 @@ async function resolveMultiNodeTargeting(rules: NodeTargetingRule[]): Promise<Mu
 // Aggregate all resolved targeting data
 async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<MultiNodeTargetingResponse> {
   const eidSources = new Set<string>();
+  const resolvedIds = new Set<string>();
   const { refs, process: refsProcessor } = buildRefsProcessor();
   const ortb2: Ortb2 = {
     user: {
@@ -47,6 +48,8 @@ async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<Mu
   function processTokens(response: TargetingResponse, matcher?: string, mm?: IDMatchMethod) {
     const { data = [], eids = [] } = response.ortb2?.user ?? {};
     ortb2.user!.data!.push(...data);
+
+    response.resolved_ids?.forEach((id) => resolvedIds.add(id));
 
     eids
       .filter((x) => x.uids.length)
@@ -68,13 +71,14 @@ async function resolveAggregateTargeting(rules: NodeTargetingRule[]): Promise<Mu
 
   await Promise.allSettled(targetingFnPromises);
 
-  return { ortb2, eidSources, refs };
+  return { ortb2, eidSources, refs, resolvedIds };
 }
 
 // Resolve the most prioritize targeting node
 // If multiple nodes have the same priority, we will append the eids
 async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<MultiNodeTargetingResponse> {
   const eidSources = new Set<string>();
+  const resolvedIds = new Set<string>();
   const { refs, process: refsProcessor } = buildRefsProcessor();
   const ortb2: Ortb2 = {
     user: {
@@ -85,12 +89,14 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
 
   const sourcesByPriority = new Map<number, string[]>();
   const eidsByPriority = new Map<number, EID[]>();
+  const resolvedIdsByPriority = new Map<number, string[]>();
 
   function processTokens(response: TargetingResponse, matcher?: string, mm?: IDMatchMethod, priority: number = 0) {
     const adjustedPriority = Math.max(0, priority);
     const { data = [], eids = [] } = response.ortb2?.user ?? {};
 
     ortb2.user!.data!.push(...data);
+    resolvedIdsByPriority.set(adjustedPriority, response.resolved_ids ?? []);
 
     eids
       .filter((x) => x.uids.length)
@@ -123,14 +129,17 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
 
   if (priority) {
     const sources = sourcesByPriority.get(priority) || [];
+    const resolvedIdsArray = resolvedIdsByPriority.get(priority) || [];
     ortb2.user!.eids!.push(...(eidsByPriority.get(priority) || []));
     sources.forEach((source) => eidSources.add(source));
+    resolvedIdsArray.forEach((id) => resolvedIds.add(id));
   }
 
   return {
     ortb2,
     eidSources,
     refs,
+    resolvedIds,
   };
 }
 

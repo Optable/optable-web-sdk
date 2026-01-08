@@ -7,6 +7,7 @@
   },
   "author": "",
   "license": "Apache-2.0",
+  "packageManager": "pnpm@10.11.0",
   "devDependencies": {
     "@optable/web-sdk": "file:../..",
     "@types/react": "^18.0.17",

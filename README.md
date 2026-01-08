@@ -5,12 +5,12 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 ## Contents
 
 - [Installing](#installing)
-  - [npm module](#npm-module)
-  - [script tag](#script-tag)
+  - [NPM module](#npm-module)
+  - [Script tag](#script-tag)
 - [Versioning](#versioning)
 - [Domains and Cookies](#domains-and-cookies)
   - [LocalStorage](#localstorage)
-- [Using the npm module](#using-the-npm-module)
+- [Using the NPM module](#using-the-npm-module)
   - [Identify API](#identify-api)
   - [Profile API](#profile-api)
   - [Targeting API](#targeting-api)
@@ -32,22 +32,25 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 
 ## Installing
 
-The [Optable](https://optable.co/) web SDK can be installed as a ES6 compatible [npm](https://www.npmjs.com/) module paired with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/), or can be loaded on a webpage directly by referencing a release build from the page HTML via a `<script>` tag.
+The [Optable](https://optable.co/) web SDK can be installed as a ES6 compatible [npm](https://www.npmjs.com/) module using package managers such as [pnpm](https://pnpm.io/), paired with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/), or can be loaded on a webpage directly by referencing a release build from the page HTML via a `<script>` tag.
 
 > :warning: **CORS Configuration**: Regardless of how you install the SDK, make sure that the _Allowed HTTP Origins_ setting in the Optable DCN that you are integrating with contains the URL(s) of any web site(s) where the SDK is being used, otherwise your browser may block communication with the DCN.
 
-### npm module
+### NPM module
 
-If you're building a web application or want to bundle the SDK functionality with your own JavaScript, then [npm](https://www.npmjs.com/) is the recommended installation method. It pairs nicely with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/) and exports types for applications using the [typescript](https://www.typescriptlang.org/) language and type checker. To use it simply install the package:
+If you're building a web application or want to bundle the SDK functionality with your own JavaScript, then using a package manager like [pnpm](https://pnpm.io/) or [npm](https://www.npmjs.com/) is the recommended installation method. It pairs nicely with module bundlers such as [webpack](https://webpack.js.org/) or [browserify](http://browserify.org/) and exports types for applications using the [typescript](https://www.typescriptlang.org/) language and type checker. To use it simply install the package:
 
 ```shell
-# latest stable release:
-$ npm install @optable/web-sdk
+# latest stable release (using pnpm):
+pnpm install @optable/web-sdk
+
+# or using npm:
+npm install @optable/web-sdk
 ```
 
 And then simply `import` and use the `OptableSDK` class as shown in the _Usage_ section below.
 
-### script tag
+### Script tag
 
 For simple integrations from your web site, you can load the SDK built for the browser from Optable's CDN via a HTML `script` tag. In production it's advised to lock your SDK bundle to a specific major version identified by `vX` or a specific minor version with `vX.Y`, while in development you may want to experiment with `latest`.
 
@@ -92,7 +95,7 @@ const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", cookies:
 
 Note that the default is `cookies: true` and will be inferred if you do not specify the `cookies` parameter at all.
 
-# Using the npm module
+## Using the NPM module
 
 ## Initialization Configuration (`InitConfig`)
 
@@ -114,9 +117,6 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`cookies` (boolean, default: `true`)**
   If `true`, enables the use of browser cookies for storage.
 
-- **`legacyHostCache` (string)**
-  Used when migrating from one DCN host to another. If specified, it retains the previous cache state when switching hosts.
-
 - **`initPassport` (boolean, default: `true`)**
   If `true`, initializes the user passport (identity mechanism) upon SDK load.
 
@@ -128,6 +128,7 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 
 - **`readOnly` (boolean, default: `false`)**
   When set to `true`, puts the SDK in a read-only mode, preventing any data modifications while still allowing API queries.
+
 - **`optableCacheTargeting` (string, defaults: `optable-cache:targeting`)**
   Local storage cache key used to store latest targeting response.
 
@@ -202,6 +203,28 @@ Note that visitor traits are key value pairs and have type `ProfileTraits`:
 type ProfileTraits = {
   [key: string]: string | number | boolean;
 };
+```
+
+You can also override the main identifier (replacing the Optable Visitor ID) as the second argument of the function.
+The third argument is to provide additional identifier(s) that you want to associate to that profile.
+
+```javascript
+const onSuccess = () => console.log("Profile API success!");
+const onFailure = (err) => console.warn("Profile API error: ${err.message}");
+
+const visitorTraits = {
+  gender: "M",
+  age: 44,
+  favColor: "blue",
+  hasAccount: true,
+};
+
+const emailID = OptableSDK.eid("some.email@address.com");
+const additionalIDs = [];
+additionalIDs.push(OptableSDK.cid("id1"));
+additionalIDs.push(OptableSDK.cid("id2", "c2"));
+
+sdk.profile(visitorTraits, emailID, additionalIDs).then(onSuccess).catch(onFailure);
 ```
 
 ### Targeting API
@@ -293,7 +316,7 @@ const eventProperties = {
   property_three: false,
 };
 
-sdk.witness("event.type.here", eventProperties).then(onSuccess).catch(onFailure);
+sdk.witness("event_type_here", eventProperties).then(onSuccess).catch(onFailure);
 ```
 
 The specified event type and properties are associated with the logged event and which can be used for matching during audience assembly.
@@ -308,7 +331,7 @@ type WitnessProperties = {
 
 ## Using a script tag
 
-For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack-generated browser bundle targeting the browsers list described by `npx browserslist "> 0.25%, not dead"` can be loaded on a website via a `script` tag.
+For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack-generated browser bundle targeting the browsers list described by `pnpm dlx browserslist "> 0.25%, not dead"` can be loaded on a website via a `script` tag.
 
 As described in the **Installation** section above, the recommended way to load the SDK via `script` tag is asynchronously using the `async` attribute, to avoid blocking page rendering.
 
@@ -521,6 +544,25 @@ To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.co
   });
 </script>
 ```
+
+Advanced usage:
+You can customize which GPT events are registered and which event properties to include, per event type, by passing an options object:
+
+```js
+// Only listen to impressionViewable and emit only `slot_element_id`
+optable.instance.installGPTEventListeners({ impressionViewable: ["slot_element_id"] });
+
+// For slotRenderEnded, emit all properties. For impressionViewable, emit only the listed properties.
+optable.instance.installGPTEventListeners({
+  slotRenderEnded: "all",
+  impressionViewable: ["slot_element_id", "is_empty"],
+});
+```
+
+The value for each event key can be "all" (to include all witness properties) or an array of property names from the set below (as mapped by the SDK):
+
+`advertiser_id`, `campaign_id`, `creative_id`, `is_empty`, `line_item_id`, `service_name`, `size`, `slot_element_id`, `source_agnostic_creative_id`, `source_agnostic_line_item_id`.
+If no argument is provided, the default behavior is unchanged and both slotRenderEnded and impressionViewable are captured with all properties.
 
 Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
 
@@ -775,7 +817,7 @@ If you send Email newsletters that contain links to your website, then you may w
 
 To enable automatic identification of visitors originating from your Email newsletter, you first need to include an **oeid** parameter in the query string of all links to your website in your Email newsletter template. The value of the **oeid** parameter should be set to the SHA256 hash of the lowercased Email address of the recipient. For example, if you are using [Braze](https://www.braze.com/) to send your newsletters, you can easily encode the SHA256 hash value of the recipient's Email address by setting the **oeid** parameter in the query string of any links to your website as follows:
 
-```
+```javascript
 oeid={{${email_address} | downcase | sha2}}
 ```
 
@@ -834,16 +876,16 @@ It is recommended to call this method before making ad calls to ensure that the 
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
 
-You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found [here](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
+You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found in the [demos directory](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
 
-Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described [here](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
+Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described in [this section](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
 
 To build and run the demos locally, you will need [Docker](https://www.docker.com/), `docker-compose` and `make`:
 
-```
-$ cd path/to/optable-web-sdk
-$ make
-$ docker-compose up
+```shell
+cd path/to/optable-web-sdk
+make
+docker-compose up
 ```
 
 Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).

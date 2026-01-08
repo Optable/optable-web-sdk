@@ -12,3 +12,6 @@ demos/**/*.html
 
 .wakatime-project
 .vscode/
+
+# pnpm
+.pnpm-debug.log

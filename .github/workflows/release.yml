@@ -77,13 +77,16 @@ jobs:
       - name: Patch version
         run: ./scripts/patch-version.sh "${{ github.ref_name }}"
 
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+
       - name: Setup registry access
         run: |
           echo '@optable:registry=https://registry.npmjs.org/' > ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_CI_ACCESS_TOKEN }}" >> ~/.npmrc
 
       - name: Publish to NPM
-        run: npm publish --access public
+        run: pnpm publish --access public --no-git-checks
 
   deploy-sdk-to-gcs:
     needs: [deploy-sdk-to-npm, define-gcs-versions-to-update]

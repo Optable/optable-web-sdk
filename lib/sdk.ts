@@ -102,9 +102,9 @@ class OptableSDK {
     return Witness(this.dcn, event, properties);
   }
 
-  async profile(traits: ProfileTraits): Promise<void> {
+  async profile(traits: ProfileTraits, id: string | null = null, neighbors: string[] | null = null): Promise<void> {
     await this.init;
-    return Profile(this.dcn, traits);
+    return Profile(this.dcn, traits, id, neighbors);
   }
 
   async tokenize(id: string): Promise<TokenizeResponse> {

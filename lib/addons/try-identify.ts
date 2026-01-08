@@ -26,5 +26,5 @@ OptableSDK.prototype.tryIdentifyFromParams = function (key?: string, prefix?: st
     return;
   }
 
-  this.identify((prefix || "e") + ":" + eid.toLowerCase());
+  this.identify((prefix || "e") + ":" + eid);
 };

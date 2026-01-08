@@ -1,9 +1,20 @@
 import { resolveMultiNodeTargeting, TargetingResponse } from "./resolveMultiTargeting.ts";
 import { IDMatchMethod } from "iab-adcom";
 
-const createOrtb2Response = ({ data = [], eids = [], refs = undefined }: { data?: any; eids?: any; refs?: any }) => {
+const createTargetingResponse = ({
+  data = [],
+  eids = [],
+  refs = undefined,
+  resolved_ids = [],
+}: {
+  data?: any;
+  eids?: any;
+  refs?: any;
+  resolved_ids?: any;
+}) => {
   return {
     refs,
+    resolved_ids,
     ortb2: {
       user: {
         data,
@@ -17,7 +28,7 @@ describe("resolveMultiNodeTargeting", () => {
   test("properly aggregates all eids with sources", async () => {
     const matcherOneMMThree = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           data: [
             { id: "data1", name: "Provider1" },
             { id: "data2", name: "Provider2" },
@@ -32,7 +43,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const matcherTwoMMFive = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           data: [],
           eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }],
         })
@@ -41,7 +52,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const matcherThreeMMFive = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           eids: [{ inserter: "optable.co", source: "another-place.com", uids: [{ id: "some-id" }] }],
         })
       );
@@ -94,8 +105,8 @@ describe("resolveMultiNodeTargeting", () => {
   });
 
   test("resolves empty responses gracefully for aggregate resolving", async () => {
-    const emptyTargetingOne = new Promise<TargetingResponse>((resolve) => resolve(createOrtb2Response({})));
-    const emptyTargetingTwo = new Promise<TargetingResponse>((resolve) => resolve(createOrtb2Response({})));
+    const emptyTargetingOne = new Promise<TargetingResponse>((resolve) => resolve(createTargetingResponse({})));
+    const emptyTargetingTwo = new Promise<TargetingResponse>((resolve) => resolve(createTargetingResponse({})));
 
     const configs = [
       { targetingFn: () => emptyTargetingOne, matcher: "matcher_one", mm: IDMatchMethod.COOKIE_SYNC },
@@ -109,8 +120,8 @@ describe("resolveMultiNodeTargeting", () => {
   });
 
   test("resolves empty responses gracefully for priority resolving", async () => {
-    const emptyTargetingOne = new Promise<TargetingResponse>((resolve) => resolve(createOrtb2Response({})));
-    const emptyTargetingTwo = new Promise<TargetingResponse>((resolve) => resolve(createOrtb2Response({})));
+    const emptyTargetingOne = new Promise<TargetingResponse>((resolve) => resolve(createTargetingResponse({})));
+    const emptyTargetingTwo = new Promise<TargetingResponse>((resolve) => resolve(createTargetingResponse({})));
 
     const configs = [
       { targetingFn: () => emptyTargetingOne, matcher: "matcher_one", mm: IDMatchMethod.COOKIE_SYNC, priority: 1 },
@@ -125,7 +136,7 @@ describe("resolveMultiNodeTargeting", () => {
   test("Resolves priority queue by lowest number", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           data: [{ id: "data1", name: "Provider1" }],
           eids: [{ inserter: "optable.co", source: "uid2.com", uids: [{ id: "uid123" }, { id: "uid456" }] }],
         })
@@ -134,7 +145,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
       );
     });
 
@@ -162,7 +173,7 @@ describe("resolveMultiNodeTargeting", () => {
   test("Same priority will merge together", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           data: [{ id: "data1", name: "Provider1" }],
           eids: [{ inserter: "optable.co", source: "uid2.com", uids: [{ id: "uid123" }, { id: "uid456" }] }],
         })
@@ -171,13 +182,13 @@ describe("resolveMultiNodeTargeting", () => {
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
       );
     });
 
     const mockTargetingFnThree = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({ eids: [{ inserter: "optable.co", source: "another.com", uids: [{ id: "blah" }] }] })
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "another.com", uids: [{ id: "blah" }] }] })
       );
     });
 
@@ -212,12 +223,12 @@ describe("resolveMultiNodeTargeting", () => {
 
   test("Grabs lowest priority that HAS eids", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
-      resolve(createOrtb2Response({}));
+      resolve(createTargetingResponse({}));
     });
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
       );
     });
 
@@ -245,7 +256,7 @@ describe("resolveMultiNodeTargeting", () => {
   test("ignores priorities lower then 1", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           data: [],
           eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }],
         })
@@ -254,7 +265,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
       );
     });
 
@@ -273,7 +284,7 @@ describe("resolveMultiNodeTargeting", () => {
   it("Should use matcher from response if provided on aggregate", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           eids: [
             {
               inserter: "optable.co",
@@ -289,7 +300,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
       );
     });
 
@@ -322,7 +333,7 @@ describe("resolveMultiNodeTargeting", () => {
   it("Should use matcher from response if provided with priority", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           eids: [
             {
               inserter: "optable.co",
@@ -338,7 +349,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid456" }] }] })
       );
     });
 
@@ -364,7 +375,7 @@ describe("resolveMultiNodeTargeting", () => {
   it("Handles extension when priority based", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           refs: { "1": { some: "private things" } },
           eids: [
             {
@@ -380,7 +391,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           refs: { "1": { other: "private things" } },
           eids: [
             {
@@ -429,7 +440,7 @@ describe("resolveMultiNodeTargeting", () => {
   it("Handles extension when aggregate based", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           refs: { "1": { some: "private things" } },
           eids: [
             {
@@ -445,7 +456,7 @@ describe("resolveMultiNodeTargeting", () => {
 
     const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
       resolve(
-        createOrtb2Response({
+        createTargetingResponse({
           refs: { "1": { other: "private things" } },
           eids: [
             {
@@ -489,5 +500,122 @@ describe("resolveMultiNodeTargeting", () => {
         uids: [{ id: "uid456", ext: { uidTwo: "uidTwo", optable: { ref: "2" } } }],
       },
     ]);
+  });
+
+  test("properly aggregates and deduplicates all resolved ids", async () => {
+    const matcherOneMMThree = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid123", "uid456"],
+        })
+      );
+    });
+
+    const matcherTwoMMFive = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid456", "uid-from-example-com"],
+        })
+      );
+    });
+
+    const matcherThreeMMFive = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid456", "uid-from-another-place"],
+        })
+      );
+    });
+
+    const configs = [
+      { targetingFn: () => matcherOneMMThree },
+      { targetingFn: () => matcherTwoMMFive },
+      { targetingFn: () => matcherThreeMMFive },
+    ];
+
+    const { resolvedIds } = await resolveMultiNodeTargeting(configs);
+
+    expect(resolvedIds).toEqual(
+      new Set<string>(["uid123", "uid456", "uid-from-example-com", "uid-from-another-place"])
+    );
+  });
+
+  test("properly get priority based resolved ids and deduplicates", async () => {
+    const matcherOneMMThree = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid123", "uid234", "uid234"],
+          eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid123" }, { id: "uid234" }] }],
+        })
+      );
+    });
+
+    const matcherTwoMMFive = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid-from-example-com"],
+          eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid-from-example-com" }] }],
+        })
+      );
+    });
+
+    const matcherThreeMMFive = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid-from-another-place"],
+          eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid-from-another-place" }] }],
+        })
+      );
+    });
+
+    const configs = [
+      { targetingFn: () => matcherOneMMThree, priority: 1, matcher: "matcher_one" },
+      { targetingFn: () => matcherTwoMMFive, priority: 2, matcher: "matcher_two" },
+      { targetingFn: () => matcherThreeMMFive, priority: 3, matcher: "matcher_three" },
+    ];
+
+    const { resolvedIds } = await resolveMultiNodeTargeting(configs);
+
+    expect(resolvedIds).toEqual(new Set<string>(["uid123", "uid234"]));
+  });
+
+  test("properly get gt resolved ids from priority fallback", async () => {
+    const matcherOneMMThree = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: [],
+          eids: [],
+        })
+      );
+    });
+
+    const matcherTwoMMFive = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid-from-example-com"],
+          eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid-from-example-com" }] }],
+        })
+      );
+    });
+
+    const matcherThreeMMFive = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          resolved_ids: ["uid-from-another-place"],
+          eids: [{ inserter: "optable.co", source: "example.com", uids: [{ id: "uid-from-another-place" }] }],
+        })
+      );
+    });
+
+    const configs = [
+      { targetingFn: () => matcherOneMMThree, priority: 1, matcher: "matcher_one" },
+      { targetingFn: () => matcherTwoMMFive, priority: 2, matcher: "matcher_two" },
+      { targetingFn: () => matcherThreeMMFive, priority: 3, matcher: "matcher_three" },
+    ];
+
+    const { resolvedIds } = await resolveMultiNodeTargeting(configs);
+
+    // Fallback to prio 2 since priority 1 has no eids
+    expect(resolvedIds).toEqual(new Set<string>(["uid-from-example-com"]));
   });
 });
