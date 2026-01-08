@@ -106,7 +106,7 @@ jobs:
         uses: ./.github/actions/setup-pnpm-demos-react
 
       - name: Build react demo
-        run: pnpm run build
+        run: pnpm --prefix demo/react run build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -128,7 +128,7 @@ jobs:
         uses: ./.github/actions/setup-pnpm-demos-npm
 
       - name: Build npm-demo
-        run: pnpm run build
+        run: pnpm --prefix demo/npm run build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
