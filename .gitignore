@@ -10,5 +10,8 @@ demos/**/*.html
 !demos/index-nocookies.html
 !demos/index.html
 
+.wakatime-project
+.vscode/
+
 # pnpm
 .pnpm-debug.log

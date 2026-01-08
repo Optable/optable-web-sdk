@@ -2,7 +2,7 @@ import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 
 type WitnessProperties = {
-  [key: string]: string | number | boolean;
+  [key: string]: string | number | boolean | unknown[] | null | { [key: string]: unknown };
 };
 
 function Witness(config: ResolvedConfig, event: string, properties: WitnessProperties): Promise<void> {
