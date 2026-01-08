@@ -85,9 +85,6 @@ jobs:
   build-react-demo:
     needs: [build-lib]
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: demos/react
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -117,9 +114,6 @@ jobs:
 
   build-npm-demo:
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: demos/npm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
