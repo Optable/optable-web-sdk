@@ -347,6 +347,34 @@ describe("behavior testing of", () => {
     );
   });
 
+  test("witness with pageContext sends context on first call only", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      pageContext: { capture: ["url", "referrer"] },
+    });
+
+    // First call should include pageContext
+    await sdk.witness("firstEvent", {});
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        _bodyText: expect.stringContaining('"pageContext"'),
+        url: expect.stringContaining("witness"),
+      })
+    );
+
+    // Second call should NOT include pageContext (already sent)
+    await sdk.witness("secondEvent", {});
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        _bodyText: '{"event":"secondEvent","properties":{}}',
+        url: expect.stringContaining("witness"),
+      })
+    );
+  });
+
   test("config has initTargeting true then constructor sends a targeting request", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
     const sdk = new OptableSDK({ ...defaultConfig, initPassport: false, initTargeting: true });
