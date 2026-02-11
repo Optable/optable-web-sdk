@@ -347,15 +347,25 @@ describe("behavior testing of", () => {
     );
   });
 
-  test("witness with pageContext sends context on first call only", async () => {
+  test("witness with pageContext requires explicit opt-in", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
     const sdk = new OptableSDK({
       ...defaultConfig,
       pageContext: { capture: ["url", "referrer"] },
     });
 
-    // First call should include pageContext
+    // Call without includeContext should NOT include pageContext
     await sdk.witness("firstEvent", {});
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        _bodyText: '{"event":"firstEvent","properties":{}}',
+        url: expect.stringContaining("witness"),
+      })
+    );
+
+    // Call with includeContext: true should include pageContext
+    await sdk.witness("secondEvent", {}, { includeContext: true });
     expect(fetchSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         method: "POST",
@@ -364,12 +374,12 @@ describe("behavior testing of", () => {
       })
     );
 
-    // Second call should NOT include pageContext (already sent)
-    await sdk.witness("secondEvent", {});
+    // Subsequent call with includeContext: true should NOT include pageContext (already sent)
+    await sdk.witness("thirdEvent", {}, { includeContext: true });
     expect(fetchSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         method: "POST",
-        _bodyText: '{"event":"secondEvent","properties":{}}',
+        _bodyText: '{"event":"thirdEvent","properties":{}}',
         url: expect.stringContaining("witness"),
       })
     );

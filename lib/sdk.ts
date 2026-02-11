@@ -103,11 +103,15 @@ class OptableSDK {
     return TargetingKeyValues(tdata);
   }
 
-  async witness(event: string, properties: WitnessProperties = {}): Promise<void> {
+  async witness(
+    event: string,
+    properties: WitnessProperties = {},
+    options: { includeContext?: boolean } = {}
+  ): Promise<void> {
     await this.init;
 
     let context: ContextData | undefined;
-    if (this.contextConfig && !this.contextSent) {
+    if (options.includeContext && this.contextConfig && !this.contextSent) {
       context = extractContext(this.contextConfig);
       this.contextSent = true;
     }
