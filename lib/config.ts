@@ -147,5 +147,14 @@ function generateSessionID(): string {
     .replace(/=+$/g, "");
 }
 
-export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig, ABTestConfig, MatcherOverride, Experiment, PageContextConfig };
+export type {
+  InitConsent,
+  CMPApiConfig,
+  InitConfig,
+  ResolvedConfig,
+  ABTestConfig,
+  MatcherOverride,
+  Experiment,
+  PageContextConfig,
+};
 export { getConfig, DCN_DEFAULTS, generateSessionID };
