@@ -149,15 +149,10 @@ function findContentElement(selector?: string): Element | null {
 }
 
 function extractTextContent(element: Element): string {
-  // Clone to avoid modifying the DOM
-  const clone = element.cloneNode(true) as Element;
-
-  // Remove script and style elements
-  clone.querySelectorAll("script, style, noscript, iframe, svg").forEach((el) => el.remove());
-
-  // Get text and normalize whitespace
-  const text = clone.textContent || "";
-  return text.replace(/\s+/g, " ").trim();
+  if (element instanceof HTMLElement && element.innerText) {
+    return element.innerText.trim();
+  }
+  return "";
 }
 
 function extractContext(config: PageContextConfig): ContextData {
