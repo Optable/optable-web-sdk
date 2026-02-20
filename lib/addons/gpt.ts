@@ -70,7 +70,9 @@ OptableSDK.prototype.installGPTEventListeners = function (eventSpec?: GptEventSp
           const propsToSend =
             Array.isArray(keysOrAll) && keysOrAll.length ? filterProps(fullProps, keysOrAll) : fullProps;
 
-          sdk.witness("gpt_events_" + snakeCase(eventName), propsToSend);
+          if (Object.keys(propsToSend).length > 0) {
+            sdk.witness("gpt_events_" + snakeCase(eventName), propsToSend);
+          }
         });
       }
     } catch (e) {
