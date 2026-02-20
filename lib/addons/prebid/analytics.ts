@@ -244,7 +244,7 @@ class OptablePrebidAnalytics {
               transactionId: string;
               src: string;
               floorData?: { floorMin: number };
-              ortb2Imp?: { ext?: { optable?: { splitTestVariant?: string } } };
+              ortb2Imp?: { ext?: { optable?: { splitTestAssignment?: string } } };
             }) => ({
               bidId: b.bidId,
               bidderRequestId,
@@ -253,7 +253,7 @@ class OptablePrebidAnalytics {
               transactionId: b.transactionId,
               src: b.src,
               floorMin: b.floorData?.floorMin,
-              splitTestVariant: b.ortb2Imp?.ext?.optable?.splitTestVariant,
+              splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
               status: STATUS.REQUESTED,
             })
           ),
@@ -293,7 +293,7 @@ class OptablePrebidAnalytics {
           cpm: b.cpm,
           size: `${b.width}x${b.height}`,
           currency: b.currency,
-          splitTestVariant: b.ortb2Imp?.ext?.optable?.splitTestVariant,
+          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
         });
       } else {
         // Create new bid object for this response
@@ -307,7 +307,7 @@ class OptablePrebidAnalytics {
           cpm: b.cpm,
           size: `${b.width}x${b.height}`,
           currency: b.currency,
-          splitTestVariant: b.ortb2Imp?.ext?.optable?.splitTestVariant,
+          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
           status: STATUS.RECEIVED,
         };
         br.bids.push(bidObj);
@@ -465,7 +465,7 @@ class OptablePrebidAnalytics {
             transactionId: string;
             src: string;
             floorData?: { floorMin: number };
-            ortb2Imp?: { ext?: { optable?: { splitTestVariant?: string } } };
+            ortb2Imp?: { ext?: { optable?: { splitTestAssignment?: string } } };
           }) => ({
             bidId: b.bidId,
             bidderRequestId,
@@ -474,7 +474,7 @@ class OptablePrebidAnalytics {
             transactionId: b.transactionId,
             src: b.src,
             floorMin: b.floorData?.floorMin,
-            splitTestVariant: b.ortb2Imp?.ext?.optable?.splitTestVariant,
+            splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
             status: STATUS.REQUESTED,
           })
         ),
