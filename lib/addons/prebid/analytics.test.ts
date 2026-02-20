@@ -684,6 +684,119 @@ describe("OptablePrebidAnalytics", () => {
       expect(storedAuction).toBeDefined();
     });
 
+    it("should extract splitTestVariant from bidsReceived", async () => {
+      const event = {
+        auctionId: "auction-split-test",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [
+                  {
+                    inserter: "optable.co",
+                    matcher: "matcher1",
+                    source: "source1",
+                  },
+                ],
+              },
+            },
+            bids: [
+              {
+                bidId: "bid-1",
+                adUnitCode: "ad-unit-1",
+                adUnitId: "ad-id-1",
+                transactionId: "trans-1",
+                src: "client",
+              },
+            ],
+          },
+        ],
+        bidsReceived: [
+          {
+            requestId: "bid-1",
+            cpm: 1.5,
+            width: 300,
+            height: 250,
+            currency: "USD",
+            adUnitCode: "ad-unit-1",
+            ortb2Imp: {
+              ext: {
+                optable: {
+                  splitTestVariant: "treatment",
+                },
+              },
+            },
+          },
+        ],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+
+      // Get the stored auction and check the bid has splitTestVariant
+      const storedAuction = analytics["auctions"].get("auction-split-test");
+      expect(storedAuction).toBeDefined();
+
+      // The splitTestVariant should be extracted and stored in the payload
+      const payload = await analytics.toWitness(storedAuction.auctionEnd, null);
+      expect(payload.bidderRequests[0].bids[0].splitTestVariant).toBe("treatment");
+    });
+
+    it("should handle missing splitTestVariant gracefully", async () => {
+      const event = {
+        auctionId: "auction-no-split-test",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [],
+              },
+            },
+            bids: [
+              {
+                bidId: "bid-1",
+                adUnitCode: "ad-unit-1",
+                adUnitId: "ad-id-1",
+                transactionId: "trans-1",
+                src: "client",
+              },
+            ],
+          },
+        ],
+        bidsReceived: [
+          {
+            requestId: "bid-1",
+            cpm: 1.5,
+            width: 300,
+            height: 250,
+            currency: "USD",
+            adUnitCode: "ad-unit-1",
+            // No ortb2Imp field
+          },
+        ],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+
+      // Should not throw error and splitTestVariant should be undefined
+      const storedAuction = analytics["auctions"].get("auction-no-split-test");
+      expect(storedAuction).toBeDefined();
+
+      const payload = await analytics.toWitness(storedAuction.auctionEnd, null);
+      expect(payload.bidderRequests[0].bids[0].splitTestVariant).toBeUndefined();
+    });
+
     it("should handle noBids and update status", async () => {
       const event = {
         auctionId: "auction-no-bids",
