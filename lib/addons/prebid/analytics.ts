@@ -437,11 +437,6 @@ class OptablePrebidAnalytics {
     let totalBids = 0;
     let device = null;
 
-    // Extract device from first bidder request if available
-    if (bidderRequests.length > 0) {
-      device = bidderRequests[0].ortb2?.device;
-    }
-
     // Process bidder requests
     const requests = bidderRequests.map((br: any) => {
       const { bidderCode, bidderRequestId, bids = [] } = br;
@@ -452,6 +447,8 @@ class OptablePrebidAnalytics {
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
       const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
       const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
+
+      device = br.ortb2.device;
 
       return {
         bidderCode,
