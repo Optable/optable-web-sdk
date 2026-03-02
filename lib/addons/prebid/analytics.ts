@@ -483,7 +483,7 @@ class OptablePrebidAnalytics {
     });
 
     // Merge splitTestAssignment from bidsReceived into the requests
-    const bidsReceivedMap = new Map(bidsReceived.map((b: any) => [b.requestId, b]));
+    const bidsReceivedMap = new Map<string, any>(bidsReceived.map((b: any) => [b.requestId, b]));
     requests.forEach((request: any) => {
       request.bids.forEach((bid: any) => {
         const bidReceived = bidsReceivedMap.get(bid.bidId);
