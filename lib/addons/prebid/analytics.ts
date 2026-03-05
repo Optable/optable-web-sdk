@@ -220,7 +220,8 @@ class OptablePrebidAnalytics {
 
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
 
-    window.optable.pageAuctionsCount = (Number(window.optable?.pageAuctionsCount) || 0) + 1;
+    window.optable = window.optable || {};
+    window.optable.pageAuctionsCount = (Number(window.optable.pageAuctionsCount) || 0) + 1;
 
     // Build auction object with bidder requests and EID flags
     const auction = {
