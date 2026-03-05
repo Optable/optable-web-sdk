@@ -10,7 +10,6 @@ declare const SDK_WRAPPER_VERSION: string;
 declare global {
   interface Window {
     pbjs?: any;
-    optable?: any;
   }
 }
 
@@ -220,8 +219,8 @@ class OptablePrebidAnalytics {
 
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
 
-    window.optable = window.optable || {};
-    window.optable.pageAuctionsCount = (Number(window.optable.pageAuctionsCount) || 0) + 1;
+    (window as any).optable = (window as any).optable || {};
+    (window as any).optable.pageAuctionsCount = (Number((window as any).optable.pageAuctionsCount) || 0) + 1;
 
     // Build auction object with bidder requests and EID flags
     const auction = {
@@ -521,7 +520,7 @@ class OptablePrebidAnalytics {
       device,
       prebidjsVersion: this.prebidInstance?.version || "unknown",
       sessionDepth: sessionStorage?.optableSessionDepth || 1,
-      pageAuctionsCount: window.optable?.pageAuctionsCount || 1,
+      pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
     };
 
     // Log summary with bid counts
