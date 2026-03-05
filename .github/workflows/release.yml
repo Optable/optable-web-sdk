@@ -34,8 +34,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install asdf CLI
-        uses: asdf-vm/actions/install@1117842ea70e2711a0072e3a71265cbfe2c830be
+      - name: Setup mise
+        uses: ./.github/actions/setup-mise
 
       # We need to determine which versions to update based on the new version
       # - In case of a pre-release, only update vX.Y.Z-{prerel}

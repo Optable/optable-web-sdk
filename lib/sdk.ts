@@ -3,6 +3,8 @@ import { default as buildInfo } from "./build.json";
 import { getConfig } from "./config";
 import type { WitnessProperties } from "./edge/witness";
 import type { ProfileTraits } from "./edge/profile";
+import type { PageContextConfig, ContextData } from "./core/context";
+import { extractContext, normalizeContextConfig } from "./core/context";
 import { Identify } from "./edge/identify";
 import { Uid2Token, Uid2TokenResponse } from "./edge/uid2_token";
 import { Resolve, ResolveResponse } from "./edge/resolve";
@@ -28,8 +30,12 @@ class OptableSDK {
   public dcn: ResolvedConfig;
   protected init: Promise<void>;
 
+  private contextSent: boolean = false;
+  private contextConfig: PageContextConfig | null = null;
+
   constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
+    this.contextConfig = normalizeContextConfig(dcn.pageContext);
     this.init = this.initialize();
   }
 
@@ -97,9 +103,24 @@ class OptableSDK {
     return TargetingKeyValues(tdata);
   }
 
-  async witness(event: string, properties: WitnessProperties = {}): Promise<void> {
+  async witness(
+    event: string,
+    properties: WitnessProperties = {},
+    options: { includeContext?: boolean } = {}
+  ): Promise<void> {
     await this.init;
-    return Witness(this.dcn, event, properties);
+
+    let context: ContextData | undefined;
+    if (options.includeContext && this.contextConfig && !this.contextSent) {
+      context = extractContext(this.contextConfig);
+      this.contextSent = true;
+    }
+
+    return Witness(this.dcn, event, properties, context);
+  }
+
+  resetContext(): void {
+    this.contextSent = false;
   }
 
   async profile(traits: ProfileTraits, id: string | null = null, neighbors: string[] | null = null): Promise<void> {

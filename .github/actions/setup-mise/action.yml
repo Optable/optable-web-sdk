@@ -1,0 +1,11 @@
+name: "Setup mise"
+description: "A composite action to setup mise-en-place tool manager"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup mise
+      uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+      with:
+        install: true
+        cache: true

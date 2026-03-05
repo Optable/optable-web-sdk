@@ -1,5 +1,6 @@
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
+import type { PageContextConfig } from "./core/context";
 
 type Experiment = never;
 
@@ -65,6 +66,10 @@ type InitConfig = {
   // When provided, the server will attempt to answer within the given time limit.
   // Some APIs like targeting may return partial responses depending at which stage the timeout occurred.
   timeout?: string;
+  // Page context configuration for extracting semantic content from the page.
+  // When enabled, context is sent with the first witness() call after page load.
+  // Set to true for defaults, or provide a PageContextConfig object for customization.
+  pageContext?: PageContextConfig | boolean;
 };
 
 type ResolvedConfig = {
@@ -142,5 +147,14 @@ function generateSessionID(): string {
     .replace(/=+$/g, "");
 }
 
-export type { InitConsent, CMPApiConfig, InitConfig, ResolvedConfig, ABTestConfig, MatcherOverride, Experiment };
+export type {
+  InitConsent,
+  CMPApiConfig,
+  InitConfig,
+  ResolvedConfig,
+  ABTestConfig,
+  MatcherOverride,
+  Experiment,
+  PageContextConfig,
+};
 export { getConfig, DCN_DEFAULTS, generateSessionID };

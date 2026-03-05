@@ -213,6 +213,9 @@ packages:
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
 
+  bowser@2.13.1:
+    resolution: {integrity: sha512-OHawaAbjwx6rqICCKgSG0SAnT05bzd7ppyKLVUITZpANBaaMFBAsaNkto3LoQ31tyFP5kNujE8Cdx85G9VzOkw==}
+
   braces@3.0.3:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
@@ -792,6 +795,7 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.28.4
       '@optable/web-sdk': 0.40.0
+      bowser: 2.13.1
       iab-adcom: 1.0.6
       iab-openrtb: 1.0.1
       js-sha256: 0.11.1
@@ -953,6 +957,8 @@ snapshots:
   baseline-browser-mapping@2.8.32: {}
 
   boolbase@1.0.0: {}
+
+  bowser@2.13.1: {}
 
   braces@3.0.3:
     dependencies:

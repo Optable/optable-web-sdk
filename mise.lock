@@ -1,0 +1,30 @@
+[[tools.mkcert]]
+version = "1.4.4"
+backend = "aqua:FiloSottile/mkcert"
+"platforms.linux-arm64" = { url = "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-arm64"}
+"platforms.linux-x64" = { url = "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64"}
+"platforms.macos-arm64" = { url = "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-darwin-arm64"}
+"platforms.macos-x64" = { url = "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-darwin-amd64"}
+"platforms.windows-x64" = { url = "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-windows-amd64.exe"}
+
+[[tools.node]]
+version = "22.12.0"
+backend = "core:node"
+"platforms.linux-arm64" = { checksum = "sha256:9e7905fdee722f9650a03ae644b51c4c6effd3b98ac93c588700072ab35c9ddb", url = "https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-arm64.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:e05a4d65232ae2b27b3d77da2e368522fb46b923335b8e0d5f77624c32484044", url = "https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.gz"}
+"platforms.macos-arm64" = { checksum = "sha256:293dcc6c2408da21562d135b0412525e381bb6fe150d688edb58fe850d0f3e13", url = "https://nodejs.org/dist/v22.12.0/node-v22.12.0-darwin-arm64.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:52bc25dd026db7247c3c00439afdb83e95087248267f02d6c1a7250d1f896173", url = "https://nodejs.org/dist/v22.12.0/node-v22.12.0-darwin-x64.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:2b8f2256382f97ad51e29ff71f702961af466c4616393f767455501e6aece9b8", url = "https://nodejs.org/dist/v22.12.0/node-v22.12.0-win-x64.zip"}
+
+[[tools.pnpm]]
+version = "10.11.0"
+backend = "aqua:pnpm/pnpm"
+
+[[tools.semver]]
+version = "3.3.0"
+backend = "vfox:mise-plugins/vfox-semver"
+"platforms.linux-arm64" = { url = "https://raw.githubusercontent.com/fsaintjacques/semver-tool/3.3.0/src/semver"}
+"platforms.linux-x64" = { url = "https://raw.githubusercontent.com/fsaintjacques/semver-tool/3.3.0/src/semver"}
+"platforms.macos-arm64" = { url = "https://raw.githubusercontent.com/fsaintjacques/semver-tool/3.3.0/src/semver"}
+"platforms.macos-x64" = { url = "https://raw.githubusercontent.com/fsaintjacques/semver-tool/3.3.0/src/semver"}
+"platforms.windows-x64" = { url = "https://raw.githubusercontent.com/fsaintjacques/semver-tool/3.3.0/src/semver"}

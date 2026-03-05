@@ -78,11 +78,8 @@ certs:
 	mkcert -install
 	mkcert -cert-file nginx/tls/cert.pem -key-file nginx/tls/key.pem localhost
 
-.PHONY: asdf
-asdf:
-	-asdf plugin add nodejs
-	-asdf plugin add semver
-	-asdf plugin add mkcert
-	asdf install
+.PHONY: mise
+mise:
+	mise install
 
-all: asdf certs test build demos
+all: mise certs test build demos
