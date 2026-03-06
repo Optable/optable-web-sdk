@@ -47,6 +47,7 @@ class OptablePrebidAnalytics {
   private readonly maxAuctionDataSize: number = 50;
 
   private auctions = new Map<string, AuctionItem>();
+  private prebidInstance: any;
 
   /**
    * Create a new OptablePrebidAnalytics instance.
@@ -71,6 +72,8 @@ class OptablePrebidAnalytics {
     } else {
       sessionStorage.removeItem(SESSION_SAMPLE_KEY);
     }
+
+    sessionStorage.optableSessionDepth = (Number(sessionStorage?.optableSessionDepth) || 0) + 1;
 
     this.isInitialized = true;
 
@@ -186,6 +189,8 @@ class OptablePrebidAnalytics {
    */
   hookIntoPrebid(prebidInstance = window.pbjs) {
     const pbjs = prebidInstance;
+    this.prebidInstance = pbjs;
+
     if (typeof pbjs === "undefined") {
       this.log("Prebid.js not found");
       return false;
@@ -213,6 +218,9 @@ class OptablePrebidAnalytics {
     const { auctionId, timeout, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = event;
 
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
+
+    (window as any).optable = (window as any).optable || {};
+    (window as any).optable.pageAuctionsCount = (Number((window as any).optable.pageAuctionsCount) || 0) + 1;
 
     // Build auction object with bidder requests and EID flags
     const auction = {
@@ -528,6 +536,9 @@ class OptablePrebidAnalytics {
       optableWrapperVersion: SDK_WRAPPER_VERSION || "unknown",
       userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
       device,
+      prebidjsVersion: this.prebidInstance?.version || "unknown",
+      sessionDepth: sessionStorage?.optableSessionDepth || 1,
+      pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
     };
 
     // Log summary with bid counts
