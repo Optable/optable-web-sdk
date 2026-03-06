@@ -244,6 +244,7 @@ class OptablePrebidAnalytics {
               transactionId: string;
               src: string;
               floorData?: { floorMin: number };
+              ortb2Imp?: { ext?: { optable?: { splitTestAssignment?: string } } };
             }) => ({
               bidId: b.bidId,
               bidderRequestId,
@@ -252,6 +253,7 @@ class OptablePrebidAnalytics {
               transactionId: b.transactionId,
               src: b.src,
               floorMin: b.floorData?.floorMin,
+              splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
               status: STATUS.REQUESTED,
             })
           ),
@@ -291,6 +293,7 @@ class OptablePrebidAnalytics {
           cpm: b.cpm,
           size: `${b.width}x${b.height}`,
           currency: b.currency,
+          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
         });
       } else {
         // Create new bid object for this response
@@ -305,6 +308,7 @@ class OptablePrebidAnalytics {
           size: `${b.width}x${b.height}`,
           currency: b.currency,
           status: STATUS.RECEIVED,
+          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
         };
         br.bids.push(bidObj);
         bidIndex[bidId] = bidObj;
@@ -349,7 +353,7 @@ class OptablePrebidAnalytics {
       this.sendToWitnessAPI("optable.prebid.auction", payload);
     }, this.config.bidWinTimeout);
 
-    // Store the processed auction
+    // Store the auction data
     this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId });
 
     // Clean up old auctions
@@ -433,6 +437,7 @@ class OptablePrebidAnalytics {
     let totalBids = 0;
     let device = null;
 
+    // Process bidder requests
     const requests = bidderRequests.map((br: any) => {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
@@ -461,6 +466,7 @@ class OptablePrebidAnalytics {
             transactionId: string;
             src: string;
             floorData?: { floorMin: number };
+            ortb2Imp?: { ext?: { optable?: { splitTestAssignment?: string } } };
           }) => ({
             bidId: b.bidId,
             bidderRequestId,
@@ -469,10 +475,22 @@ class OptablePrebidAnalytics {
             transactionId: b.transactionId,
             src: b.src,
             floorMin: b.floorData?.floorMin,
+            splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
             status: STATUS.REQUESTED,
           })
         ),
       };
+    });
+
+    // Merge splitTestAssignment from bidsReceived into the requests
+    const bidsReceivedMap = new Map<string, any>(bidsReceived.map((b: any) => [b.requestId, b]));
+    requests.forEach((request: any) => {
+      request.bids.forEach((bid: any) => {
+        const bidReceived = bidsReceivedMap.get(bid.bidId);
+        if (bidReceived?.ortb2Imp?.ext?.optable?.splitTestAssignment) {
+          bid.splitTestAssignment = bidReceived.ortb2Imp.ext.optable.splitTestAssignment;
+        }
+      });
     });
 
     const witnessData: WitnessProperties = {
