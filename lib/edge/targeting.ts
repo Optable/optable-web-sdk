@@ -80,6 +80,9 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
     if (abTest.skipMatchers) {
       searchParams.append("skip_matchers", abTest.skipMatchers.join(","));
     }
+    if (abTest.skipResolvers) {
+      searchParams.append("skip_resolvers", abTest.skipResolvers.join(","));
+    }
   }
 
   if (config.additionalTargetingSignals?.ref) {
