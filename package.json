@@ -5,7 +5,7 @@
   "browser": "./lib/dist/sdk.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/optable/optable-web-sdk.git"
+    "url": "git+https://github.com/Optable/optable-web-sdk.git"
   },
   "homepage": "https://optable.co",
   "license": "SEE LICENSE IN LICENSE",
