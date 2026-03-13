@@ -15,6 +15,8 @@ type ABTestConfig = {
   matcher_override?: MatcherOverride[];
   // SkipMatchers specifies the list of matchers (node_id)s to skip. To skip 1p, simply send 1p
   skipMatchers?: string[];
+  // SkipResolvers specifies the list of resolvers (node_id)s to skip.
+  skipResolvers?: string[];
 };
 
 type TargetingSignals = {
