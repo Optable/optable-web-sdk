@@ -16,6 +16,9 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Targeting API](#targeting-api)
   - [Witness API](#witness-api)
 - [Using a script tag](#using-a-script-tag)
+- [Integrating PrebidJS analytics](#integrating-prebidjs-analytics)
+  - [Script tag](#script-tag-1)
+  - [NPM package](#npm-package)
 - [Integrating GAM360](#integrating-gam360)
   - [Targeting key values](#targeting-key-values)
   - [Targeting key values from local cache](#targeting-key-values-from-local-cache)
@@ -391,6 +394,58 @@ You can also manually initialize the SDK using the cmd queue. This approach is u
 
 <input type="text" id="email" value="some.email@address.com" />
 ```
+
+## Integrating PrebidJS analytics
+
+The `OptablePrebidAnalytics` addon hooks into [Prebid.js](https://prebid.org/) auction events (`auctionEnd` and `bidWon`) and sends auction analytics to the Optable DCN via the **witness API**. It reports per-bidder EID coverage, bid outcomes, and optional custom key-value pairs, enabling you to measure the impact of Optable targeting on your Prebid auctions.
+
+### Script tag
+
+When the SDK is loaded via a `<script>` tag, `OptablePrebidAnalytics` is available as `window.optable.OptablePrebidAnalytics`.
+
+```html
+<!-- Optable SDK async load: -->
+<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
+
+<!-- Prebid.js async load: -->
+<script async src="prebid.js"></script>
+
+<script>
+  window.optable = window.optable || { cmd: [] };
+  window.pbjs = window.pbjs || { que: [] };
+
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
+
+    const analytics = new optable.OptablePrebidAnalytics(optable.instance, {
+      analytics: true,
+      tenant: "my_tenant", // Replace with your Optable tenant name
+    });
+
+    analytics.hookIntoPrebid(window.pbjs);
+  });
+</script>
+```
+
+### NPM package
+
+When using the SDK as an NPM package, import `OptablePrebidAnalytics` directly from the addon module:
+
+```javascript
+import OptableSDK from "@optable/web-sdk";
+import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
+
+const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site" });
+
+const analytics = new OptablePrebidAnalytics(sdk, {
+  analytics: true,
+  tenant: "my_tenant", // Replace with your Optable tenant name
+});
+
+analytics.hookIntoPrebid(window.pbjs);
+```
+
+For extended configuration options such as sampling, debug mode, and custom analytics data, see the [Prebid analytics addon README](lib/addons/prebid/README.md).
 
 ## Integrating GAM360
 
