@@ -83,6 +83,12 @@ jobs:
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
 
+      - name: Configure Node.js for npm registry with OIDC
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
       - name: Publish to NPM using OIDC
         run: pnpm publish --provenance --access public --no-git-checks
 
