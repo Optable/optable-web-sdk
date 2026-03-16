@@ -10,7 +10,11 @@ backend = "aqua:FiloSottile/mkcert"
 [[tools.node]]
 version = "24.3.0"
 backend = "core:node"
+"platforms.linux-arm64" = { checksum = "sha256:371fc060d5dd4de565586c3cc70034956db67a8f3dae0f0e5724fa56147c472a", url = "https://nodejs.org/dist/v24.3.0/node-v24.3.0-linux-arm64.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:bbeb5fb8113b44fc30f5a5887dbc0ab66af8e56139f5f9fbe7c7a1aa056246dc", url = "https://nodejs.org/dist/v24.3.0/node-v24.3.0-linux-x64.tar.gz"}
 "platforms.macos-arm64" = { checksum = "sha256:fee91aa5febeda47ef9f6c0afd2f2bcd3dacb0e656c29de0b5274e0ea1ca3565", url = "https://nodejs.org/dist/v24.3.0/node-v24.3.0-darwin-arm64.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:0c065ffa4e53b1a172ab9cd8ca08ae141b187aca8a07403c6856a7b8d0024804", url = "https://nodejs.org/dist/v24.3.0/node-v24.3.0-darwin-x64.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:c0c8efbca1b57e5b074bbdf7cef1ccca40979d6b46e5bcadaad5d4b07cbb3b10", url = "https://nodejs.org/dist/v24.3.0/node-v24.3.0-win-x64.zip"}
 
 [[tools.pnpm]]
 version = "10.11.0"
