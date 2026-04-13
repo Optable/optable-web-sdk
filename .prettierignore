@@ -2,6 +2,9 @@
 
 # build outputs
 browser/dist
+
+# Go text/template file (not valid TypeScript)
+browser/pub.ts
 lib/dist
 
 # demos
