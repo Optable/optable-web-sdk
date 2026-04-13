@@ -124,7 +124,10 @@ jobs:
             x-goog-meta-optable-sdk-version: ${{ github.ref_name }}
 
   deploy-pub-template-to-gcs:
-    needs: [build]
+    needs: [deploy-sdk-to-npm, define-gcs-versions-to-update]
+    strategy:
+      matrix:
+        sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -143,7 +146,7 @@ jobs:
         uses: google-github-actions/upload-cloud-storage@v2
         with:
           path: "browser/pub.ts"
-          destination: "optable-web-sdk/pub-sdk/${{ github.ref_name }}"
+          destination: "optable-web-sdk/pub-sdk/${{ matrix.sdk-version }}"
           process_gcloudignore: false
           headers: |
             x-goog-meta-optable-sdk-version: ${{ github.ref_name }}
