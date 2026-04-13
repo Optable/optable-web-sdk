@@ -8,6 +8,8 @@
 //   .Node              - Node slug derived from tenant
 //   .Timeout           - Optional timeout hint (e.g. "500ms", "2s")
 //   .PrebidGlobal      - Prebid.js global variable name (e.g. "pbjs", "__pmc_atlasmg_pbjs")
+//   .TcfeuVendorID        - Optional TCF EU vendor ID (GVLID) for consent checks
+//   .TcfcaVendorID        - Optional TCF CA vendor ID (GVLID) for consent checks
 //   .EnableSecureSignals  - Boolean: enable GPT Secure Signals
 //   .EnableBotDetection   - Boolean: enable bot detection
 //   .EnableAnalytics      - Boolean: enable Prebid analytics
@@ -67,7 +69,14 @@ function getConsent() {
       useProfilesForAdvertising: true,
     };
   }
-  return { cmpapi: {} };
+  return { cmpapi: {
+    {{- if .TcfeuVendorID}}
+    tcfeuVendorID: {{.TcfeuVendorID}},
+    {{- end}}
+    {{- if .TcfcaVendorID}}
+    tcfcaVendorID: {{.TcfcaVendorID}},
+    {{- end}}
+  } };
 }
 
 {{if .EnableAnalytics}}

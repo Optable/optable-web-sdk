@@ -30,6 +30,8 @@ sed \
   -e 's/{{\.Node}}/sample-node/g' \
   -e 's/{{\.PrebidGlobal}}/pbjs/g' \
   -e 's/{{\.Timeout}}/500ms/g' \
+  -e 's/{{\.TcfeuVendorID}}/123/g' \
+  -e 's/{{\.TcfcaVendorID}}/456/g' \
   "${TEMPLATE}" > "${rendered}"
 
 echo "Rendered template to ${rendered}"
