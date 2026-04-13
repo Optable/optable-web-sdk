@@ -123,6 +123,31 @@ jobs:
           headers: |
             x-goog-meta-optable-sdk-version: ${{ github.ref_name }}
 
+  deploy-pub-template-to-gcs:
+    needs: [build]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Auth to google cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.workload_identity_provider }}
+          service_account: ${{ env.service-account }}
+
+      - name: Upload pub.ts template to GCS bucket
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: "browser/pub.ts"
+          destination: "optable-web-sdk/pub-sdk/${{ github.ref_name }}"
+          process_gcloudignore: false
+          headers: |
+            x-goog-meta-optable-sdk-version: ${{ github.ref_name }}
+
   deploy-demo:
     needs: [deploy-sdk-to-npm]
     permissions:
@@ -181,7 +206,7 @@ jobs:
         run: docker push us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }}
 
   slack-notification:
-    needs: [tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-demo]
+    needs: [tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-pub-template-to-gcs, deploy-demo]
     runs-on: ubuntu-22.04
     if: ${{ failure() }}
     steps:

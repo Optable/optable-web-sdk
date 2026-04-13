@@ -14,6 +14,27 @@ jobs:
       - name: Test
         run: pnpm test
 
+  validate-pub-template:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if pub template files changed
+        id: changed
+        run: |
+          if git diff --name-only origin/master...HEAD | grep -qE '^(browser/pub\.ts|scripts/validate-pub-template\.sh)$'; then
+            echo "pub_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pub_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate pub.ts template
+        if: steps.changed.outputs.pub_changed == 'true'
+        run: ./scripts/validate-pub-template.sh
+
   prettier:
     runs-on: ubuntu-22.04
     steps:
