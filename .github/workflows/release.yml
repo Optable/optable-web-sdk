@@ -209,7 +209,16 @@ jobs:
         run: docker push us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }}
 
   slack-notification:
-    needs: [tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-pub-template-to-gcs, deploy-demo]
+    needs:
+      [
+        tests-prettier,
+        build,
+        deploy-sdk-to-npm,
+        define-gcs-versions-to-update,
+        deploy-sdk-to-gcs,
+        deploy-pub-template-to-gcs,
+        deploy-demo,
+      ]
     runs-on: ubuntu-22.04
     if: ${{ failure() }}
     steps:
