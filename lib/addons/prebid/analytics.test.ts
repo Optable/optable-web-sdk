@@ -1107,6 +1107,245 @@ describe("OptablePrebidAnalytics", () => {
     });
   });
 
+  describe("EID deduplication", () => {
+    beforeEach(() => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
+        tenant: "test-tenant",
+      });
+    });
+
+    it("should deduplicate EIDs by source when both ext.eids and eids contain same source", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-dedup",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                ext: {
+                  eids: [{ inserter: "optable.co", matcher: "matcher1", source: "optable.co" }],
+                },
+                eids: [{ inserter: "optable.co", matcher: "matcher2", source: "optable.co" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, null);
+
+      // Should only have one source since they have the same source value
+      expect(result.optableSources).toEqual(["optable.co"]);
+      // The last occurrence (from eids, not ext.eids) should win due to deduplication
+      expect(result.optableMatchers).toEqual(["matcher2"]);
+    });
+
+    it("should preserve EIDs with different sources from ext.eids and eids", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-no-dedup",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                ext: {
+                  eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1.optable.co" }],
+                },
+                eids: [{ inserter: "optable.co", matcher: "matcher2", source: "source2.optable.co" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, null);
+
+      // Should have both sources since they're different
+      expect(result.optableSources).toHaveLength(2);
+      expect(result.optableSources).toContain("source1.optable.co");
+      expect(result.optableSources).toContain("source2.optable.co");
+      expect(result.optableMatchers).toHaveLength(2);
+      expect(result.optableMatchers).toContain("matcher1");
+      expect(result.optableMatchers).toContain("matcher2");
+    });
+
+    it("should handle empty ext.eids and only use eids", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-only-eids",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                ext: {
+                  eids: [],
+                },
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, null);
+
+      expect(result.optableSources).toEqual(["source1"]);
+      expect(result.optableMatchers).toEqual(["matcher1"]);
+    });
+
+    it("should handle missing ext.eids and only use eids", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-no-ext-eids",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, null);
+
+      expect(result.optableSources).toEqual(["source1"]);
+      expect(result.optableMatchers).toEqual(["matcher1"]);
+    });
+
+    it("should handle empty eids and only use ext.eids", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-only-ext-eids",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                ext: {
+                  eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+                },
+                eids: [],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, null);
+
+      expect(result.optableSources).toEqual(["source1"]);
+      expect(result.optableMatchers).toEqual(["matcher1"]);
+    });
+
+    it("should deduplicate multiple EIDs with same source across different locations", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-multi-dedup",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                ext: {
+                  eids: [
+                    { inserter: "optable.co", matcher: "matcher1", source: "optable.co" },
+                    { inserter: "other.co", matcher: "other1", source: "other.co" },
+                  ],
+                },
+                eids: [
+                  { inserter: "optable.co", matcher: "matcher2", source: "optable.co" },
+                  { inserter: "other.co", matcher: "other2", source: "other.co" },
+                ],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, null);
+
+      // Should only have one optable source and matcher due to deduplication
+      expect(result.optableSources).toEqual(["optable.co"]);
+      expect(result.optableMatchers).toEqual(["matcher2"]);
+      // Non-optable EIDs should be filtered out
+      expect(result.optableMatchers).not.toContain("other1");
+      expect(result.optableMatchers).not.toContain("other2");
+    });
+
+    it("should handle trackAuctionEnd with duplicate EIDs in ext.eids and eids", async () => {
+      const event = {
+        auctionId: "auction-track-dedup",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                ext: {
+                  eids: [{ inserter: "optable.co", matcher: "matcher1", source: "optable.co" }],
+                },
+                eids: [{ inserter: "optable.co", matcher: "matcher2", source: "optable.co" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+
+      const storedAuction = analytics["auctions"].get("auction-track-dedup");
+      expect(storedAuction).toBeDefined();
+
+      const payload = await analytics.toWitness(storedAuction.auctionEnd, null);
+      // Should only have one source after deduplication
+      expect(payload.optableSources).toEqual(["optable.co"]);
+      // The last matcher should win
+      expect(payload.optableMatchers).toEqual(["matcher2"]);
+    });
+  });
+
   describe("trackAuctionEnd - edge cases", () => {
     beforeEach(() => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);

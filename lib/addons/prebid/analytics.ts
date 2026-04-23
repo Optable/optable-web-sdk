@@ -229,7 +229,9 @@ class OptablePrebidAnalytics {
       bidderRequests: bidderRequests.map((br: any) => {
         const { bidderCode, bidderRequestId, bids = [] } = br;
         const domain = br.ortb2.site?.domain ?? "unknown";
-        const eids = br.ortb2.user?.eids ?? [];
+        const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
+        // Deduplicate EIDs by source
+        const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
 
         // Optable EIDs
         const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
@@ -449,7 +451,9 @@ class OptablePrebidAnalytics {
     const requests = bidderRequests.map((br: any) => {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
-      const eids = br.ortb2.user?.eids ?? [];
+      const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
+      // Deduplicate EIDs by source
+      const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
