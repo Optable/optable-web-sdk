@@ -110,6 +110,16 @@ describe("Breaking change detection: if typescript complains or a test fails it'
     await new OptableSDK({ ...defaultConfig }).uid2Token("c:a1a335b8216658319f96a4b0c718557ba41dd1f5");
   });
 
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: passport", () => {
+    const result = new OptableSDK({ ...defaultConfig }).passport();
+    expect(result === null || typeof result === "string").toBe(true);
+  });
+
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: visitorId", () => {
+    const result = new OptableSDK({ ...defaultConfig }).visitorId();
+    expect(result === null || typeof result === "string").toBe(true);
+  });
+
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: targetingFromCache", async () => {
     const result = new OptableSDK({ ...defaultConfig }).targetingFromCache();
     expect(result).toBeNull();
@@ -517,6 +527,63 @@ describe("behavior testing of", () => {
         url: expect.stringContaining("&timeout=30ms"),
       })
     );
+  });
+});
+
+describe("passport and visitorId", () => {
+  let warnSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    localStorage.clear();
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
+  });
+
+  test("returns null and warns once when no passport is cached", () => {
+    const sdk = new OptableSDK({ ...defaultConfig, initPassport: false });
+
+    expect(sdk.passport()).toBeNull();
+    expect(sdk.passport()).toBeNull();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toMatch(/\[Optable\] passport\(\) returned null/);
+
+    expect(sdk.visitorId()).toBeNull();
+    expect(sdk.visitorId()).toBeNull();
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    expect(warnSpy.mock.calls[1][0]).toMatch(/\[Optable\] visitorId\(\) returned null/);
+  });
+
+  test("returns cached passport and decoded visitor id after an edge call populates them", async () => {
+    const payload = { id: "vid-xyz" };
+    const mockJwt = "h." + btoa(JSON.stringify(payload)) + ".s";
+    const fetchSpy = jest.spyOn(window, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ passport: mockJwt }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig, initPassport: false });
+    await sdk.site();
+
+    expect(sdk.passport()).toEqual(mockJwt);
+    expect(sdk.visitorId()).toEqual("vid-xyz");
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
+  });
+
+  test("warn-once flag is per-instance", () => {
+    const sdk1 = new OptableSDK({ ...defaultConfig, initPassport: false });
+    const sdk2 = new OptableSDK({ ...defaultConfig, initPassport: false });
+
+    sdk1.passport();
+    sdk2.passport();
+
+    expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 });
 

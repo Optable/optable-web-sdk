@@ -35,6 +35,26 @@ class LocalStorage {
     this.writeToStorageKeys(this.passportKeys, passport);
   }
 
+  getVisitorId(): string | null {
+    const passport = this.getPassport();
+    if (!passport) return null;
+
+    const payload = passport.split(".")[1];
+    if (!payload) return null;
+
+    try {
+      // JWT payload is base64url; normalize to base64 before atob.
+      const b64 = payload
+        .replace(/-/g, "+")
+        .replace(/_/g, "/")
+        .padEnd(payload.length + ((4 - (payload.length % 4)) % 4), "=");
+      const claims = JSON.parse(atob(b64));
+      return typeof claims?.id === "string" ? claims.id : null;
+    } catch {
+      return null;
+    }
+  }
+
   getTargeting(): TargetingResponse | null {
     const raw = this.readStorageKeys(this.targetingKeys);
     return raw ? JSON.parse(raw) : null;
