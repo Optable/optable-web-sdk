@@ -934,7 +934,7 @@ const passport = sdk.passport(); // string | null — the raw JWT as stored in l
 const visitorId = sdk.visitorId(); // string | null — the `id` claim decoded from the passport
 ```
 
-Both methods return `null` until the passport has been populated in `localStorage`. By default (`initPassport: true`) the SDK triggers a `/config` call at construction time, and the DCN response populates the passport. 
+Both methods return `null` until the passport has been populated in `localStorage`. By default (`initPassport: true`) the SDK triggers a `/config` call at construction time, and the DCN response populates the passport.
 
 If the returned value is `null`, the SDK logs a one-time warning per instance to help diagnose the cause. The two expected reasons for a `null` return are:
 

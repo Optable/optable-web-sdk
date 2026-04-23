@@ -44,10 +44,10 @@ class LocalStorage {
 
     try {
       // JWT payload is base64url; normalize to base64 before atob.
-      const b64 = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(
-        payload.length + ((4 - (payload.length % 4)) % 4),
-        "="
-      );
+      const b64 = payload
+        .replace(/-/g, "+")
+        .replace(/_/g, "/")
+        .padEnd(payload.length + ((4 - (payload.length % 4)) % 4), "=");
       const claims = JSON.parse(atob(b64));
       return typeof claims?.id === "string" ? claims.id : null;
     } catch {
