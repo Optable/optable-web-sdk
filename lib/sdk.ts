@@ -23,6 +23,7 @@ import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
+import { LocalStorage } from "./core/storage";
 
 class OptableSDK {
   public static version = buildInfo.version;
@@ -32,6 +33,8 @@ class OptableSDK {
 
   private contextSent: boolean = false;
   private contextConfig: PageContextConfig | null = null;
+  private passportNullWarned: boolean = false;
+  private visitorIdNullWarned: boolean = false;
 
   constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
@@ -79,6 +82,32 @@ class OptableSDK {
 
   siteFromCache(): SiteResponse | null {
     return SiteFromCache(this.dcn);
+  }
+
+  passport(): string | null {
+    const value = new LocalStorage(this.dcn).getPassport();
+    if (value === null && !this.passportNullWarned) {
+      this.passportNullWarned = true;
+      console.warn(
+        "[Optable] passport() returned null. The passport is cached in localStorage once the DCN returns one. " +
+          "Call before initialization (await sdk.site() or sdk.targeting()) may return null, and deployments where the DCN " +
+          "does not echo the passport in response bodies will never populate it client-side."
+      );
+    }
+    return value;
+  }
+
+  visitorId(): string | null {
+    const value = new LocalStorage(this.dcn).getVisitorId();
+    if (value === null && !this.visitorIdNullWarned) {
+      this.visitorIdNullWarned = true;
+      console.warn(
+        "[Optable] visitorId() returned null. The visitor ID is derived from the passport JWT in localStorage. " +
+          "Call before initialization (await sdk.site() or sdk.targeting()) may return null, and deployments where the DCN " +
+          "does not echo the passport in response bodies will never populate it client-side."
+      );
+    }
+    return value;
   }
 
   targetingClearCache(): void {

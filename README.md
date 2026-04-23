@@ -31,6 +31,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
 - [Fetching Google Privacy Sandbox Topics](#fetching-google-privacy-sandbox-topics)
+- [Passport and Visitor ID](#passport-and-visitor-id)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -909,8 +910,10 @@ For example:
 ```
 
 ## Fetching Google Privacy Sandbox topics
+## Passport and Visitor ID
 
 To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `getTopics` method. This method asynchronously retrieves topics IDs and taxonomy versions from the Chrome browser. Alternatively, you can use the `ingestTopics` method. This method invokes `getTopics` and sends the retrieved topics to the Optable DCN under the trait "topics_api". See the [Topics API dictionary](https://patcg-individual-drafts.github.io/topics/#dictdef-browsingtopic) for details.
+The Optable DCN issues a _passport_ (a signed JWT) that is cached in browser `localStorage`. The passport encodes a unique _visitor ID_ that the DCN uses to anonymously identify the browser. Both values can be read synchronously from the SDK:
 
 It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
 
@@ -925,6 +928,9 @@ It is recommended to call this method before making ad calls to ensure that the 
     optable.instance.ingestTopics();
   });
 </script>
+```javascript
+const passport = sdk.passport(); // string | null — the raw JWT as stored in localStorage
+const visitorId = sdk.visitorId(); // string | null — the `id` claim decoded from the passport
 ```
 
 ## Demo Pages
@@ -942,10 +948,14 @@ cd path/to/optable-web-sdk
 make
 docker-compose up
 ```
+Both methods return `null` until the passport has been populated in `localStorage`. By default (`initPassport: true`) the SDK triggers a `/config` call at construction time, and the DCN response populates the passport. 
 
 Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
+If the returned value is `null`, the SDK logs a one-time warning per instance to help diagnose the cause. The two expected reasons for a `null` return are:
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
+1. The method was called before the passport was cached (e.g. before `sdk.site()` resolved).
+2. The DCN is configured to not echo the passport in response bodies, in which case the client-side cache is never populated.
 
 ## Multi-Node Targeting Resolver
 
