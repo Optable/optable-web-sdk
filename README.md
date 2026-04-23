@@ -1,8 +1,8 @@
-# Optable Web SDK [![Continuous Integration](https://github.com/Optable/optable-web-sdk/actions/workflows/pull-request.yml/badge.svg)](https://github.com/Optable/optable-web-sdk/actions/workflows/pull-request.yml)
+# Optable Web SDK [![Continuous Integration](https://github.com/Optable/optable-web-sdk/actions/workflows/pull-request.yml/badge.svg)](https://github.com/Optable/optable-web-sdk/actions/workflows/pull-request.yml) <!-- omit in toc -->
 
 JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](https://docs.optable.co/) from a web site or web application.
 
-## Contents
+## Contents <!-- omit in toc -->
 
 - [Installing](#installing)
   - [NPM module](#npm-module)
@@ -11,11 +11,22 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 - [Domains and Cookies](#domains-and-cookies)
   - [LocalStorage](#localstorage)
 - [Using the NPM module](#using-the-npm-module)
+- [Initialization Configuration (`InitConfig`)](#initialization-configuration-initconfig)
+  - [Required Keys](#required-keys)
+  - [Optional Keys](#optional-keys)
+- [Usage Example](#usage-example)
+  - [Security \& Privacy](#security--privacy)
   - [Identify API](#identify-api)
   - [Profile API](#profile-api)
   - [Targeting API](#targeting-api)
+    - [Single Identifier (Default)](#single-identifier-default)
+    - [Multiple Identifiers](#multiple-identifiers)
+    - [TypeScript Types](#typescript-types)
+    - [Caching Targeting Data](#caching-targeting-data)
   - [Witness API](#witness-api)
 - [Using a script tag](#using-a-script-tag)
+  - [Option 1: Automatic Initialization](#option-1-automatic-initialization)
+  - [Option 2: Manual Initialization with Commands Queue](#option-2-manual-initialization-with-commands-queue)
 - [Integrating PrebidJS analytics](#integrating-prebidjs-analytics)
   - [Script tag](#script-tag-1)
   - [NPM package](#npm-package)
@@ -23,15 +34,20 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Targeting key values](#targeting-key-values)
   - [Targeting key values from local cache](#targeting-key-values-from-local-cache)
   - [Witnessing ad events](#witnessing-ad-events)
-  - [Passing Secure Signals to GAM](#gam-secure-signals)
+  - [GAM Secure Signals](#gam-secure-signals)
 - [Integrating Prebid](#integrating-prebid)
+  - [Open Pair ID Prebid Module](#open-pair-id-prebid-module)
   - [Seller Defined Audiences](#seller-defined-audiences)
   - [Custom key values](#custom-key-values)
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
-- [Fetching Google Privacy Sandbox Topics](#fetching-google-privacy-sandbox-topics)
 - [Passport and Visitor ID](#passport-and-visitor-id)
+- [Multi-Node Targeting Resolver](#multi-node-targeting-resolver)
+  - [Usage](#usage)
+  - [Rules](#rules)
+  - [Return Value](#return-value)
+  - [Input Type](#input-type)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -909,51 +925,19 @@ For example:
 </script>
 ```
 
-## Fetching Google Privacy Sandbox topics
 ## Passport and Visitor ID
 
-To fetch Google Privacy Sandbox topics using the Optable SDK, you can use the `getTopics` method. This method asynchronously retrieves topics IDs and taxonomy versions from the Chrome browser. Alternatively, you can use the `ingestTopics` method. This method invokes `getTopics` and sends the retrieved topics to the Optable DCN under the trait "topics_api". See the [Topics API dictionary](https://patcg-individual-drafts.github.io/topics/#dictdef-browsingtopic) for details.
 The Optable DCN issues a _passport_ (a signed JWT) that is cached in browser `localStorage`. The passport encodes a unique _visitor ID_ that the DCN uses to anonymously identify the browser. Both values can be read synchronously from the SDK:
 
-It is recommended to call this method before making ad calls to ensure that the latest topics are available for targeting.
-
-```html
-<!-- Optable SDK async load: -->
-<script async src="https://cdn.optable.co/web-sdk/latest/sdk.js"></script>
-<script>
-  window.optable = window.optable || { cmd: [] };
-  optable.cmd.push(function () {
-    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
-    // Fetch Google Privacy Sandbox topics and send them to the Optable DCN
-    optable.instance.ingestTopics();
-  });
-</script>
 ```javascript
 const passport = sdk.passport(); // string | null — the raw JWT as stored in localStorage
 const visitorId = sdk.visitorId(); // string | null — the `id` claim decoded from the passport
 ```
 
-## Demo Pages
-
-The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
-
-You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found in the [demos directory](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
-
-Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described in [this section](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
-
-To build and run the demos locally, you will need [Docker](https://www.docker.com/), `docker-compose` and `make`:
-
-```shell
-cd path/to/optable-web-sdk
-make
-docker-compose up
-```
 Both methods return `null` until the passport has been populated in `localStorage`. By default (`initPassport: true`) the SDK triggers a `/config` call at construction time, and the DCN response populates the passport. 
 
-Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
 If the returned value is `null`, the SDK logs a one-time warning per instance to help diagnose the cause. The two expected reasons for a `null` return are:
 
-Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
 1. The method was called before the passport was cached (e.g. before `sdk.site()` resolved).
 2. The DCN is configured to not echo the passport in response bodies, in which case the client-side cache is never populated.
 
@@ -962,7 +946,7 @@ Note that using HTTP first-party cookies with a local instance of the demos page
 Resolves multiple **Node Targeting Rules** based on **priority** or **aggregation**.
 This function is available under `window.optable.utils` as part of a collection of helper methods extending the SDK.
 
-### **Usage**
+### Usage
 
 Define targeting rules:
 
@@ -999,13 +983,13 @@ const result = await window.optable.utils.resolveMultiNodeTargeting(rules);
 console.log(result);
 ```
 
-### **Rules**
+### Rules
 
 - If **any rule has a `priority`**, the function will return the response with the highest priority (1 being the highest). Lower priorities (2, 3, etc.) are considered progressively less important. Any rules with priority values of 0 or below are ignored.
 - If **multiple nodes share the highest priority**, merges their `eids`.
 - If **no priority is set**, aggregates all responses.
 
-### **Return Value**
+### Return Value
 
 ```typescript
 type MultiNodeTargetingResponse = {
@@ -1016,7 +1000,7 @@ type MultiNodeTargetingResponse = {
 };
 ```
 
-### **Input Type**
+### Input Type
 
 ```typescript
 type NodeTargetingRule = {
@@ -1034,3 +1018,23 @@ type NodeTargetingRule = {
   priority?: number;
 };
 ```
+
+## Demo Pages
+
+The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
+
+You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found in the [demos directory](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
+
+Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described in [this section](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
+
+To build and run the demos locally, you will need [Docker](https://www.docker.com/), `docker-compose` and `make`:
+
+```shell
+cd path/to/optable-web-sdk
+make
+docker-compose up
+```
+
+Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
+
+Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
