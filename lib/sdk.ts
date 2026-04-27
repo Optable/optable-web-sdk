@@ -215,5 +215,6 @@ function normalizeTargetingRequest(input: string | TargetingRequest): TargetingR
 }
 
 export { OptableSDK, normalizeTargetingRequest };
-export type { InitConfig };
+export { mergeWithCache } from "./core/eid-cache";
+export type { InitConfig, EidCacheConfig } from "./config";
 export default OptableSDK;
