@@ -67,9 +67,7 @@ describe("mergeWithCache", () => {
 
     const result = mergeWithCache(freshResponse, enabledConfig);
 
-    expect(result.ortb2.user.eids).toEqual([
-      { source: "uid2.com", matcher: "matcher_one", uids: [{ id: "uid123" }] },
-    ]);
+    expect(result.ortb2.user.eids).toEqual([{ source: "uid2.com", matcher: "matcher_one", uids: [{ id: "uid123" }] }]);
 
     const stored = JSON.parse(mockLocalStorage.getItem("OPTABLE_RESOLVED")!);
     expect(stored.ortb2.user.eids).toHaveLength(1);
