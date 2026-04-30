@@ -191,7 +191,7 @@ describe("OptablePrebidAnalytics", () => {
         cpm: 1.5,
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, bidWonEvent);
+      const result = await analytics.toWitness(auctionEndEvent, [bidWonEvent]);
 
       expect(result).toMatchObject({
         auctionId: "auction-123",
@@ -205,7 +205,8 @@ describe("OptablePrebidAnalytics", () => {
         missed: false,
       });
 
-      expect(result.bidWon).toMatchObject({
+      expect(result.bidWon).toHaveLength(1);
+      expect(result.bidWon[0]).toMatchObject({
         bidderCode: "bidder1",
         adUnitCode: "ad-unit-1",
       });
@@ -249,7 +250,7 @@ describe("OptablePrebidAnalytics", () => {
         cpm: 2.0,
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, bidWonEvent);
+      const result = await analytics.toWitness(auctionEndEvent, [bidWonEvent]);
 
       expect(result.optableMatchers).toEqual([]);
       expect(result.optableSources).toEqual([]);
@@ -289,6 +290,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(storedAuction).toBeDefined();
       expect(storedAuction?.auctionEnd).toBe(event);
       expect(storedAuction?.missed).toBe(false);
+      expect(storedAuction?.bidWonEvents).toEqual([]);
     });
 
     it("should mark auction as missed when specified", async () => {
@@ -322,10 +324,15 @@ describe("OptablePrebidAnalytics", () => {
 
   describe("trackBidWon", () => {
     beforeEach(() => {
+      jest.useFakeTimers();
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
         analytics: true,
         tenant: "test-tenant",
       });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
     });
 
     it("should skip if auction data is missing", async () => {
@@ -338,6 +345,7 @@ describe("OptablePrebidAnalytics", () => {
       };
 
       await analytics.trackBidWon(event);
+      await jest.runAllTimersAsync();
 
       expect(mockOptableInstance.witness).not.toHaveBeenCalled();
     });
@@ -372,11 +380,9 @@ describe("OptablePrebidAnalytics", () => {
         cpm: 1.5,
       };
 
-      // First track the auction end
       await analytics.trackAuctionEnd(auctionEndEvent);
-
-      // Then track the bid won
       await analytics.trackBidWon(bidWonEvent);
+      await jest.runAllTimersAsync();
 
       expect(mockOptableInstance.witness).toHaveBeenCalledWith(
         "optable.prebid.auction",
@@ -384,6 +390,7 @@ describe("OptablePrebidAnalytics", () => {
           auctionId: "auction-complete",
           tenant: "test-tenant",
           missed: false,
+          bidWon: [expect.objectContaining({ adUnitCode: "ad-unit-1", bidderCode: "bidder1" })],
         })
       );
     });
@@ -420,12 +427,50 @@ describe("OptablePrebidAnalytics", () => {
 
       await analytics.trackAuctionEnd(auctionEndEvent);
       await analytics.trackBidWon(bidWonEvent, true);
+      await jest.runAllTimersAsync();
 
       expect(mockOptableInstance.witness).toHaveBeenCalledWith(
         "optable.prebid.auction",
         expect.objectContaining({
           missed: true,
         })
+      );
+    });
+
+    it("should accumulate multiple bidWon events and emit one witness with an array", async () => {
+      const auctionId = "auction-multi-unit";
+      const auctionEndEvent = {
+        auctionId,
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "appnexus",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: { eids: [] },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(auctionEndEvent);
+      await analytics.trackBidWon({ auctionId, bidderCode: "appnexus", adUnitCode: "div-test-1", cpm: 5.0 });
+      await analytics.trackBidWon({ auctionId, bidderCode: "appnexus", adUnitCode: "div-test-2", cpm: 5.0 });
+      await jest.runAllTimersAsync();
+
+      expect(mockOptableInstance.witness).toHaveBeenCalledTimes(1);
+      const [, properties] = (mockOptableInstance.witness as jest.Mock).mock.calls[0];
+      expect(properties.bidWon).toHaveLength(2);
+      expect(properties.bidWon).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ adUnitCode: "div-test-1" }),
+          expect.objectContaining({ adUnitCode: "div-test-2" }),
+        ])
       );
     });
   });
@@ -743,7 +788,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(storedAuction).toBeDefined();
 
       // The splitTestAssignment should be extracted and merged in toWitness
-      const payload = await analytics.toWitness(storedAuction.auctionEnd, null);
+      const payload = await analytics.toWitness(storedAuction.auctionEnd, []);
       expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("treatment");
     });
 
@@ -793,7 +838,7 @@ describe("OptablePrebidAnalytics", () => {
       const storedAuction = analytics["auctions"].get("auction-no-split-test");
       expect(storedAuction).toBeDefined();
 
-      const payload = await analytics.toWitness(storedAuction.auctionEnd, null);
+      const payload = await analytics.toWitness(storedAuction.auctionEnd, []);
       expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBeUndefined();
     });
 
@@ -899,7 +944,7 @@ describe("OptablePrebidAnalytics", () => {
         cpm: 1.5,
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, bidWonEvent);
+      const result = await analytics.toWitness(auctionEndEvent, [bidWonEvent]);
 
       expect(result.totalRequests).toBe(2);
       expect(result.bidderRequests).toHaveLength(2);
@@ -937,7 +982,7 @@ describe("OptablePrebidAnalytics", () => {
         cpm: 1.5,
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, bidWonEvent);
+      const result = await analytics.toWitness(auctionEndEvent, [bidWonEvent]);
 
       // Should only include optable EIDs
       expect(result.optableMatchers).toEqual(["matcher1"]);
@@ -976,7 +1021,7 @@ describe("OptablePrebidAnalytics", () => {
         cpm: 1.5,
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, bidWonEvent);
+      const result = await analytics.toWitness(auctionEndEvent, [bidWonEvent]);
 
       expect(window.optable.customAnalytics).toHaveBeenCalled();
       expect(result).toMatchObject(customData);
@@ -1030,6 +1075,8 @@ describe("OptablePrebidAnalytics", () => {
     });
 
     it("should process missed bidWon events", async () => {
+      jest.useFakeTimers();
+
       const witnessspy = jest.fn().mockResolvedValue(undefined);
       const testInstance = {
         witness: witnessspy,
@@ -1081,9 +1128,8 @@ describe("OptablePrebidAnalytics", () => {
       };
 
       analytics["setHooks"](mockPbjs);
-
-      // Wait for async operations to complete
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await jest.runAllTimersAsync();
+      jest.useRealTimers();
 
       expect(witnessspy).toHaveBeenCalledWith(
         "optable.prebid.auction",
@@ -1138,7 +1184,7 @@ describe("OptablePrebidAnalytics", () => {
         timeoutBids: [],
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, null);
+      const result = await analytics.toWitness(auctionEndEvent, []);
 
       // Should only have one source since they have the same source value
       expect(result.optableSources).toEqual(["optable.co"]);
@@ -1170,7 +1216,7 @@ describe("OptablePrebidAnalytics", () => {
         timeoutBids: [],
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, null);
+      const result = await analytics.toWitness(auctionEndEvent, []);
 
       // Should have both sources since they're different
       expect(result.optableSources).toHaveLength(2);
@@ -1205,7 +1251,7 @@ describe("OptablePrebidAnalytics", () => {
         timeoutBids: [],
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, null);
+      const result = await analytics.toWitness(auctionEndEvent, []);
 
       expect(result.optableSources).toEqual(["source1"]);
       expect(result.optableMatchers).toEqual(["matcher1"]);
@@ -1232,7 +1278,7 @@ describe("OptablePrebidAnalytics", () => {
         timeoutBids: [],
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, null);
+      const result = await analytics.toWitness(auctionEndEvent, []);
 
       expect(result.optableSources).toEqual(["source1"]);
       expect(result.optableMatchers).toEqual(["matcher1"]);
@@ -1262,7 +1308,7 @@ describe("OptablePrebidAnalytics", () => {
         timeoutBids: [],
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, null);
+      const result = await analytics.toWitness(auctionEndEvent, []);
 
       expect(result.optableSources).toEqual(["source1"]);
       expect(result.optableMatchers).toEqual(["matcher1"]);
@@ -1298,7 +1344,7 @@ describe("OptablePrebidAnalytics", () => {
         timeoutBids: [],
       };
 
-      const result = await analytics.toWitness(auctionEndEvent, null);
+      const result = await analytics.toWitness(auctionEndEvent, []);
 
       // Should only have one optable source and matcher due to deduplication
       expect(result.optableSources).toEqual(["optable.co"]);
@@ -1338,7 +1384,7 @@ describe("OptablePrebidAnalytics", () => {
       const storedAuction = analytics["auctions"].get("auction-track-dedup");
       expect(storedAuction).toBeDefined();
 
-      const payload = await analytics.toWitness(storedAuction.auctionEnd, null);
+      const payload = await analytics.toWitness(storedAuction.auctionEnd, []);
       // Should only have one source after deduplication
       expect(payload.optableSources).toEqual(["optable.co"]);
       // The last matcher should win
