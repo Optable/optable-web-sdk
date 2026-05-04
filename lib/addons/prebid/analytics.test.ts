@@ -433,6 +433,7 @@ describe("OptablePrebidAnalytics", () => {
         "optable.prebid.auction",
         expect.objectContaining({
           missed: true,
+          optableLoaded: false,
         })
       );
     });
@@ -472,6 +473,62 @@ describe("OptablePrebidAnalytics", () => {
           expect.objectContaining({ adUnitCode: "div-test-2" }),
         ])
       );
+    });
+
+    it("should emit bidWon:[] and bidWonAt:null when no bidWon events arrive", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-no-bidwon",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: { eids: [] },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(auctionEndEvent);
+      await jest.runAllTimersAsync();
+
+      expect(mockOptableInstance.witness).toHaveBeenCalledWith(
+        "optable.prebid.auction",
+        expect.objectContaining({ bidWon: [], bidWonAt: null })
+      );
+    });
+
+    it("should delete the auction from the map after the timeout fires", async () => {
+      const auctionId = "auction-cleanup";
+      const auctionEndEvent = {
+        auctionId,
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: { eids: [] },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(auctionEndEvent);
+      expect(analytics["auctions"].has(auctionId)).toBe(true);
+      await jest.runAllTimersAsync();
+      expect(analytics["auctions"].has(auctionId)).toBe(false);
     });
   });
 

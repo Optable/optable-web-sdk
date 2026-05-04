@@ -356,12 +356,15 @@ class OptablePrebidAnalytics {
 
     const createdAt = new Date();
     const auctionEndTimeoutId = setTimeout(async () => {
-      const auction = this.auctions.get(auctionId);
-      if (!auction) return;
-      const effectiveMissed = auction.missed;
-      const payload = await this.toWitness(event, auction.bidWonEvents, effectiveMissed);
+      const storedAuction = this.auctions.get(auctionId);
+      if (!storedAuction) return;
+      const effectiveMissed = storedAuction.missed;
+      const payload = await this.toWitness(event, storedAuction.bidWonEvents, effectiveMissed);
       payload["auctionEndAt"] = createdAt.toISOString();
-      payload["bidWonAt"] = auction.bidWonEvents.length > 0 ? new Date().toISOString() : null;
+      payload["bidWonAt"] =
+        storedAuction.bidWonEvents.length > 0
+          ? new Date(Math.min(...storedAuction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
+          : null;
       payload["optableLoaded"] = !effectiveMissed;
       this.sendToWitnessAPI("optable.prebid.auction", payload);
       this.auctions.delete(auctionId);
@@ -375,21 +378,14 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Handle a Prebid `bidWon` event by finalizing the matching auction, clearing
-   * the pending timeout and sending the combined payload to Witness.
+   * Accumulate a Prebid `bidWon` event into the matching auction's event list
+   * for deferred emission when the auction timeout fires.
    * @param event - The raw Prebid bidWon event object.
    * @param missed - True when the event was previously emitted (missed replay).
    * @returns void
    */
   async trackBidWon(event: any, missed: boolean = false) {
-    const filteredEvent = {
-      auctionId: event.auctionId,
-      bidderCode: event.bidderCode,
-      bidId: event.requestId,
-      tenant: this.config.tenant,
-      missed,
-    };
-    this.log("bidWon filtered event", filteredEvent);
+    this.log("bidWon event", { auctionId: event.auctionId, bidderCode: event.bidderCode, missed });
 
     const auction = this.auctions.get(event.auctionId);
     if (!auction) {
@@ -397,7 +393,7 @@ class OptablePrebidAnalytics {
       return;
     }
 
-    auction.bidWonEvents.push(event);
+    auction.bidWonEvents.push({ ...event, _receivedAt: new Date() });
     if (missed) {
       auction.missed = true;
     }
@@ -427,10 +423,10 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Convert internal auction state and optional bidWon event into a Witness payload.
+   * Convert internal auction state and accumulated bidWon events into a Witness payload.
    * This collects matcher/source metadata, bid counts and optional custom analytics.
    * @param auctionEndEvent - The `auctionEnd` event object from Prebid.js.
-   * @param bidWonEvent - Optional `bidWon` event when a winning bid exists.
+   * @param bidWonEvents - Array of `bidWon` events accumulated during the auction window.
    * @param missed - True when the original events were already emitted (replayed).
    * @returns A payload object compatible with the Witness API.
    */
