@@ -38,6 +38,7 @@ interface AuctionItem {
   auctionEndTimeoutId: NodeJS.Timeout | null;
   missed: boolean;
   createdAt: Date;
+  bidWonEvents: any[];
 }
 
 class OptablePrebidAnalytics {
@@ -355,37 +356,36 @@ class OptablePrebidAnalytics {
 
     const createdAt = new Date();
     const auctionEndTimeoutId = setTimeout(async () => {
-      const payload = await this.toWitness(event, null, missed);
+      const storedAuction = this.auctions.get(auctionId);
+      if (!storedAuction) return;
+      const effectiveMissed = storedAuction.missed;
+      const payload = await this.toWitness(event, storedAuction.bidWonEvents, effectiveMissed);
       payload["auctionEndAt"] = createdAt.toISOString();
-      payload["bidWonAt"] = null;
-      payload["optableLoaded"] = !missed;
-
+      payload["bidWonAt"] =
+        storedAuction.bidWonEvents.length > 0
+          ? new Date(Math.min(...storedAuction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
+          : null;
+      payload["optableLoaded"] = !effectiveMissed;
       this.sendToWitnessAPI("optable.prebid.auction", payload);
+      this.auctions.delete(auctionId);
     }, this.config.bidWinTimeout);
 
     // Store the auction data
-    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId });
+    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, bidWonEvents: [] });
 
     // Clean up old auctions
     this.cleanupOldAuctions();
   }
 
   /**
-   * Handle a Prebid `bidWon` event by finalizing the matching auction, clearing
-   * the pending timeout and sending the combined payload to Witness.
+   * Accumulate a Prebid `bidWon` event into the matching auction's event list
+   * for deferred emission when the auction timeout fires.
    * @param event - The raw Prebid bidWon event object.
    * @param missed - True when the event was previously emitted (missed replay).
    * @returns void
    */
   async trackBidWon(event: any, missed: boolean = false) {
-    const filteredEvent = {
-      auctionId: event.auctionId,
-      bidderCode: event.bidderCode,
-      bidId: event.requestId,
-      tenant: this.config.tenant,
-      missed,
-    };
-    this.log("bidWon filtered event", filteredEvent);
+    this.log("bidWon event", { auctionId: event.auctionId, bidderCode: event.bidderCode, missed });
 
     const auction = this.auctions.get(event.auctionId);
     if (!auction) {
@@ -393,18 +393,10 @@ class OptablePrebidAnalytics {
       return;
     }
 
-    if (auction.auctionEndTimeoutId) {
-      clearTimeout(auction.auctionEndTimeoutId);
+    auction.bidWonEvents.push({ ...event, _receivedAt: new Date() });
+    if (missed) {
+      auction.missed = true;
     }
-
-    const payload = await this.toWitness(auction.auctionEnd, event, missed);
-    payload["auctionEndAt"] = auction.createdAt.toISOString();
-    payload["bidWonAt"] = new Date().toISOString();
-    payload["optableLoaded"] = !missed;
-
-    this.sendToWitnessAPI("optable.prebid.auction", payload);
-
-    this.auctions.delete(event.auctionId);
   }
 
   /**
@@ -431,14 +423,14 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Convert internal auction state and optional bidWon event into a Witness payload.
+   * Convert internal auction state and accumulated bidWon events into a Witness payload.
    * This collects matcher/source metadata, bid counts and optional custom analytics.
    * @param auctionEndEvent - The `auctionEnd` event object from Prebid.js.
-   * @param bidWonEvent - Optional `bidWon` event when a winning bid exists.
+   * @param bidWonEvents - Array of `bidWon` events accumulated during the auction window.
    * @param missed - True when the original events were already emitted (replayed).
    * @returns A payload object compatible with the Witness API.
    */
-  async toWitness(auctionEndEvent: any, bidWonEvent: any | null, missed = false): Promise<Record<string, any>> {
+  async toWitness(auctionEndEvent: any, bidWonEvents: any[], missed = false): Promise<Record<string, any>> {
     const { auctionId, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = auctionEndEvent;
 
     const oMatchersSet = new Set();
@@ -519,20 +511,11 @@ class OptablePrebidAnalytics {
       optableTargetingDone: oMatchersSet.size || oSourcesSet.size,
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
-      bidWon: bidWonEvent
-        ? {
-            message:
-              bidWonEvent.bidderCode +
-              " won the ad server auction for ad unit " +
-              bidWonEvent.adUnitCode +
-              " at " +
-              bidWonEvent.cpm +
-              " CPM",
-            bidderCode: bidWonEvent.bidderCode,
-            adUnitCode: bidWonEvent.adUnitCode,
-            cpm: bidWonEvent.cpm,
-          }
-        : null,
+      bidWon: bidWonEvents.map((e) => ({
+        bidderCode: e.bidderCode,
+        adUnitCode: e.adUnitCode,
+        cpm: e.cpm,
+      })),
       missed,
       url: `${window.location.hostname}${window.location.pathname}`,
       tenant: this.config.tenant!,
