@@ -55,7 +55,8 @@ class OptableSDK {
     }
 
     if (this.dcn.initContextual) {
-      this.witness("pageview", {}, { includeContext: true }).catch(() => {});
+      const url = `${window.location.hostname}${window.location.pathname}`;
+      this.witness("pageview", { url }, { includeContext: true }).catch(() => {});
     }
   }
 

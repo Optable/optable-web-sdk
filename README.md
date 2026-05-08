@@ -397,8 +397,9 @@ const sdk = new OptableSDK({
   pageContext: true,
 });
 
-// Fire a pageview with full page context attached
-sdk.witness("pageview", {}, { includeContext: true });
+// Fire a pageview with URL property and full page context attached
+const url = `${window.location.hostname}${window.location.pathname}`;
+sdk.witness("pageview", { url }, { includeContext: true });
 ```
 
 To reset the context (e.g. on SPA navigation), call `sdk.resetContext()` before the next `witness()` call.
