@@ -24,6 +24,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
     - [TypeScript Types](#typescript-types)
     - [Caching Targeting Data](#caching-targeting-data)
   - [Witness API](#witness-api)
+    - [Contextual Pageview Tracking](#contextual-pageview-tracking)
 - [Using a script tag](#using-a-script-tag)
   - [Option 1: Automatic Initialization](#option-1-automatic-initialization)
   - [Option 2: Manual Initialization with Commands Queue](#option-2-manual-initialization-with-commands-queue)
@@ -142,6 +143,12 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 
 - **`initTargeting` (boolean, default: `false`)**
   If `true`, the SDK will automatically perform a targeting request during initialization and store the response in cache. This ensures the cache is populated with the most up-to-date targeting data as soon as the SDK is loaded.
+
+- **`pageContext` (`PageContextConfig | boolean`, default: `undefined`)**
+  When set, enables page context extraction for contextual intelligence. Set to `true` to use defaults, or pass a `PageContextConfig` object to customize what is extracted (HTML content, content selector, max lengths). Extracted context is automatically attached to the first `witness()` call that uses `{ includeContext: true }`.
+
+- **`initContextual` (boolean, default: `false`)**
+  If `true`, the SDK will automatically fire a `pageview` witness event with full page context during initialization. This is the recommended way to enable contextual pageview tracking without writing custom code. Implies `pageContext: true` when no `pageContext` is explicitly configured.
 
 - **`consent` (`InitConsent`)**
   Defines the consent settings for data collection and processing.
@@ -348,6 +355,54 @@ type WitnessProperties = {
   [key: string]: string | number | boolean;
 };
 ```
+
+### Contextual Pageview Tracking
+
+The SDK can automatically fire a `pageview` witness event with full page context on initialization. This sends semantic content from the page (title, description, keywords, headings, canonical URL, Open Graph tags, and body text) to the DCN for contextual audience assembly.
+
+#### Option 1: Automatic (recommended)
+
+Set `initContextual: true` in your SDK config. The SDK fires the pageview event once after passport initialization, with no additional code required:
+
+```javascript
+const sdk = new OptableSDK({
+  host: "dcn.customer.com",
+  site: "my-site",
+  initContextual: true,
+});
+```
+
+You can combine this with `pageContext` to customize what content is extracted:
+
+```javascript
+const sdk = new OptableSDK({
+  host: "dcn.customer.com",
+  site: "my-site",
+  initContextual: true,
+  pageContext: {
+    contentSelector: "article",
+    maxContentLength: 3000,
+  },
+});
+```
+
+#### Option 2: Manual
+
+Enable `pageContext` in your config and call `witness()` with `{ includeContext: true }` yourself. Context is attached once per page load (subsequent calls with `includeContext: true` send no context):
+
+```javascript
+const sdk = new OptableSDK({
+  host: "dcn.customer.com",
+  site: "my-site",
+  pageContext: true,
+});
+
+// Fire a pageview with URL property and full page context attached
+const url = `${window.location.hostname}${window.location.pathname}`;
+sdk.witness("pageview", { url }, { includeContext: true });
+```
+
+To reset the context (e.g. on SPA navigation), call `sdk.resetContext()` before the next `witness()` call.
 
 ## Using a script tag
 

@@ -39,6 +39,9 @@ class OptableSDK {
   constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
     this.contextConfig = normalizeContextConfig(dcn.pageContext);
+    if (this.dcn.initContextual && !this.contextConfig) {
+      this.contextConfig = {};
+    }
     this.init = this.initialize();
   }
 
@@ -49,6 +52,11 @@ class OptableSDK {
 
     if (this.dcn.initTargeting) {
       this.targeting().catch(() => {});
+    }
+
+    if (this.dcn.initContextual) {
+      const url = `${window.location.hostname}${window.location.pathname}`;
+      this.witness("pageview", { url }, { includeContext: true }).catch(() => {});
     }
   }
 
