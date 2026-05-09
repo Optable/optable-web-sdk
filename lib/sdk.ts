@@ -6,7 +6,7 @@ import type { ProfileTraits } from "./edge/profile";
 import type { PageContextConfig, ContextData } from "./core/context";
 import { extractContext, normalizeContextConfig } from "./core/context";
 import { Identify } from "./edge/identify";
-import { Uid2Token, Uid2TokenResponse } from "./edge/uid2_token";
+import { Uid2Token, Uid2TokenResponse, Uid2Refresh, Uid2RefreshBody } from "./edge/uid2_token";
 import { Resolve, ResolveResponse } from "./edge/resolve";
 import { Site, SiteResponse, SiteFromCache } from "./edge/site";
 import { isObject } from "./core/utils";
@@ -71,6 +71,10 @@ class OptableSDK {
   async uid2Token(id: string): Promise<Uid2TokenResponse> {
     await this.init;
     return Uid2Token(this.dcn, id);
+  }
+
+  async uid2Refresh(refreshToken: string, refreshResponseKey: string): Promise<Uid2RefreshBody | null> {
+    return Uid2Refresh(refreshToken, refreshResponseKey);
   }
 
   async targeting(input: string | TargetingRequest = "__passport__"): Promise<TargetingResponse> {
