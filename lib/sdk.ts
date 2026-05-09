@@ -52,10 +52,7 @@ class OptableSDK {
         if (this.dcn.reportMisconfiguration) {
           const status = err instanceof FetchError ? err.status : null;
           const key = status ? `error_${status}` : "error_config";
-          Profile(
-            { ...this.dcn, site: "default-sdk" },
-            { [key]: window.location.hostname }
-          ).catch(() => {});
+          Profile({ ...this.dcn, site: "default-sdk" }, { [key]: window.location.hostname }).catch(() => {});
         }
       });
     }
