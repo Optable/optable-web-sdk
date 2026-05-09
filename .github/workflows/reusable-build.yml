@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
@@ -70,7 +70,7 @@ jobs:
       UID2_BASE_URL: ${{ vars.UID2_BASE_URL }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build vanilla demo
         run: make demo-html
@@ -90,7 +90,7 @@ jobs:
         working-directory: demos/react
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download web artifacts
         uses: actions/download-artifact@v4
@@ -122,7 +122,7 @@ jobs:
         working-directory: demos/npm
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm demos npm
         uses: ./.github/actions/setup-pnpm-demos-npm

@@ -75,6 +75,10 @@ type InitConfig = {
   pageContext?: PageContextConfig | boolean;
   // EID cache configuration
   eidCache?: EidCacheConfig;
+  // Automatically send a pageview witness event with page context on SDK initialization.
+  // When true, a 'pageview' event is fired once after passport init with full page context.
+  // Implies pageContext: true when no pageContext is explicitly configured.
+  initContextual?: boolean;
 };
 
 type ResolvedConfig = {
@@ -92,6 +96,7 @@ type ResolvedConfig = {
   sessionID: string;
   skipEnrichment?: boolean;
   initTargeting?: boolean;
+  initContextual?: boolean;
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
   timeout?: string;
@@ -128,6 +133,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     sessionID: init.sessionID ?? generateSessionID(),
     skipEnrichment: init.skipEnrichment,
     initTargeting: init.initTargeting,
+    initContextual: init.initContextual,
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
     timeout: init.timeout,
