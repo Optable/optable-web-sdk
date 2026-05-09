@@ -1,6 +1,7 @@
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 import type { PageContextConfig } from "./core/context";
+import type { EidCacheConfig } from "./core/eid-cache";
 
 type Experiment = never;
 
@@ -72,6 +73,8 @@ type InitConfig = {
   // When enabled, context is sent with the first witness() call after page load.
   // Set to true for defaults, or provide a PageContextConfig object for customization.
   pageContext?: PageContextConfig | boolean;
+  // EID cache configuration
+  eidCache?: EidCacheConfig;
   // Automatically send a pageview witness event with page context on SDK initialization.
   // When true, a 'pageview' event is fired once after passport init with full page context.
   // Implies pageContext: true when no pageContext is explicitly configured.
@@ -97,6 +100,7 @@ type ResolvedConfig = {
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
   timeout?: string;
+  eidCache?: EidCacheConfig;
 };
 
 const DCN_DEFAULTS = {
@@ -133,6 +137,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
     timeout: init.timeout,
+    eidCache: init.eidCache,
   };
 
   if (init.consent?.static) {
@@ -164,5 +169,6 @@ export type {
   MatcherOverride,
   Experiment,
   PageContextConfig,
+  EidCacheConfig,
 };
 export { getConfig, DCN_DEFAULTS, generateSessionID };

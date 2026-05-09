@@ -4,6 +4,7 @@ import { LocalStorage } from "../core/storage";
 import * as ortb2 from "iab-openrtb/v26";
 import * as adcom from "iab-adcom";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
+import { mergeWithCache } from "../core/eid-cache";
 
 type Identifier = {
   id: string;
@@ -91,10 +92,14 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
 
   const path = "/v2/targeting?" + searchParams.toString();
 
-  const response: TargetingResponse = await fetch(path, config, {
+  let response: TargetingResponse = await fetch(path, config, {
     method: "GET",
     headers: { Accept: "application/json" },
   });
+
+  if (response && config.eidCache?.enabled) {
+    response = mergeWithCache(response, config.eidCache);
+  }
 
   if (response) {
     const ls = new LocalStorage(config);
