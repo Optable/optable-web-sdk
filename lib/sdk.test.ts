@@ -725,7 +725,7 @@ describe("reportMisconfiguration", () => {
     );
   });
 
-  test("when reportMisconfiguration: true and Site() returns 500, profile is NOT called", async () => {
+  test("when reportMisconfiguration: true and Site() returns 500, profile is called with error_500", async () => {
     const fetchSpy = jest.spyOn(window, "fetch");
 
     // Mock 500 response for config endpoint
@@ -743,11 +743,76 @@ describe("reportMisconfiguration", () => {
 
     await sdk["init"];
 
-    // Should NOT have called profile (only 403/404 trigger it)
+    // Should have called profile with error_500 and o=default-sdk
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=default-sdk"),
+          _bodyText: expect.stringContaining('"error_500":"localhost"'),
+        })
+      );
+    });
+  });
+
+  test("when reportMisconfiguration: true and Site() throws TypeError (network error), profile is called with error_config", async () => {
+    // Mock fetch to throw TypeError for config endpoint, but allow profile call through
+    const originalFetch = window.fetch;
+    const fetchSpy = jest.spyOn(window, "fetch").mockImplementation((input: any) => {
+      if (typeof input === "string" && input.includes("/config")) {
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
+      return originalFetch(input);
+    });
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: true,
+    });
+
+    await sdk["init"];
+
+    // Should have called profile with error_config and o=default-sdk
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=default-sdk"),
+          _bodyText: expect.stringContaining('"error_config":"localhost"'),
+        })
+      );
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  test("when reportMisconfiguration not set and Site() throws TypeError, profile is NOT called", async () => {
+    // Mock fetch to throw TypeError for config endpoint
+    const originalFetch = window.fetch;
+    const fetchSpy = jest.spyOn(window, "fetch").mockImplementation((input: any) => {
+      if (typeof input === "string" && input.includes("/config")) {
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
+      return originalFetch(input);
+    });
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+    });
+
+    await sdk["init"];
+
+    // Should NOT have called profile
     expect(fetchSpy).not.toHaveBeenCalledWith(
       expect.objectContaining({
         url: expect.stringContaining("profile"),
       })
     );
+
+    fetchSpy.mockRestore();
   });
 });

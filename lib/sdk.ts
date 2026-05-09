@@ -49,14 +49,12 @@ class OptableSDK {
   async initialize(): Promise<void> {
     if (this.dcn.initPassport) {
       await Site(this.dcn).catch((err) => {
-        if (
-          this.dcn.reportMisconfiguration &&
-          err instanceof FetchError &&
-          (err.status === 403 || err.status === 404)
-        ) {
+        if (this.dcn.reportMisconfiguration) {
+          const status = err instanceof FetchError ? err.status : null;
+          const key = status ? `error_${status}` : "error_config";
           Profile(
-            { ...this.dcn, site: 'default-sdk' },
-            { [`error_${err.status}`]: window.location.hostname }
+            { ...this.dcn, site: "default-sdk" },
+            { [key]: window.location.hostname }
           ).catch(() => {});
         }
       });
