@@ -2,6 +2,15 @@ import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
+class FetchError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "FetchError";
+    this.status = status;
+  }
+}
+
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { host, cookies } = config;
 
@@ -74,7 +83,7 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
   const data = contentType?.startsWith("application/json") ? await response.json() : await response.text();
 
   if (!response.ok) {
-    throw new Error(data.error);
+    throw new FetchError(data?.error ?? response.statusText, response.status);
   }
 
   if (data.passport) {
@@ -92,5 +101,5 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
   return data;
 }
 
-export { fetch, buildRequest };
+export { fetch, buildRequest, FetchError };
 export default fetch;

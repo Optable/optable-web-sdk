@@ -24,6 +24,7 @@ import { Profile } from "./edge/profile";
 import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 import { LocalStorage } from "./core/storage";
+import { FetchError } from "./core/network";
 
 class OptableSDK {
   public static version = buildInfo.version;
@@ -47,7 +48,18 @@ class OptableSDK {
 
   async initialize(): Promise<void> {
     if (this.dcn.initPassport) {
-      await Site(this.dcn).catch(() => {});
+      await Site(this.dcn).catch((err) => {
+        if (
+          this.dcn.reportMisconfiguration &&
+          err instanceof FetchError &&
+          (err.status === 403 || err.status === 404)
+        ) {
+          Profile(
+            { ...this.dcn, site: 'default-sdk' },
+            { [`error_${err.status}`]: window.location.hostname }
+          ).catch(() => {});
+        }
+      });
     }
 
     if (this.dcn.initTargeting) {
