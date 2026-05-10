@@ -76,6 +76,10 @@ type InitConfig = {
   // When true, a 'pageview' event is fired once after passport init with full page context.
   // Implies pageContext: true when no pageContext is explicitly configured.
   initContextual?: boolean;
+  // When enabled, detects 403/404 responses from the Site config call and fires a
+  // best-effort profile() call with { error_403: hostname } or { error_404: hostname }.
+  // Pass true to use the "default-sdk" catch-all source, or { site: "slug" } to override the target source.
+  reportMisconfiguration?: boolean | { site?: string };
 };
 
 type ResolvedConfig = {
@@ -97,6 +101,7 @@ type ResolvedConfig = {
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
   timeout?: string;
+  reportMisconfiguration?: boolean | { site?: string };
 };
 
 const DCN_DEFAULTS = {
@@ -133,6 +138,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
     timeout: init.timeout,
+    reportMisconfiguration: init.reportMisconfiguration,
   };
 
   if (init.consent?.static) {

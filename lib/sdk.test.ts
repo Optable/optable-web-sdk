@@ -3,6 +3,8 @@ import { OptableSDK, normalizeTargetingRequest } from "./sdk";
 import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "./test/mocks";
 import { DCN_DEFAULTS } from "./config";
 import { waitFor } from "./test/utils";
+import { server } from "./test/server";
+import { http, HttpResponse } from "msw";
 
 const defaultConsent = DCN_DEFAULTS.consent;
 
@@ -601,5 +603,274 @@ describe("normalizeTargetingRequest", () => {
 
   test("fails for unknown types", () => {
     expect(() => normalizeTargetingRequest(3)).toThrowError(/Expected string or object/);
+  });
+});
+
+describe("reportMisconfiguration", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    jest.clearAllMocks();
+  });
+
+  test("when reportMisconfiguration: true and Site() returns 403, profile is called with error_403", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    // Mock 403 response for config endpoint
+    server.use(
+      http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+        return HttpResponse.json({ error: "Forbidden" }, { status: 403 });
+      })
+    );
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: true,
+    });
+
+    await sdk["init"];
+
+    // Should have called profile with error_403 and o=default-sdk
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=default-sdk"),
+          _bodyText: expect.stringContaining('"error_403":"localhost"'),
+        })
+      );
+    });
+  });
+
+  test("when reportMisconfiguration: true and Site() returns 404, profile is called with error_404", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    // Mock 404 response for config endpoint
+    server.use(
+      http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+        return HttpResponse.json({ error: "Not Found" }, { status: 404 });
+      })
+    );
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: true,
+    });
+
+    await sdk["init"];
+
+    // Should have called profile with error_404 and o=default-sdk
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=default-sdk"),
+          _bodyText: expect.stringContaining('"error_404":"localhost"'),
+        })
+      );
+    });
+  });
+
+  test("when reportMisconfiguration: false and Site() returns 403, profile is NOT called", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    // Mock 403 response for config endpoint
+    server.use(
+      http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+        return HttpResponse.json({ error: "Forbidden" }, { status: 403 });
+      })
+    );
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: false,
+    });
+
+    await sdk["init"];
+
+    // Should NOT have called profile
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("profile"),
+      })
+    );
+  });
+
+  test("when reportMisconfiguration not set and Site() returns 403, profile is NOT called", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    // Mock 403 response for config endpoint
+    server.use(
+      http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+        return HttpResponse.json({ error: "Forbidden" }, { status: 403 });
+      })
+    );
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+    });
+
+    await sdk["init"];
+
+    // Should NOT have called profile
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("profile"),
+      })
+    );
+  });
+
+  test("when reportMisconfiguration: true and Site() returns 500, profile is called with error_500", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    // Mock 500 response for config endpoint
+    server.use(
+      http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+        return HttpResponse.json({ error: "Internal Server Error" }, { status: 500 });
+      })
+    );
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: true,
+    });
+
+    await sdk["init"];
+
+    // Should have called profile with error_500 and o=default-sdk
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=default-sdk"),
+          _bodyText: expect.stringContaining('"error_500":"localhost"'),
+        })
+      );
+    });
+  });
+
+  test("when reportMisconfiguration: true and Site() throws TypeError (network error), profile is called with error_config", async () => {
+    // Mock fetch to throw TypeError for config endpoint, but allow profile call through
+    const originalFetch = window.fetch;
+    const fetchSpy = jest.spyOn(window, "fetch").mockImplementation((input: any) => {
+      if (typeof input === "string" && input.includes("/config")) {
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
+      return originalFetch(input);
+    });
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: true,
+    });
+
+    await sdk["init"];
+
+    // Should have called profile with error_config and o=default-sdk
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=default-sdk"),
+          _bodyText: expect.stringContaining('"error_config":"localhost"'),
+        })
+      );
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  test("when reportMisconfiguration not set and Site() throws TypeError, profile is NOT called", async () => {
+    // Mock fetch to throw TypeError for config endpoint
+    const originalFetch = window.fetch;
+    const fetchSpy = jest.spyOn(window, "fetch").mockImplementation((input: any) => {
+      if (typeof input === "string" && input.includes("/config")) {
+        return Promise.reject(new TypeError("Failed to fetch"));
+      }
+      return originalFetch(input);
+    });
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+    });
+
+    await sdk["init"];
+
+    // Should NOT have called profile
+    expect(fetchSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("profile"),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  });
+
+  test("when reportMisconfiguration: { site } and Site() returns 403, profile is called with the custom site slug", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    server.use(
+      http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+        return HttpResponse.json({ error: "Forbidden" }, { status: 403 });
+      })
+    );
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: { site: "my-error-source" },
+    });
+
+    await sdk["init"];
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=my-error-source"),
+          _bodyText: expect.stringContaining('"error_403":"localhost"'),
+        })
+      );
+    });
+  });
+
+  test("when reportMisconfiguration: {} and Site() returns 403, profile falls back to default-sdk", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+
+    server.use(
+      http.get(`${TEST_BASE_URL}/config`, async ({}) => {
+        return HttpResponse.json({ error: "Forbidden" }, { status: 403 });
+      })
+    );
+
+    const sdk = new OptableSDK({
+      ...defaultConfig,
+      initPassport: true,
+      reportMisconfiguration: {},
+    });
+
+    await sdk["init"];
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("profile"),
+          url: expect.stringContaining("o=default-sdk"),
+          _bodyText: expect.stringContaining('"error_403":"localhost"'),
+        })
+      );
+    });
   });
 });
