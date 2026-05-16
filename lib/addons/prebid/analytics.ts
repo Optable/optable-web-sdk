@@ -526,6 +526,7 @@ class OptablePrebidAnalytics {
       prebidjsVersion: this.prebidInstance?.version || "unknown",
       sessionDepth: sessionStorage?.optableSessionDepth || 1,
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
+      sourceSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };
 
     // Log summary with bid counts
