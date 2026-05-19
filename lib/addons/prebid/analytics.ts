@@ -35,7 +35,7 @@ interface OptablePrebidAnalyticsConfig {
 
 interface AuctionItem {
   auctionEnd: unknown | null;
-  auctionEndTimeoutId: NodeJS.Timeout | null;
+  auctionEndTimeoutId: ReturnType<typeof setTimeout> | null;
   missed: boolean;
   createdAt: Date;
   bidWonEvents: any[];
