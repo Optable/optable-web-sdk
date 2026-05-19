@@ -74,7 +74,7 @@ class OptablePrebidAnalytics {
       sessionStorage.removeItem(SESSION_SAMPLE_KEY);
     }
 
-    sessionStorage.optableSessionDepth = (Number(sessionStorage?.optableSessionDepth) || 0) + 1;
+    sessionStorage.sessionPageViewCount = (Number(sessionStorage?.sessionPageViewCount) || 0) + 1;
 
     this.isInitialized = true;
 
@@ -221,7 +221,7 @@ class OptablePrebidAnalytics {
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
 
     (window as any).optable = (window as any).optable || {};
-    (window as any).optable.pageAuctionsCount = (Number((window as any).optable.pageAuctionsCount) || 0) + 1;
+    (window as any).optable.pageAuctionCount = (Number((window as any).optable.pageAuctionCount) || 0) + 1;
 
     // Build auction object with bidder requests and EID flags
     const auction = {
@@ -524,8 +524,8 @@ class OptablePrebidAnalytics {
       userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
       device,
       prebidjsVersion: this.prebidInstance?.version || "unknown",
-      sessionDepth: sessionStorage?.optableSessionDepth || 1,
-      pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
+      sessionPageViewCount: sessionStorage?.sessionPageViewCount || 1,
+      pageAuctionCount: (window as any).optable?.pageAuctionCount || 1,
     };
 
     // Log summary with bid counts
