@@ -321,7 +321,8 @@ function handleRtd(
 
     routes.forEach((route) => {
       eidsPerRoute[route] = eidsPerRoute[route] ?? { user: { ext: { eids: [] } } };
-      eidsPerRoute[route].user!.ext!.eids!.push(eid);
+      const { _ref, ...clean } = eid as any;
+      eidsPerRoute[route].user!.ext!.eids!.push(clean);
       config.log("info", `EID with source ${eid.source} routed to ${route}`);
     });
     processedEids += 1;
