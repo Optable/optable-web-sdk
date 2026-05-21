@@ -249,8 +249,12 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
   /* eslint-disable no-param-reassign */
   targetORTB2.user = targetORTB2.user ?? {};
   targetORTB2.user.ext = targetORTB2.user.ext ?? {};
-  targetORTB2.user.ext.eids = targetORTB2.user.ext.eids ?? [];
   /* eslint-enable no-param-reassign */
+
+  // Use Object.getOwnPropertyDescriptor/defineProperty to bypass Prebid's ORTB2
+  // Proxy whose get trap blocks direct reads of `eids`.
+  const eidsDesc = Object.getOwnPropertyDescriptor(targetORTB2.user.ext, "eids");
+  let currentEids: EID[] = Array.isArray(eidsDesc?.value) ? eidsDesc.value : [];
   let skipped = 0;
 
   const eidsBySource =
@@ -267,8 +271,14 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
     }
 
     const mergeFn = mergeStrategy(config, eidSource);
-    // eslint-disable-next-line no-param-reassign
-    targetORTB2.user!.ext!.eids = mergeFn(targetORTB2.user!.ext!.eids!, eids);
+    currentEids = mergeFn(currentEids, eids);
+  });
+
+  Object.defineProperty(targetORTB2.user!.ext!, "eids", {
+    value: currentEids,
+    writable: true,
+    enumerable: true,
+    configurable: true,
   });
   return skipped;
 }
