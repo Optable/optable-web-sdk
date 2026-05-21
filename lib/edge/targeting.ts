@@ -36,6 +36,8 @@ type TargetingResponse = {
   resolved_ids?: string[];
   // A/B test ID
   ab_test_id?: string;
+  // Split test Assignment
+  split_test_assignment?: string;
 };
 
 // Determine which A/B test (if any) should be used for this request
