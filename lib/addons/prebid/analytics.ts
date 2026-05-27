@@ -48,6 +48,7 @@ class OptablePrebidAnalytics {
   private readonly maxAuctionDataSize: number = 50;
 
   private auctions = new Map<string, AuctionItem>();
+  private missedAuctionIds = new Set<string>();
   private prebidInstance: any;
 
   /**
@@ -159,13 +160,15 @@ class OptablePrebidAnalytics {
    * @returns void
    */
   setHooks(pbjs: any) {
-    this.log("Processing missed auctionEnd");
+    this.log("Processing past events");
     pbjs.getEvents().forEach((event: any) => {
-      if (event.eventType === "auctionEnd") {
-        this.log("auction missed");
+      if (event.eventType === "auctionInit") {
+        this.missedAuctionIds.add(event.args.auctionId);
+      } else if (event.eventType === "auctionEnd") {
+        this.missedAuctionIds.delete(event.args.auctionId);
+        this.log(`auction ${event.args.auctionId} missed (completed before hook)`);
         this.trackAuctionEnd(event.args, true);
-      }
-      if (event.eventType === "bidWon") {
+      } else if (event.eventType === "bidWon") {
         this.log("bid won missed");
         this.trackBidWon(event.args, true);
       }
@@ -174,7 +177,11 @@ class OptablePrebidAnalytics {
     this.log("Hooking into Prebid.js events");
     pbjs.onEvent("auctionEnd", (event: any) => {
       this.log("auctionEnd event received");
-      this.trackAuctionEnd(event);
+      const missed = this.missedAuctionIds.has(event.auctionId);
+      if (missed) {
+        this.missedAuctionIds.delete(event.auctionId);
+      }
+      this.trackAuctionEnd(event, missed);
     });
     pbjs.onEvent("bidWon", (event: any) => {
       this.log("bidWon event received");
@@ -419,6 +426,7 @@ class OptablePrebidAnalytics {
    */
   clearData() {
     this.auctions.clear();
+    this.missedAuctionIds.clear();
     this.log("All analytics data cleared");
   }
 

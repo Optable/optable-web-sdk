@@ -697,6 +697,18 @@ describe("OptablePrebidAnalytics", () => {
 
       expect(analytics["auctions"].size).toBe(0);
     });
+
+    it("should clear missedAuctionIds", () => {
+      // Add some missed auction IDs
+      analytics["missedAuctionIds"].add("auction-1");
+      analytics["missedAuctionIds"].add("auction-2");
+
+      expect(analytics["missedAuctionIds"].size).toBe(2);
+
+      analytics.clearData();
+
+      expect(analytics["missedAuctionIds"].size).toBe(0);
+    });
   });
 
   describe("hookIntoPrebid", () => {
@@ -1094,13 +1106,38 @@ describe("OptablePrebidAnalytics", () => {
       });
     });
 
-    it("should process missed auctionEnd events", () => {
+    it("should track auctions that started but not finished as missed", () => {
       const mockPbjs = {
         getEvents: jest.fn().mockReturnValue([
           {
+            eventType: "auctionInit",
+            args: {
+              auctionId: "incomplete-auction",
+            },
+          },
+        ]),
+        onEvent: jest.fn(),
+      };
+
+      analytics["setHooks"](mockPbjs);
+
+      // Auction should be in missedAuctionIds since it started but hasn't ended
+      expect(analytics["missedAuctionIds"].has("incomplete-auction")).toBe(true);
+    });
+
+    it("should not track auctions that completed before hooks as missed", () => {
+      const mockPbjs = {
+        getEvents: jest.fn().mockReturnValue([
+          {
+            eventType: "auctionInit",
+            args: {
+              auctionId: "complete-auction",
+            },
+          },
+          {
             eventType: "auctionEnd",
             args: {
-              auctionId: "missed-auction",
+              auctionId: "complete-auction",
               timeout: 3000,
               bidderRequests: [
                 {
@@ -1126,9 +1163,282 @@ describe("OptablePrebidAnalytics", () => {
 
       analytics["setHooks"](mockPbjs);
 
-      expect(analytics["auctions"].has("missed-auction")).toBe(true);
-      const auction = analytics["auctions"].get("missed-auction");
+      // Auction should NOT be in missedAuctionIds since it both started and ended
+      expect(analytics["missedAuctionIds"].has("complete-auction")).toBe(false);
+    });
+
+    it("should mark live auction as missed when it was in missedAuctionIds", () => {
+      const mockPbjs = {
+        getEvents: jest.fn().mockReturnValue([
+          {
+            eventType: "auctionInit",
+            args: {
+              auctionId: "late-auction",
+            },
+          },
+        ]),
+        onEvent: jest.fn(),
+      };
+
+      analytics["setHooks"](mockPbjs);
+
+      // Verify it's tracked as missed initially
+      expect(analytics["missedAuctionIds"].has("late-auction")).toBe(true);
+
+      // Now trigger the live auctionEnd event
+      const auctionEndCallback = mockPbjs.onEvent.mock.calls.find((call) => call[0] === "auctionEnd")[1];
+      auctionEndCallback({
+        auctionId: "late-auction",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      });
+
+      // Should be removed from missedAuctionIds
+      expect(analytics["missedAuctionIds"].has("late-auction")).toBe(false);
+
+      // And auction should be marked as missed
+      const auction = analytics["auctions"].get("late-auction");
       expect(auction?.missed).toBe(true);
+    });
+
+    describe("Comprehensive missed auction scenarios", () => {
+      it("Scenario 1: auctionInit + auctionEnd both before load => missed", () => {
+        const mockPbjs = {
+          getEvents: jest.fn().mockReturnValue([
+            {
+              eventType: "auctionInit",
+              args: { auctionId: "scenario-1" },
+            },
+            {
+              eventType: "auctionEnd",
+              args: {
+                auctionId: "scenario-1",
+                timeout: 3000,
+                bidderRequests: [
+                  {
+                    bidderCode: "bidder1",
+                    bidderRequestId: "req-1",
+                    ortb2: {
+                      site: { domain: "example.com" },
+                      user: { eids: [] },
+                    },
+                    bids: [],
+                  },
+                ],
+                bidsReceived: [],
+                noBids: [],
+                timeoutBids: [],
+              },
+            },
+          ]),
+          onEvent: jest.fn(),
+        };
+
+        analytics["setHooks"](mockPbjs);
+
+        // Should NOT be in missedAuctionIds (was removed after seeing auctionEnd)
+        expect(analytics["missedAuctionIds"].has("scenario-1")).toBe(false);
+
+        // Auction should be tracked and marked as missed
+        const auction = analytics["auctions"].get("scenario-1");
+        expect(auction).toBeDefined();
+        expect(auction?.missed).toBe(true);
+      });
+
+      it("Scenario 2: auctionInit before load + auctionEnd after load => missed", () => {
+        const mockPbjs = {
+          getEvents: jest.fn().mockReturnValue([
+            {
+              eventType: "auctionInit",
+              args: { auctionId: "scenario-2" },
+            },
+            // No auctionEnd in past events
+          ]),
+          onEvent: jest.fn(),
+        };
+
+        analytics["setHooks"](mockPbjs);
+
+        // Should be in missedAuctionIds (started before load, not ended yet)
+        expect(analytics["missedAuctionIds"].has("scenario-2")).toBe(true);
+
+        // Now trigger live auctionEnd
+        const auctionEndCallback = mockPbjs.onEvent.mock.calls.find((call) => call[0] === "auctionEnd")[1];
+        auctionEndCallback({
+          auctionId: "scenario-2",
+          timeout: 3000,
+          bidderRequests: [
+            {
+              bidderCode: "bidder1",
+              bidderRequestId: "req-1",
+              ortb2: {
+                site: { domain: "example.com" },
+                user: { eids: [] },
+              },
+              bids: [],
+            },
+          ],
+          bidsReceived: [],
+          noBids: [],
+          timeoutBids: [],
+        });
+
+        // Should be removed from missedAuctionIds
+        expect(analytics["missedAuctionIds"].has("scenario-2")).toBe(false);
+
+        // Auction should be marked as missed
+        const auction = analytics["auctions"].get("scenario-2");
+        expect(auction).toBeDefined();
+        expect(auction?.missed).toBe(true);
+      });
+
+      it("Scenario 3: auctionInit + auctionEnd both after load => not missed", () => {
+        const mockPbjs = {
+          getEvents: jest.fn().mockReturnValue([
+            // No past events for this auction
+          ]),
+          onEvent: jest.fn(),
+        };
+
+        analytics["setHooks"](mockPbjs);
+
+        // Should NOT be in missedAuctionIds
+        expect(analytics["missedAuctionIds"].has("scenario-3")).toBe(false);
+
+        // Now trigger live auctionEnd
+        const auctionEndCallback = mockPbjs.onEvent.mock.calls.find((call) => call[0] === "auctionEnd")[1];
+        auctionEndCallback({
+          auctionId: "scenario-3",
+          timeout: 3000,
+          bidderRequests: [
+            {
+              bidderCode: "bidder1",
+              bidderRequestId: "req-1",
+              ortb2: {
+                site: { domain: "example.com" },
+                user: { eids: [] },
+              },
+              bids: [],
+            },
+          ],
+          bidsReceived: [],
+          noBids: [],
+          timeoutBids: [],
+        });
+
+        // Should still NOT be in missedAuctionIds
+        expect(analytics["missedAuctionIds"].has("scenario-3")).toBe(false);
+
+        // Auction should be marked as NOT missed
+        const auction = analytics["auctions"].get("scenario-3");
+        expect(auction).toBeDefined();
+        expect(auction?.missed).toBe(false);
+      });
+
+      it("Scenario with bidWon: auctionEnd + bidWon both in past => accumulates bidWon correctly", async () => {
+        jest.useFakeTimers();
+
+        const witnessspy = jest.fn().mockResolvedValue(undefined);
+        const testInstance = {
+          witness: witnessspy,
+        } as any;
+
+        const testAnalytics = new OptablePrebidAnalytics(testInstance, {
+          analytics: true,
+          tenant: "test-tenant",
+          debug: true,
+        });
+
+        const mockPbjs = {
+          getEvents: jest.fn().mockReturnValue([
+            {
+              eventType: "auctionInit",
+              args: { auctionId: "scenario-bidwon" },
+            },
+            {
+              eventType: "auctionEnd",
+              args: {
+                auctionId: "scenario-bidwon",
+                timeout: 3000,
+                bidderRequests: [
+                  {
+                    bidderCode: "bidder1",
+                    bidderRequestId: "req-1",
+                    ortb2: {
+                      site: { domain: "example.com" },
+                      user: { eids: [] },
+                    },
+                    bids: [
+                      {
+                        bidId: "bid-1",
+                        adUnitCode: "ad-unit-1",
+                        transactionId: "trans-1",
+                      },
+                    ],
+                  },
+                ],
+                bidsReceived: [],
+                noBids: [],
+                timeoutBids: [],
+              },
+            },
+            {
+              eventType: "bidWon",
+              args: {
+                auctionId: "scenario-bidwon",
+                bidderCode: "bidder1",
+                requestId: "bid-1",
+                adUnitCode: "ad-unit-1",
+                cpm: 2.5,
+              },
+            },
+          ]),
+          onEvent: jest.fn(),
+        };
+
+        testAnalytics["setHooks"](mockPbjs);
+
+        // Auction should be tracked
+        const auction = testAnalytics["auctions"].get("scenario-bidwon");
+        expect(auction).toBeDefined();
+        expect(auction?.missed).toBe(true);
+        expect(auction?.bidWonEvents).toHaveLength(1);
+        expect(auction?.bidWonEvents[0].cpm).toBe(2.5);
+
+        // Wait for timeout and check witness call
+        await jest.runAllTimersAsync();
+
+        expect(witnessspy).toHaveBeenCalledWith(
+          "optable.prebid.auction",
+          expect.objectContaining({
+            auctionId: "scenario-bidwon",
+            missed: true,
+            bidWon: [
+              expect.objectContaining({
+                bidderCode: "bidder1",
+                cpm: 2.5,
+              }),
+            ],
+          })
+        );
+
+        jest.useRealTimers();
+      });
     });
 
     it("should process missed bidWon events", async () => {
