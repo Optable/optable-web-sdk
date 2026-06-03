@@ -25,6 +25,8 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
     - [Caching Targeting Data](#caching-targeting-data)
   - [Witness API](#witness-api)
     - [Contextual Pageview Tracking](#contextual-pageview-tracking)
+    - [Contextual Segments API](#contextual-segments-api)
+      - [Contextual targeting key-values](#contextual-targeting-key-values)
 - [Using a script tag](#using-a-script-tag)
   - [Option 1: Automatic Initialization](#option-1-automatic-initialization)
   - [Option 2: Manual Initialization with Commands Queue](#option-2-manual-initialization-with-commands-queue)
@@ -147,8 +149,9 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`pageContext` (`PageContextConfig | boolean`, default: `undefined`)**
   When set, enables page context extraction for contextual intelligence. Set to `true` to use defaults, or pass a `PageContextConfig` object to customize what is extracted (HTML content, content selector, max lengths). Extracted context is automatically attached to the first `witness()` call that uses `{ includeContext: true }`.
 
-- **`initContextual` (boolean, default: `false`)**
-  If `true`, the SDK will automatically fire a `pageview` witness event with full page context during initialization. This is the recommended way to enable contextual pageview tracking without writing custom code. Implies `pageContext: true` when no `pageContext` is explicitly configured.
+- **`initContextual` (`boolean | (response: ContextualSegmentsResponse) => void`, default: `false`)**
+  If `true`, the SDK will automatically fire a `pageview` witness event with full page context during initialization, and also call `ctxSegments()` to fetch contextual segments for the current page, caching the result on the instance for later use via `ctxTargetingKeyValues()`. This is the recommended way to enable contextual pageview tracking and contextual targeting without writing custom code. Implies `pageContext: true` when no `pageContext` is explicitly configured.
+  When set to a callback function, the SDK does everything `true` does **and** invokes the callback with the `ContextualSegmentsResponse` once it resolves — useful for chaining an ad-server load (e.g. GAM) on the contextual response without making a second `ctxSegments()` call. The callback is not invoked if the request fails.
 
 - **`consent` (`InitConsent`)**
   Defines the consent settings for data collection and processing.
@@ -403,6 +406,103 @@ sdk.witness("pageview", { url }, { includeContext: true });
 ```
 
 To reset the context (e.g. on SPA navigation), call `sdk.resetContext()` before the next `witness()` call.
+
+### Contextual Segments API
+
+In addition to pageview tracking, the SDK can classify a page URL against one or more contextual taxonomies (such as the [IAB Content Taxonomy](https://iabtechlab.com/standards/content-taxonomy/)) and use the result for ad targeting. Call `ctxSegments()` to fetch the contextual classifications for a URL:
+
+```javascript
+// Classify the current page (defaults to window.location.href):
+const response = await sdk.ctxSegments();
+
+// Or classify an explicit URL:
+const response = await sdk.ctxSegments("https://example.com/article");
+```
+
+The response has the shape:
+
+```typescript
+type ContextualSegmentsResponse = {
+  classifications: {
+    categories: { id: string; name: string; score: number; taxonomy: string }[];
+  };
+};
+```
+
+Each call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
+
+> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain an empty `categories` array.
+
+#### Contextual targeting key-values
+
+`ctxTargetingKeyValues(taxonomyKeys?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>` of category ids grouped by taxonomy, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`.
+
+Without arguments, each taxonomy value is used as the key:
+
+```javascript
+sdk.ctxTargetingKeyValues();
+// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"] }
+```
+
+Pass a `taxonomyKeys` map to rename keys. Only taxonomies present in the map are emitted (filter + rename), which is useful when you only want to set keys you have configured in your ad server:
+
+```javascript
+sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" });
+// => { "foo": ["53", "91", "58", "115", "90", "52"] }
+```
+
+A typical Google Ad Manager activation uses a `loadGAM()` helper:
+
+```javascript
+// Helper to load GAM ads with optional targeting data:
+var loadGAM = function (tdata = {}) {
+  window.googletag = window.googletag || { cmd: [] };
+  googletag.cmd.push(function () {
+    for (const [key, values] of Object.entries(tdata)) {
+      googletag.pubads().setTargeting(key, values);
+    }
+    googletag.pubads().refresh();
+  });
+};
+```
+
+Because `ctxTargetingKeyValues()` reads the cached response, the instance should be initialized with `initContextual: true` so the segments are fetched during initialization and the cache is likely populated by the time `loadGAM()` runs:
+
+```javascript
+loadGAM(optable.instance.ctxTargetingKeyValues());
+```
+
+If you want `loadGAM()` to run as soon as the contextual segments arrive — without making a second `ctxSegments()` call — pass a callback to `initContextual`. The SDK fires the contextual request automatically during initialization and invokes the callback with the response, populating the cache before `ctxTargetingKeyValues()` reads from it:
+
+```javascript
+const sdk = new OptableSDK({
+  host: "dcn.customer.com",
+  site: "my-site",
+  initContextual: function (response) {
+    loadGAM(sdk.ctxTargetingKeyValues());
+  },
+});
+```
+
+If you are not using `initContextual` at all, fetch the segments explicitly and call `loadGAM()` once `ctxSegments()` resolves (falling back to an untargeted load on error):
+
+```javascript
+optable.cmd.push(function () {
+  optable.instance
+    .ctxSegments()
+    .then(loadGAM)
+    .catch((err) => {
+      loadGAM();
+    });
+});
+```
+
+You can also rename and allow-list the GAM keys by passing a `taxonomyKeys` map to `ctxTargetingKeyValues()` (only the taxonomies present in the map are emitted):
+
+```javascript
+// Emit only the "iab_ct_3_1" taxonomy, under the GAM key "ctx_iab":
+loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));
+```
 
 ## Using a script tag
 

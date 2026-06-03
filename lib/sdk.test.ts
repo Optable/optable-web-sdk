@@ -1,7 +1,9 @@
 import { SiteResponse } from "edge/site";
+import { http, HttpResponse } from "msw";
 import { OptableSDK, normalizeTargetingRequest } from "./sdk";
 import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "./test/mocks";
 import { DCN_DEFAULTS } from "./config";
+import { server } from "./test/server";
 import { waitFor } from "./test/utils";
 
 const defaultConsent = DCN_DEFAULTS.consent;
@@ -91,6 +93,16 @@ describe("Breaking change detection: if typescript complains or a test fails it'
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: witness", async () => {
     await new OptableSDK({ ...defaultConfig }).witness("event");
     await new OptableSDK({ ...defaultConfig }).witness("event", { property: "value" });
+  });
+
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: ctxSegments", async () => {
+    await new OptableSDK({ ...defaultConfig }).ctxSegments("https://optable.co");
+  });
+
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: ctxTargetingKeyValues", () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+    sdk.ctxTargetingKeyValues();
+    sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" });
   });
 
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: profile", async () => {
@@ -393,6 +405,296 @@ describe("behavior testing of", () => {
         url: expect.stringContaining("witness"),
       })
     );
+  });
+
+  test("ctxSegments sends the provided url to /v1beta1/contextual", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({ ...defaultConfig });
+
+    await sdk.ctxSegments("https://example.com/some/page");
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        _bodyText: '{"url":"https://example.com/some/page"}',
+        url: expect.stringContaining("v1beta1/contextual"),
+      })
+    );
+  });
+
+  test("ctxSegments defaults to window.location.href when no url is provided", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({ ...defaultConfig });
+
+    await sdk.ctxSegments();
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        _bodyText: JSON.stringify({ url: window.location.href }),
+        url: expect.stringContaining("v1beta1/contextual"),
+      })
+    );
+  });
+
+  test("ctxSegments returns the parsed classifications response", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(
+          {
+            classifications: {
+              categories: [{ id: "IAB1", name: "Arts & Entertainment", score: 0.95, taxonomy: "iab_3_1" }],
+            },
+          },
+          { status: 200 }
+        );
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    expect(result).toEqual({
+      classifications: {
+        categories: [{ id: "IAB1", name: "Arts & Entertainment", score: 0.95, taxonomy: "iab_3_1" }],
+      },
+    });
+  });
+
+  test("ctxSegments returns an empty categories array when the server returns one", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: { categories: [] } }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    expect(result).toEqual({ classifications: { categories: [] } });
+    expect(Array.isArray(result.classifications.categories)).toBe(true);
+    expect(result.classifications.categories).toHaveLength(0);
+  });
+
+  test("ctxSegments passes through a response missing the classifications key", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({}, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    // Current behavior: no normalization, classifications is undefined on the returned object.
+    expect(result).toEqual({});
+    expect(result.classifications).toBeUndefined();
+  });
+
+  test("ctxSegments passes through classifications missing the categories key", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: {} }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    // Current behavior: no normalization, categories is undefined on the returned object.
+    expect(result.classifications).toEqual({});
+    expect(result.classifications.categories).toBeUndefined();
+  });
+
+  test("ctxSegments passes through categories spanning multiple taxonomies", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(
+          {
+            classifications: {
+              categories: [
+                { id: "IAB1", name: "Arts & Entertainment", score: 0.95, taxonomy: "iab_3_1" },
+                { id: "483", name: "Motorsports", score: 0.7, taxonomy: "iab_2_2" },
+              ],
+            },
+          },
+          { status: 200 }
+        );
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    expect(result.classifications.categories).toEqual([
+      { id: "IAB1", name: "Arts & Entertainment", score: 0.95, taxonomy: "iab_3_1" },
+      { id: "483", name: "Motorsports", score: 0.7, taxonomy: "iab_2_2" },
+    ]);
+  });
+
+  test("ctxSegments passes through categories missing required fields", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(
+          {
+            classifications: {
+              categories: [
+                // missing `score`
+                { id: "IAB1", name: "Arts & Entertainment", taxonomy: "iab_3_1" },
+                // missing `name`
+                { id: "IAB2", score: 0.5, taxonomy: "iab_3_1" },
+                // missing `taxonomy`
+                { id: "IAB3", name: "Books & Literature", score: 0.3 },
+              ],
+            },
+          },
+          { status: 200 }
+        );
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    // Current behavior: no validation, malformed categories are returned to the caller as-is.
+    expect(result.classifications.categories).toEqual([
+      { id: "IAB1", name: "Arts & Entertainment", taxonomy: "iab_3_1" },
+      { id: "IAB2", score: 0.5, taxonomy: "iab_3_1" },
+      { id: "IAB3", name: "Books & Literature", score: 0.3 },
+    ]);
+  });
+
+  // Shared single-taxonomy payload mirroring the documented API example.
+  const singleTaxonomyContextual = {
+    classifications: {
+      categories: [
+        { id: "53", name: "Business and Finance > Business", score: 0.95, taxonomy: "iab_ct_3_1" },
+        {
+          id: "91",
+          name: "Business and Finance > Industries > Advertising Industry",
+          score: 0.98,
+          taxonomy: "iab_ct_3_1",
+        },
+        {
+          id: "58",
+          name: "Business and Finance > Business > Marketing and Advertising",
+          score: 0.95,
+          taxonomy: "iab_ct_3_1",
+        },
+        {
+          id: "115",
+          name: "Business and Finance > Industries > Technology Industry",
+          score: 0.85,
+          taxonomy: "iab_ct_3_1",
+        },
+        { id: "90", name: "Business and Finance > Industries", score: 0.98, taxonomy: "iab_ct_3_1" },
+        { id: "52", name: "Business and Finance", score: 0.98, taxonomy: "iab_ct_3_1" },
+      ],
+    },
+  };
+
+  test("ctxTargetingKeyValues returns {} before any ctxSegments call has populated the cache", () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+    expect(sdk.ctxTargetingKeyValues()).toEqual({});
+    expect(sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" })).toEqual({});
+  });
+
+  test("ctxSegments caches the response and ctxTargetingKeyValues derives GAM key-values (default keys)", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(singleTaxonomyContextual, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://optable.co/");
+
+    // Default: key is the raw taxonomy value, ids grouped under it in response order.
+    expect(sdk.ctxTargetingKeyValues()).toEqual({
+      iab_ct_3_1: ["53", "91", "58", "115", "90", "52"],
+    });
+  });
+
+  test("ctxTargetingKeyValues renames taxonomy keys when a map is provided", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(singleTaxonomyContextual, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://optable.co/");
+
+    expect(sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" })).toEqual({
+      foo: ["53", "91", "58", "115", "90", "52"],
+    });
+  });
+
+  test("ctxTargetingKeyValues filters out taxonomies absent from the provided map", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(
+          {
+            classifications: {
+              categories: [
+                { id: "53", name: "Business", score: 0.95, taxonomy: "iab_ct_3_1" },
+                { id: "42", name: "Finance", score: 0.9, taxonomy: "iab_ct_3_1" },
+                { id: "123", name: "Sports", score: 0.8, taxonomy: "iab_ct_2_2" },
+              ],
+            },
+          },
+          { status: 200 }
+        );
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://optable.co/");
+
+    // Default: both taxonomies emitted under their raw values.
+    expect(sdk.ctxTargetingKeyValues()).toEqual({
+      iab_ct_3_1: ["53", "42"],
+      iab_ct_2_2: ["123"],
+    });
+
+    // Map covers only iab_ct_3_1 -> iab_ct_2_2 is dropped (filter + rename).
+    expect(sdk.ctxTargetingKeyValues({ iab_ct_3_1: "ctx" })).toEqual({
+      ctx: ["53", "42"],
+    });
+  });
+
+  test("config has initContextual true then constructor sends a contextual request", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    new OptableSDK({ ...defaultConfig, initPassport: false, initContextual: true });
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("v1beta1/contextual"),
+        })
+      );
+    });
+  });
+
+  test("config has initContextual as a function then constructor sends a contextual request and invokes the callback with the response", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const callback = jest.fn();
+    new OptableSDK({ ...defaultConfig, initPassport: false, initContextual: callback });
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("v1beta1/contextual"),
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          classifications: expect.objectContaining({ categories: expect.any(Array) }),
+        })
+      );
+    });
   });
 
   test("config has initTargeting true then constructor sends a targeting request", async () => {

@@ -52,6 +52,7 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/gam360-cached.html.tpl > demos/vanilla/targeting/gam360-cached.html
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/gam360-adcp.html.tpl > demos/vanilla/targeting/gam360-adcp.html
 	envsubst $(DEMO_VARS) < demos/vanilla/targeting/prebid.html.tpl > demos/vanilla/targeting/prebid.html
+	envsubst $(DEMO_VARS) < demos/vanilla/targeting/ctx_segments.html.tpl > demos/vanilla/targeting/ctx_segments.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/identify.html.tpl > demos/vanilla/nocookies/identify.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/witness.html.tpl > demos/vanilla/nocookies/witness.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/profile.html.tpl > demos/vanilla/nocookies/profile.html
@@ -59,6 +60,7 @@ demo-html:
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360-cached.html.tpl > demos/vanilla/nocookies/targeting/gam360-cached.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/gam360-adcp.html.tpl > demos/vanilla/nocookies/targeting/gam360-adcp.html
 	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/prebid.html.tpl > demos/vanilla/nocookies/targeting/prebid.html
+	envsubst $(DEMO_VARS) < demos/vanilla/nocookies/targeting/ctx_segments.html.tpl > demos/vanilla/nocookies/targeting/ctx_segments.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/login.html.tpl > demos/vanilla/uid2_token/login.html
 	envsubst $(DEMO_VARS) < demos/vanilla/uid2_token/index.html.tpl > demos/vanilla/uid2_token/index.html
 	envsubst $(DEMO_VARS) < demos/vanilla/pair/index.html.tpl > demos/vanilla/pair/index.html

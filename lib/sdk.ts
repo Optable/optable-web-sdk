@@ -21,6 +21,11 @@ import {
 } from "./edge/targeting";
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
+import {
+  ContextualSegments,
+  ContextualSegmentsResponse,
+  ContextualTargetingKeyValues,
+} from "./edge/contextual_segments";
 import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 import { LocalStorage } from "./core/storage";
@@ -33,6 +38,7 @@ class OptableSDK {
 
   private contextSent: boolean = false;
   private contextConfig: PageContextConfig | null = null;
+  private contextualResponse: ContextualSegmentsResponse | null = null;
   private passportNullWarned: boolean = false;
   private visitorIdNullWarned: boolean = false;
 
@@ -57,6 +63,10 @@ class OptableSDK {
     if (this.dcn.initContextual) {
       const url = `${window.location.hostname}${window.location.pathname}`;
       this.witness("pageview", { url }, { includeContext: true }).catch(() => {});
+
+      const onSegments = typeof this.dcn.initContextual === "function" ? this.dcn.initContextual : null;
+      const promise = this.ctxSegments();
+      (onSegments ? promise.then(onSegments) : promise).catch(() => {});
     }
   }
 
@@ -163,6 +173,16 @@ class OptableSDK {
   async profile(traits: ProfileTraits, id: string | null = null, neighbors: string[] | null = null): Promise<void> {
     await this.init;
     return Profile(this.dcn, traits, id, neighbors);
+  }
+
+  async ctxSegments(url?: string): Promise<ContextualSegmentsResponse> {
+    const response = await ContextualSegments(this.dcn, url ?? window.location.href);
+    this.contextualResponse = response;
+    return response;
+  }
+
+  ctxTargetingKeyValues(taxonomyKeys?: Record<string, string>): ContextualTargetingKeyValues {
+    return ContextualTargetingKeyValues(this.contextualResponse, taxonomyKeys);
   }
 
   async tokenize(id: string): Promise<TokenizeResponse> {
