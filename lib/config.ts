@@ -1,6 +1,7 @@
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 import type { PageContextConfig } from "./core/context";
+import type { ContextualSegmentsResponse } from "./edge/contextual_segments";
 
 type Experiment = never;
 
@@ -72,10 +73,17 @@ type InitConfig = {
   // When enabled, context is sent with the first witness() call after page load.
   // Set to true for defaults, or provide a PageContextConfig object for customization.
   pageContext?: PageContextConfig | boolean;
-  // Automatically send a pageview witness event with page context on SDK initialization.
-  // When true, a 'pageview' event is fired once after passport init with full page context.
+  // Automatically send a pageview witness event with page context on SDK initialization
+  // and fetch + cache contextual segments for later use by ctxTargetingKeyValues().
+  // When true, a 'pageview' witness event is fired once after passport init with full
+  // page context, and ctxSegments() is called once for the current page so the response
+  // is cached on the instance.
+  // When set to a callback function, does everything `true` does AND invokes the callback
+  // with the ContextualSegmentsResponse once ctxSegments() resolves — useful for chaining
+  // an ad-server load (e.g. GAM) on the contextual response without making a second
+  // ctxSegments() call. The callback is not invoked if the request fails.
   // Implies pageContext: true when no pageContext is explicitly configured.
-  initContextual?: boolean;
+  initContextual?: boolean | ((response: ContextualSegmentsResponse) => void);
 };
 
 type ResolvedConfig = {
@@ -93,7 +101,7 @@ type ResolvedConfig = {
   sessionID: string;
   skipEnrichment?: boolean;
   initTargeting?: boolean;
-  initContextual?: boolean;
+  initContextual?: boolean | ((response: ContextualSegmentsResponse) => void);
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
   timeout?: string;
