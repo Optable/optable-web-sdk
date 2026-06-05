@@ -1,1 +1,4 @@
 Dockerfile
+
+# Exclude template source files from Docker image
+**/*.tpl
