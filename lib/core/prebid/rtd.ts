@@ -346,12 +346,13 @@ function handleRtd(
     if (route === "global") {
       globalEidsCount += count;
       skippedEids += merge(config, reqBidsConfigObj.ortb2Fragments.global, ortb2);
-    } else {
+    } else if (route in reqBidsConfigObj.ortb2Fragments.bidder) {
       bidderEidsCount += count;
-      const bidder = reqBidsConfigObj.ortb2Fragments.bidder[route] ?? {};
-      skippedEids += merge(config, bidder, ortb2);
-      // eslint-disable-next-line no-param-reassign
-      reqBidsConfigObj.ortb2Fragments.bidder[route] = bidder;
+      skippedEids += merge(config, reqBidsConfigObj.ortb2Fragments.bidder[route], ortb2);
+    } else {
+      config.log("info", `Bidder "${route}" not in auction, routing ${count} EID(s) to global`);
+      globalEidsCount += count;
+      skippedEids += merge(config, reqBidsConfigObj.ortb2Fragments.global, ortb2);
     }
   });
 
