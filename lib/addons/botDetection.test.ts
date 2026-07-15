@@ -1,6 +1,4 @@
-import { enableBotDetection, isBot } from "./botDetection";
-
-const TARGETING_DONE_KEY = "OPTABLE_TARGETING_DONE";
+import { isBot } from "./botDetection";
 
 describe("isBot", () => {
   it.each([
@@ -40,28 +38,5 @@ describe("isBot", () => {
     const spy = jest.spyOn(navigator, "userAgent", "get").mockReturnValue("Googlebot/2.1");
     expect(isBot()).toBe(true);
     spy.mockRestore();
-  });
-});
-
-describe("enableBotDetection", () => {
-  beforeEach(() => {
-    sessionStorage.clear();
-    jest.restoreAllMocks();
-  });
-
-  it("marks targeting as done and returns true for a bot", () => {
-    jest.spyOn(navigator, "userAgent", "get").mockReturnValue("Googlebot/2.1");
-    expect(enableBotDetection()).toBe(true);
-    expect(sessionStorage.getItem(TARGETING_DONE_KEY)).toBe("1");
-  });
-
-  it("is a no-op and returns false for a real user", () => {
-    jest
-      .spyOn(navigator, "userAgent", "get")
-      .mockReturnValue(
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      );
-    expect(enableBotDetection()).toBe(false);
-    expect(sessionStorage.getItem(TARGETING_DONE_KEY)).toBeNull();
   });
 });

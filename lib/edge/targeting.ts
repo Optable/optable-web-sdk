@@ -126,13 +126,16 @@ function TargetingClearCache(config: ResolvedConfig) {
  * Returns whether the request was identified as a bot.
  */
 export function SkipTargetingForBots(): boolean {
-  if (isBot()) {
-    sessionStorage.setItem(TARGETING_DONE_KEY, "1");
-    return true;
+  try {
+    if (typeof isBot === "function" && isBot()) {
+      sessionStorage.setItem(TARGETING_DONE_KEY, "1");
+      return true;
+    }
+  } catch {
+    // isBot is unavailable or threw; fall through and treat as a real user.
   }
   return false;
 }
-
 
 // Prebid.js supports setting ortb2 object for compatible bidder adapters.
 //

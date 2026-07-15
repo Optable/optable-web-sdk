@@ -27,7 +27,6 @@ const BOT_PATTERN = new RegExp(
   "i"
 );
 
-
 /** True if the current user agent looks like a known bot/crawler. */
 export function isBot(userAgent: string = navigator.userAgent): boolean {
   return BOT_PATTERN.test(userAgent || "");
