@@ -1,6 +1,7 @@
 import type { ResolvedConfig, ABTestConfig, MatcherOverride } from "../config";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
+import { isBot } from "../addons/botDetection";
 import * as ortb2 from "iab-openrtb/v26";
 import * as adcom from "iab-adcom";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
@@ -39,6 +40,8 @@ type TargetingResponse = {
   // Split test Assignment
   split_test_assignment?: string;
 };
+
+const TARGETING_DONE_KEY = "OPTABLE_TARGETING_DONE";
 
 // Determine which A/B test (if any) should be used for this request
 function determineABTest(abTests?: ABTestConfig[]): ABTestConfig | null {
@@ -116,6 +119,20 @@ function TargetingClearCache(config: ResolvedConfig) {
   const ls = new LocalStorage(config);
   ls.clearTargeting();
 }
+
+/**
+ * Skip targeting for bots by marking targeting as already done,
+ * so RTD short-circuits and returns null. No-op for real users.
+ * Returns whether the request was identified as a bot.
+ */
+export function SkipTargetingForBots(): boolean {
+  if (isBot()) {
+    sessionStorage.setItem(TARGETING_DONE_KEY, "1");
+    return true;
+  }
+  return false;
+}
+
 
 // Prebid.js supports setting ortb2 object for compatible bidder adapters.
 //
