@@ -51,6 +51,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Rules](#rules)
   - [Return Value](#return-value)
   - [Input Type](#input-type)
+- [Geotargeting](#geotargeting)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -1173,6 +1174,28 @@ type NodeTargetingRule = {
   priority?: number;
 };
 ```
+
+## Geotargeting
+
+The geotargeting addon maps a visitor's geo (country code) to the Optable host and node that should serve them, so that a single SDK bundle can route traffic to region-specific DCNs.
+
+```typescript
+import { getGeoConfig } from "@optable/web-sdk/lib/dist/addons/geotargeting";
+
+const geoConfig = getGeoConfig("acme", visitorGeo); // e.g. { host: "na.edge.optable.co", node: "acme" } for "US"
+
+if (geoConfig) {
+  const sdk = new OptableSDK({
+    host: geoConfig.host,
+    node: geoConfig.node,
+    site: "my-site",
+  });
+}
+```
+
+The first argument is the node name: the tenant name, optionally with an `-auth` suffix to select the auth variant of the node (e.g. `"acme-auth"`). `getGeoConfig` returns `null` when the geo is not supported, in which case region-specific initialization should be skipped.
+
+By default the following geos are supported: `US`, `CA`, `GB`, `UK` and `AU`. A custom `GeoMap` can be passed as a third argument to override the mapping; see `lib/addons/geotargeting.ts` for the entry format.
 
 ## Demo Pages
 
