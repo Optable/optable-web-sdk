@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
+import { buildRequest } from "../../core/network";
 
 import * as Bowser from "bowser";
 
@@ -39,6 +40,8 @@ interface AuctionItem {
   missed: boolean;
   createdAt: Date;
   bidWonEvents: any[];
+  timeoutBids: any[];
+  sampled: boolean;
 }
 
 class OptablePrebidAnalytics {
@@ -49,6 +52,7 @@ class OptablePrebidAnalytics {
 
   private auctions = new Map<string, AuctionItem>();
   private missedAuctionIds = new Set<string>();
+  private pendingTimeoutBids = new Map<string, any[]>();
   private prebidInstance: any;
 
   /**
@@ -82,8 +86,40 @@ class OptablePrebidAnalytics {
     // Store auction data
     this.maxAuctionDataSize = 50;
 
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+
     this.log("OptablePrebidAnalytics initialized");
   }
+
+  private handleVisibilityChange = () => {
+    if (document.visibilityState !== "hidden") return;
+    if (!this.optableInstance.dcn) return;
+
+    const witnessUrl = buildRequest("/witness", this.optableInstance.dcn).url;
+
+    this.auctions.forEach((auction, auctionId) => {
+      if (!auction.auctionEndTimeoutId) return;
+      if (!auction.sampled) return;
+      clearTimeout(auction.auctionEndTimeoutId);
+      this.auctions.delete(auctionId);
+
+      this.toWitness(auction.auctionEnd, auction.bidWonEvents, auction.missed).then((payload) => {
+        payload["auctionEndAt"] = auction.createdAt.toISOString();
+        payload["bidWonAt"] =
+          auction.bidWonEvents.length > 0
+            ? new Date(Math.min(...auction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
+            : null;
+        payload["optableLoaded"] = !auction.missed;
+
+        navigator.sendBeacon(
+          witnessUrl,
+          new Blob([JSON.stringify({ event: "optable.prebid.auction", properties: payload })], {
+            type: "application/json",
+          })
+        );
+      });
+    });
+  };
 
   /**
    * Log messages to the console when debugging is enabled.
@@ -164,6 +200,12 @@ class OptablePrebidAnalytics {
     pbjs.getEvents().forEach((event: any) => {
       if (event.eventType === "auctionInit") {
         this.missedAuctionIds.add(event.args.auctionId);
+      } else if (event.eventType === "bidTimeout") {
+        (event.args as any[]).forEach((bid: any) => {
+          const existing = this.pendingTimeoutBids.get(bid.auctionId) || [];
+          existing.push(bid);
+          this.pendingTimeoutBids.set(bid.auctionId, existing);
+        });
       } else if (event.eventType === "auctionEnd") {
         this.missedAuctionIds.delete(event.args.auctionId);
         this.log(`auction ${event.args.auctionId} missed (completed before hook)`);
@@ -175,6 +217,14 @@ class OptablePrebidAnalytics {
     });
 
     this.log("Hooking into Prebid.js events");
+    pbjs.onEvent("bidTimeout", (timedOutBids: any[]) => {
+      this.log("bidTimeout event received", timedOutBids);
+      timedOutBids.forEach((bid: any) => {
+        const existing = this.pendingTimeoutBids.get(bid.auctionId) || [];
+        existing.push(bid);
+        this.pendingTimeoutBids.set(bid.auctionId, existing);
+      });
+    });
     pbjs.onEvent("auctionEnd", (event: any) => {
       this.log("auctionEnd event received");
       const missed = this.missedAuctionIds.has(event.auctionId);
@@ -223,7 +273,9 @@ class OptablePrebidAnalytics {
    * @returns void
    */
   async trackAuctionEnd(event: any, missed: boolean = false) {
-    const { auctionId, timeout, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = event;
+    const { auctionId, timeout, bidderRequests = [], bidsReceived = [], noBids = [] } = event;
+    const timeoutBids = this.pendingTimeoutBids.get(auctionId) || [];
+    const sampled = !!this.config.analytics && this.shouldSample();
 
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
 
@@ -365,6 +417,10 @@ class OptablePrebidAnalytics {
     const auctionEndTimeoutId = setTimeout(async () => {
       const storedAuction = this.auctions.get(auctionId);
       if (!storedAuction) return;
+      if (!storedAuction.sampled) {
+        this.auctions.delete(auctionId);
+        return;
+      }
       const effectiveMissed = storedAuction.missed;
       const payload = await this.toWitness(event, storedAuction.bidWonEvents, effectiveMissed);
       payload["auctionEndAt"] = createdAt.toISOString();
@@ -378,7 +434,8 @@ class OptablePrebidAnalytics {
     }, this.config.bidWinTimeout);
 
     // Store the auction data
-    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, bidWonEvents: [] });
+    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, bidWonEvents: [], timeoutBids, sampled });
+    this.pendingTimeoutBids.delete(auctionId);
 
     // Clean up old auctions
     this.cleanupOldAuctions();
@@ -439,7 +496,8 @@ class OptablePrebidAnalytics {
    * @returns A payload object compatible with the Witness API.
    */
   async toWitness(auctionEndEvent: any, bidWonEvents: any[], missed = false): Promise<Record<string, any>> {
-    const { auctionId, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = auctionEndEvent;
+    const { auctionId, bidderRequests = [], bidsReceived = [], noBids = [] } = auctionEndEvent;
+    const timeoutBids = this.auctions.get(auctionId)?.timeoutBids || [];
 
     const oMatchersSet = new Set();
     const oSourcesSet = new Set();
@@ -494,15 +552,30 @@ class OptablePrebidAnalytics {
       };
     });
 
-    // Merge splitTestAssignment from bidsReceived into the requests
     const bidsReceivedMap = new Map<string, any>(bidsReceived.map((b: any) => [b.requestId, b]));
+    const noBidRequestIds = new Set<string>(noBids.map((nb: any) => nb.bidderRequestId));
+    const timedOutRequestIds = new Set<string>(timeoutBids.map((tb: any) => tb.bidderRequestId));
+
     requests.forEach((request: any) => {
       request.bids.forEach((bid: any) => {
         const bidReceived = bidsReceivedMap.get(bid.bidId);
-        if (bidReceived?.ortb2Imp?.ext?.optable?.splitTestAssignment) {
-          bid.splitTestAssignment = bidReceived.ortb2Imp.ext.optable.splitTestAssignment;
+        if (bidReceived) {
+          bid.status = STATUS.RECEIVED;
+          bid.cpm = bidReceived.cpm;
+          bid.size = `${bidReceived.width}x${bidReceived.height}`;
+          bid.currency = bidReceived.currency;
+          if (bidReceived.ortb2Imp?.ext?.optable?.splitTestAssignment) {
+            bid.splitTestAssignment = bidReceived.ortb2Imp.ext.optable.splitTestAssignment;
+          }
+          if (request.status === STATUS.REQUESTED) request.status = STATUS.RECEIVED;
         }
       });
+      if (noBidRequestIds.has(request.bidderRequestId) && request.status === STATUS.REQUESTED) {
+        request.status = STATUS.NO_BID;
+      }
+      if (timedOutRequestIds.has(request.bidderRequestId)) {
+        request.status = STATUS.TIMEOUT;
+      }
     });
 
     const witnessData: WitnessProperties = {
