@@ -28,7 +28,7 @@ describe("OptablePrebidAnalytics", () => {
 
   afterEach(() => {
     if (analytics) {
-      window.removeEventListener("beforeunload", (analytics as any).handleBeforeUnload);
+      document.removeEventListener("visibilitychange", (analytics as any).handleVisibilityChange);
     }
     jest.clearAllMocks();
   });
@@ -1118,11 +1118,17 @@ describe("OptablePrebidAnalytics", () => {
     });
   });
 
-  describe("beforeunload flush", () => {
+  describe("visibilitychange flush", () => {
     let sendBeaconMock: jest.Mock;
     let mockOptableWithDcn: OptableSDK;
 
+    const fireHidden = () => {
+      Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+
     beforeEach(() => {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
       sendBeaconMock = jest.fn().mockReturnValue(true);
       (navigator as any).sendBeacon = sendBeaconMock;
 
@@ -1142,7 +1148,11 @@ describe("OptablePrebidAnalytics", () => {
       });
     });
 
-    it("should flush pending auctions via sendBeacon on beforeunload", async () => {
+    afterEach(() => {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    });
+
+    it("should flush pending auctions via sendBeacon when page becomes hidden", async () => {
       const event = {
         auctionId: "auction-unload",
         timeout: 3000,
@@ -1164,7 +1174,7 @@ describe("OptablePrebidAnalytics", () => {
       const storedAuction = analytics["auctions"].get("auction-unload");
       expect(storedAuction!.auctionEndTimeoutId).not.toBeNull();
 
-      window.dispatchEvent(new Event("beforeunload"));
+      fireHidden();
 
       // Allow the toWitness promise to resolve
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -1176,6 +1186,32 @@ describe("OptablePrebidAnalytics", () => {
       expect(body.event).toBe("optable.prebid.auction");
       expect(body.properties.auctionId).toBe("auction-unload");
       expect(body.properties.bidWonAt).toBeNull();
+    });
+
+    it("should not flush when visibilityState is visible", async () => {
+      const event = {
+        auctionId: "auction-visible",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+
+      // Fire with visible state (e.g. tab becomes foreground)
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).not.toHaveBeenCalled();
     });
 
     it("should not flush when analytics is disabled (analytics: false)", async () => {
@@ -1200,11 +1236,11 @@ describe("OptablePrebidAnalytics", () => {
       };
 
       await disabledAnalytics.trackAuctionEnd(event);
-      window.dispatchEvent(new Event("beforeunload"));
+      fireHidden();
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(sendBeaconMock).not.toHaveBeenCalled();
-      window.removeEventListener("beforeunload", (disabledAnalytics as any).handleBeforeUnload);
+      document.removeEventListener("visibilitychange", (disabledAnalytics as any).handleVisibilityChange);
     });
 
     it("should not flush auctions in sampling holdout (sampled=false)", async () => {
@@ -1235,11 +1271,11 @@ describe("OptablePrebidAnalytics", () => {
       const storedAuction = holdoutAnalytics["auctions"].get("auction-holdout");
       expect(storedAuction!.sampled).toBe(false);
 
-      window.dispatchEvent(new Event("beforeunload"));
+      fireHidden();
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(sendBeaconMock).not.toHaveBeenCalled();
-      window.removeEventListener("beforeunload", (holdoutAnalytics as any).handleBeforeUnload);
+      document.removeEventListener("visibilitychange", (holdoutAnalytics as any).handleVisibilityChange);
     });
 
     it("should not flush auctions that have no pending timeout", async () => {
@@ -1269,10 +1305,10 @@ describe("OptablePrebidAnalytics", () => {
       await analytics.trackBidWon(bidWonEvent);
 
       // auction was deleted by trackBidWon, so nothing to flush
-      window.dispatchEvent(new Event("beforeunload"));
+      fireHidden();
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // witness was called once (by trackBidWon), not again by beforeunload
+      // witness was called once (by trackBidWon), not again by visibilitychange
       expect(mockOptableWithDcn.witness).toHaveBeenCalledTimes(1);
       expect(sendBeaconMock).not.toHaveBeenCalled();
     });

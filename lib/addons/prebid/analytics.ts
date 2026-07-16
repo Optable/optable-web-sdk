@@ -84,20 +84,22 @@ class OptablePrebidAnalytics {
     // Store auction data
     this.maxAuctionDataSize = 50;
 
-    window.addEventListener("beforeunload", this.handleBeforeUnload);
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
 
     this.log("OptablePrebidAnalytics initialized");
   }
 
-  private handleBeforeUnload = () => {
+  private handleVisibilityChange = () => {
+    if (document.visibilityState !== "hidden") return;
     if (!this.optableInstance.dcn) return;
 
     const witnessUrl = buildRequest("/witness", this.optableInstance.dcn).url;
 
-    this.auctions.forEach((auction) => {
+    this.auctions.forEach((auction, auctionId) => {
       if (!auction.auctionEndTimeoutId) return;
       if (!auction.sampled) return;
       clearTimeout(auction.auctionEndTimeoutId);
+      this.auctions.delete(auctionId);
 
       this.toWitness(auction.auctionEnd, null, auction.missed).then((payload) => {
         payload["auctionEndAt"] = auction.createdAt.toISOString();
