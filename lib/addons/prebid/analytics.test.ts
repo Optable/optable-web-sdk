@@ -952,7 +952,9 @@ describe("OptablePrebidAnalytics", () => {
 
     it("should handle timeoutBids via pendingTimeoutBids and update status in toWitness", async () => {
       // Simulate the bidTimeout event arriving before auctionEnd (the real Prebid flow)
-      analytics["pendingTimeoutBids"].set("auction-timeout", [{ bidderRequestId: "req-1", auctionId: "auction-timeout" }]);
+      analytics["pendingTimeoutBids"].set("auction-timeout", [
+        { bidderRequestId: "req-1", auctionId: "auction-timeout" },
+      ]);
 
       const event = {
         auctionId: "auction-timeout",
@@ -1766,9 +1768,7 @@ describe("OptablePrebidAnalytics", () => {
         getEvents: jest.fn().mockReturnValue([
           {
             eventType: "bidTimeout",
-            args: [
-              { auctionId: "auction-missed-timeout", bidderRequestId: "req-1" },
-            ],
+            args: [{ auctionId: "auction-missed-timeout", bidderRequestId: "req-1" }],
           },
           {
             eventType: "auctionEnd",

@@ -434,7 +434,15 @@ class OptablePrebidAnalytics {
     }, this.config.bidWinTimeout);
 
     // Store the auction data
-    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, bidWonEvents: [], timeoutBids, sampled });
+    this.auctions.set(auctionId, {
+      auctionEnd: event,
+      createdAt,
+      missed,
+      auctionEndTimeoutId,
+      bidWonEvents: [],
+      timeoutBids,
+      sampled,
+    });
     this.pendingTimeoutBids.delete(auctionId);
 
     // Clean up old auctions
