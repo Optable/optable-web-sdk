@@ -1279,6 +1279,8 @@ describe("OptablePrebidAnalytics", () => {
     });
 
     it("should not flush auctions that have no pending timeout", async () => {
+      jest.useFakeTimers();
+
       const auctionEndEvent = {
         auctionId: "auction-already-sent",
         timeout: 3000,
@@ -1304,12 +1306,16 @@ describe("OptablePrebidAnalytics", () => {
       await analytics.trackAuctionEnd(auctionEndEvent);
       await analytics.trackBidWon(bidWonEvent);
 
-      // auction was deleted by trackBidWon, so nothing to flush
+      // Let the bidWinTimeout fire — sends via witness and deletes the auction
+      await jest.runAllTimersAsync();
+      expect(mockOptableWithDcn.witness).toHaveBeenCalledTimes(1);
+
+      jest.useRealTimers();
+
+      // No auctions remain, so visibilitychange should not trigger sendBeacon
       fireHidden();
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // witness was called once (by trackBidWon), not again by visibilitychange
-      expect(mockOptableWithDcn.witness).toHaveBeenCalledTimes(1);
       expect(sendBeaconMock).not.toHaveBeenCalled();
     });
   });

@@ -36,9 +36,10 @@ interface OptablePrebidAnalyticsConfig {
 
 interface AuctionItem {
   auctionEnd: unknown | null;
-  auctionEndTimeoutId: NodeJS.Timeout | null;
+  auctionEndTimeoutId: ReturnType<typeof setTimeout> | null;
   missed: boolean;
   createdAt: Date;
+  bidWonEvents: any[];
   timeoutBids: any[];
   sampled: boolean;
 }
@@ -50,6 +51,7 @@ class OptablePrebidAnalytics {
   private readonly maxAuctionDataSize: number = 50;
 
   private auctions = new Map<string, AuctionItem>();
+  private missedAuctionIds = new Set<string>();
   private pendingTimeoutBids = new Map<string, any[]>();
   private prebidInstance: any;
 
@@ -101,9 +103,12 @@ class OptablePrebidAnalytics {
       clearTimeout(auction.auctionEndTimeoutId);
       this.auctions.delete(auctionId);
 
-      this.toWitness(auction.auctionEnd, null, auction.missed).then((payload) => {
+      this.toWitness(auction.auctionEnd, auction.bidWonEvents, auction.missed).then((payload) => {
         payload["auctionEndAt"] = auction.createdAt.toISOString();
-        payload["bidWonAt"] = null;
+        payload["bidWonAt"] =
+          auction.bidWonEvents.length > 0
+            ? new Date(Math.min(...auction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
+            : null;
         payload["optableLoaded"] = !auction.missed;
 
         navigator.sendBeacon(
@@ -191,20 +196,21 @@ class OptablePrebidAnalytics {
    * @returns void
    */
   setHooks(pbjs: any) {
-    this.log("Processing missed auctionEnd");
+    this.log("Processing past events");
     pbjs.getEvents().forEach((event: any) => {
-      if (event.eventType === "bidTimeout") {
+      if (event.eventType === "auctionInit") {
+        this.missedAuctionIds.add(event.args.auctionId);
+      } else if (event.eventType === "bidTimeout") {
         (event.args as any[]).forEach((bid: any) => {
           const existing = this.pendingTimeoutBids.get(bid.auctionId) || [];
           existing.push(bid);
           this.pendingTimeoutBids.set(bid.auctionId, existing);
         });
-      }
-      if (event.eventType === "auctionEnd") {
-        this.log("auction missed");
+      } else if (event.eventType === "auctionEnd") {
+        this.missedAuctionIds.delete(event.args.auctionId);
+        this.log(`auction ${event.args.auctionId} missed (completed before hook)`);
         this.trackAuctionEnd(event.args, true);
-      }
-      if (event.eventType === "bidWon") {
+      } else if (event.eventType === "bidWon") {
         this.log("bid won missed");
         this.trackBidWon(event.args, true);
       }
@@ -221,7 +227,11 @@ class OptablePrebidAnalytics {
     });
     pbjs.onEvent("auctionEnd", (event: any) => {
       this.log("auctionEnd event received");
-      this.trackAuctionEnd(event);
+      const missed = this.missedAuctionIds.has(event.auctionId);
+      if (missed) {
+        this.missedAuctionIds.delete(event.auctionId);
+      }
+      this.trackAuctionEnd(event, missed);
     });
     pbjs.onEvent("bidWon", (event: any) => {
       this.log("bidWon event received");
@@ -279,7 +289,9 @@ class OptablePrebidAnalytics {
       bidderRequests: bidderRequests.map((br: any) => {
         const { bidderCode, bidderRequestId, bids = [] } = br;
         const domain = br.ortb2.site?.domain ?? "unknown";
-        const eids = br.ortb2.user?.eids ?? [];
+        const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
+        // Deduplicate EIDs by source
+        const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
 
         // Optable EIDs
         const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
@@ -403,17 +415,26 @@ class OptablePrebidAnalytics {
 
     const createdAt = new Date();
     const auctionEndTimeoutId = setTimeout(async () => {
-      if (!sampled) return;
-      const payload = await this.toWitness(event, null, missed);
+      const storedAuction = this.auctions.get(auctionId);
+      if (!storedAuction) return;
+      if (!storedAuction.sampled) {
+        this.auctions.delete(auctionId);
+        return;
+      }
+      const effectiveMissed = storedAuction.missed;
+      const payload = await this.toWitness(event, storedAuction.bidWonEvents, effectiveMissed);
       payload["auctionEndAt"] = createdAt.toISOString();
-      payload["bidWonAt"] = null;
-      payload["optableLoaded"] = !missed;
-
+      payload["bidWonAt"] =
+        storedAuction.bidWonEvents.length > 0
+          ? new Date(Math.min(...storedAuction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
+          : null;
+      payload["optableLoaded"] = !effectiveMissed;
       this.sendToWitnessAPI("optable.prebid.auction", payload);
+      this.auctions.delete(auctionId);
     }, this.config.bidWinTimeout);
 
     // Store the auction data
-    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, timeoutBids, sampled });
+    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, bidWonEvents: [], timeoutBids, sampled });
     this.pendingTimeoutBids.delete(auctionId);
 
     // Clean up old auctions
@@ -421,21 +442,14 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Handle a Prebid `bidWon` event by finalizing the matching auction, clearing
-   * the pending timeout and sending the combined payload to Witness.
+   * Accumulate a Prebid `bidWon` event into the matching auction's event list
+   * for deferred emission when the auction timeout fires.
    * @param event - The raw Prebid bidWon event object.
    * @param missed - True when the event was previously emitted (missed replay).
    * @returns void
    */
   async trackBidWon(event: any, missed: boolean = false) {
-    const filteredEvent = {
-      auctionId: event.auctionId,
-      bidderCode: event.bidderCode,
-      bidId: event.requestId,
-      tenant: this.config.tenant,
-      missed,
-    };
-    this.log("bidWon filtered event", filteredEvent);
+    this.log("bidWon event", { auctionId: event.auctionId, bidderCode: event.bidderCode, missed });
 
     const auction = this.auctions.get(event.auctionId);
     if (!auction) {
@@ -443,23 +457,10 @@ class OptablePrebidAnalytics {
       return;
     }
 
-    if (auction.auctionEndTimeoutId) {
-      clearTimeout(auction.auctionEndTimeoutId);
+    auction.bidWonEvents.push({ ...event, _receivedAt: new Date() });
+    if (missed) {
+      auction.missed = true;
     }
-
-    if (!auction.sampled) {
-      this.auctions.delete(event.auctionId);
-      return;
-    }
-
-    const payload = await this.toWitness(auction.auctionEnd, event, missed);
-    payload["auctionEndAt"] = auction.createdAt.toISOString();
-    payload["bidWonAt"] = new Date().toISOString();
-    payload["optableLoaded"] = !missed;
-
-    this.sendToWitnessAPI("optable.prebid.auction", payload);
-
-    this.auctions.delete(event.auctionId);
   }
 
   /**
@@ -482,18 +483,19 @@ class OptablePrebidAnalytics {
    */
   clearData() {
     this.auctions.clear();
+    this.missedAuctionIds.clear();
     this.log("All analytics data cleared");
   }
 
   /**
-   * Convert internal auction state and optional bidWon event into a Witness payload.
+   * Convert internal auction state and accumulated bidWon events into a Witness payload.
    * This collects matcher/source metadata, bid counts and optional custom analytics.
    * @param auctionEndEvent - The `auctionEnd` event object from Prebid.js.
-   * @param bidWonEvent - Optional `bidWon` event when a winning bid exists.
+   * @param bidWonEvents - Array of `bidWon` events accumulated during the auction window.
    * @param missed - True when the original events were already emitted (replayed).
    * @returns A payload object compatible with the Witness API.
    */
-  async toWitness(auctionEndEvent: any, bidWonEvent: any | null, missed = false): Promise<Record<string, any>> {
+  async toWitness(auctionEndEvent: any, bidWonEvents: any[], missed = false): Promise<Record<string, any>> {
     const { auctionId, bidderRequests = [], bidsReceived = [], noBids = [] } = auctionEndEvent;
     const timeoutBids = this.auctions.get(auctionId)?.timeoutBids || [];
 
@@ -507,7 +509,9 @@ class OptablePrebidAnalytics {
     const requests = bidderRequests.map((br: any) => {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
-      const eids = br.ortb2.user?.eids ?? [];
+      const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
+      // Deduplicate EIDs by source
+      const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
@@ -588,20 +592,11 @@ class OptablePrebidAnalytics {
       optableTargetingDone: oMatchersSet.size || oSourcesSet.size,
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
-      bidWon: bidWonEvent
-        ? {
-            message:
-              bidWonEvent.bidderCode +
-              " won the ad server auction for ad unit " +
-              bidWonEvent.adUnitCode +
-              " at " +
-              bidWonEvent.cpm +
-              " CPM",
-            bidderCode: bidWonEvent.bidderCode,
-            adUnitCode: bidWonEvent.adUnitCode,
-            cpm: bidWonEvent.cpm,
-          }
-        : null,
+      bidWon: bidWonEvents.map((e) => ({
+        bidderCode: e.bidderCode,
+        adUnitCode: e.adUnitCode,
+        cpm: e.cpm,
+      })),
       missed,
       url: `${window.location.hostname}${window.location.pathname}`,
       tenant: this.config.tenant!,
@@ -612,6 +607,7 @@ class OptablePrebidAnalytics {
       prebidjsVersion: this.prebidInstance?.version || "unknown",
       sessionDepth: sessionStorage?.optableSessionDepth || 1,
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
+      originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };
 
     // Log summary with bid counts
