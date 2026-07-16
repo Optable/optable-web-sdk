@@ -1178,7 +1178,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(body.properties.bidWonAt).toBeNull();
     });
 
-    it("should not flush when analytics is disabled", async () => {
+    it("should not flush when analytics is disabled (analytics: false)", async () => {
       const disabledAnalytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
         analytics: false,
         tenant: "test-tenant",
@@ -1205,6 +1205,41 @@ describe("OptablePrebidAnalytics", () => {
 
       expect(sendBeaconMock).not.toHaveBeenCalled();
       window.removeEventListener("beforeunload", (disabledAnalytics as any).handleBeforeUnload);
+    });
+
+    it("should not flush auctions in sampling holdout (sampled=false)", async () => {
+      // analytics: true but samplingRate: 0 → shouldSample() returns false → sampled=false
+      const holdoutAnalytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
+        analytics: true,
+        samplingRate: 0,
+        tenant: "test-tenant",
+      });
+
+      const event = {
+        auctionId: "auction-holdout",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await holdoutAnalytics.trackAuctionEnd(event);
+
+      const storedAuction = holdoutAnalytics["auctions"].get("auction-holdout");
+      expect(storedAuction!.sampled).toBe(false);
+
+      window.dispatchEvent(new Event("beforeunload"));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).not.toHaveBeenCalled();
+      window.removeEventListener("beforeunload", (holdoutAnalytics as any).handleBeforeUnload);
     });
 
     it("should not flush auctions that have no pending timeout", async () => {

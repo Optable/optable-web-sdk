@@ -40,6 +40,7 @@ interface AuctionItem {
   missed: boolean;
   createdAt: Date;
   timeoutBids: any[];
+  sampled: boolean;
 }
 
 class OptablePrebidAnalytics {
@@ -89,13 +90,13 @@ class OptablePrebidAnalytics {
   }
 
   private handleBeforeUnload = () => {
-    if (!this.config.analytics || !this.shouldSample()) return;
     if (!this.optableInstance.dcn) return;
 
     const witnessUrl = buildRequest("/witness", this.optableInstance.dcn).url;
 
     this.auctions.forEach((auction) => {
       if (!auction.auctionEndTimeoutId) return;
+      if (!auction.sampled) return;
       clearTimeout(auction.auctionEndTimeoutId);
 
       this.toWitness(auction.auctionEnd, null, auction.missed).then((payload) => {
@@ -262,6 +263,7 @@ class OptablePrebidAnalytics {
   async trackAuctionEnd(event: any, missed: boolean = false) {
     const { auctionId, timeout, bidderRequests = [], bidsReceived = [], noBids = [] } = event;
     const timeoutBids = this.pendingTimeoutBids.get(auctionId) || [];
+    const sampled = !!this.config.analytics && this.shouldSample();
 
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
 
@@ -399,6 +401,7 @@ class OptablePrebidAnalytics {
 
     const createdAt = new Date();
     const auctionEndTimeoutId = setTimeout(async () => {
+      if (!sampled) return;
       const payload = await this.toWitness(event, null, missed);
       payload["auctionEndAt"] = createdAt.toISOString();
       payload["bidWonAt"] = null;
@@ -408,7 +411,7 @@ class OptablePrebidAnalytics {
     }, this.config.bidWinTimeout);
 
     // Store the auction data
-    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, timeoutBids });
+    this.auctions.set(auctionId, { auctionEnd: event, createdAt, missed, auctionEndTimeoutId, timeoutBids, sampled });
     this.pendingTimeoutBids.delete(auctionId);
 
     // Clean up old auctions
@@ -440,6 +443,11 @@ class OptablePrebidAnalytics {
 
     if (auction.auctionEndTimeoutId) {
       clearTimeout(auction.auctionEndTimeoutId);
+    }
+
+    if (!auction.sampled) {
+      this.auctions.delete(event.auctionId);
+      return;
     }
 
     const payload = await this.toWitness(auction.auctionEnd, event, missed);
