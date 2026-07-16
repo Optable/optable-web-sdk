@@ -31,6 +31,7 @@ interface OptablePrebidAnalyticsConfig {
   samplingSeed?: string;
   samplingRate?: number;
   samplingRateFn?: () => boolean;
+  getSplitTestAssignment?: () => string | undefined;
 }
 
 interface AuctionItem {
@@ -226,6 +227,19 @@ class OptablePrebidAnalytics {
     const { auctionId, timeout, bidderRequests = [], bidsReceived = [], noBids = [], timeoutBids = [] } = event;
 
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
+
+    const splitTestAssignment = this.config.getSplitTestAssignment?.();
+    if (splitTestAssignment) {
+      bidderRequests.forEach((br: any) => {
+        (br.bids || []).forEach((b: any) => {
+          if (b.ortb2Imp?.ext?.optable?.splitTestAssignment) return;
+          b.ortb2Imp = b.ortb2Imp || {};
+          b.ortb2Imp.ext = b.ortb2Imp.ext || {};
+          b.ortb2Imp.ext.optable = b.ortb2Imp.ext.optable || {};
+          b.ortb2Imp.ext.optable.splitTestAssignment = splitTestAssignment;
+        });
+      });
+    }
 
     (window as any).optable = (window as any).optable || {};
     (window as any).optable.pageAuctionsCount = (Number((window as any).optable.pageAuctionsCount) || 0) + 1;

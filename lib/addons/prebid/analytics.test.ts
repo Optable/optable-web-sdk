@@ -322,6 +322,76 @@ describe("OptablePrebidAnalytics", () => {
     });
   });
 
+  describe("trackAuctionEnd - split test assignment", () => {
+    function makeEvent(bids: any[]) {
+      return {
+        auctionId: "auction-split-test",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids,
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+    }
+
+    it("does nothing when getSplitTestAssignment is not configured", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance);
+      const bid = { bidId: "bid-1" };
+      await analytics.trackAuctionEnd(makeEvent([bid]));
+
+      expect(bid).not.toHaveProperty("ortb2Imp");
+    });
+
+    it("does nothing when getSplitTestAssignment returns undefined", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
+        getSplitTestAssignment: () => undefined,
+      });
+      const bid = { bidId: "bid-1" };
+      await analytics.trackAuctionEnd(makeEvent([bid]));
+
+      expect(bid).not.toHaveProperty("ortb2Imp");
+    });
+
+    it("tags every bid's ortb2Imp.ext.optable.splitTestAssignment", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
+        getSplitTestAssignment: () => "all",
+      });
+      const bidA: any = { bidId: "bid-1" };
+      const bidB: any = { bidId: "bid-2" };
+      await analytics.trackAuctionEnd(makeEvent([bidA, bidB]));
+
+      expect(bidA.ortb2Imp.ext.optable.splitTestAssignment).toBe("all");
+      expect(bidB.ortb2Imp.ext.optable.splitTestAssignment).toBe("all");
+    });
+
+    it("does not override an already-set splitTestAssignment", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
+        getSplitTestAssignment: () => "all",
+      });
+      const bid: any = { bidId: "bid-1", ortb2Imp: { ext: { optable: { splitTestAssignment: "control" } } } };
+      await analytics.trackAuctionEnd(makeEvent([bid]));
+
+      expect(bid.ortb2Imp.ext.optable.splitTestAssignment).toBe("control");
+    });
+
+    it("preserves other fields already present on ortb2Imp.ext.optable", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
+        getSplitTestAssignment: () => "all",
+      });
+      const bid: any = { bidId: "bid-1", ortb2Imp: { ext: { optable: { foo: "bar" } } } };
+      await analytics.trackAuctionEnd(makeEvent([bid]));
+
+      expect(bid.ortb2Imp.ext.optable).toEqual({ foo: "bar", splitTestAssignment: "all" });
+    });
+  });
+
   describe("trackBidWon", () => {
     beforeEach(() => {
       jest.useFakeTimers();
