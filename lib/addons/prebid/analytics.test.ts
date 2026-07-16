@@ -27,6 +27,9 @@ describe("OptablePrebidAnalytics", () => {
   });
 
   afterEach(() => {
+    if (analytics) {
+      document.removeEventListener("visibilitychange", (analytics as any).handleVisibilityChange);
+    }
     jest.clearAllMocks();
   });
 
@@ -730,7 +733,8 @@ describe("OptablePrebidAnalytics", () => {
       const result = analytics.hookIntoPrebid(mockPbjs as any);
 
       expect(result).toBe(true);
-      expect(mockPbjs.onEvent).toHaveBeenCalledTimes(2);
+      expect(mockPbjs.onEvent).toHaveBeenCalledTimes(3);
+      expect(mockPbjs.onEvent).toHaveBeenCalledWith("bidTimeout", expect.any(Function));
       expect(mockPbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
       expect(mockPbjs.onEvent).toHaveBeenCalledWith("bidWon", expect.any(Function));
     });
@@ -789,13 +793,20 @@ describe("OptablePrebidAnalytics", () => {
           },
         ],
         noBids: [],
-        timeoutBids: [],
       };
 
       await analytics.trackAuctionEnd(event);
 
       const storedAuction = analytics["auctions"].get("auction-with-bids");
       expect(storedAuction).toBeDefined();
+
+      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
+      const bid = payload.bidderRequests[0].bids[0];
+      expect(bid.status).toBe("RECEIVED");
+      expect(bid.cpm).toBe(1.5);
+      expect(bid.size).toBe("300x250");
+      expect(bid.currency).toBe("USD");
+      expect(payload.bidderRequests[0].status).toBe("RECEIVED");
     });
 
     it("should extract splitTestAssignment from bidsReceived", async () => {
@@ -921,25 +932,30 @@ describe("OptablePrebidAnalytics", () => {
             bidderRequestId: "req-1",
             ortb2: {
               site: { domain: "example.com" },
-              user: {
-                eids: [],
-              },
+              user: { eids: [] },
             },
             bids: [],
           },
         ],
         bidsReceived: [],
         noBids: [{ bidderRequestId: "req-1" }],
-        timeoutBids: [],
       };
 
       await analytics.trackAuctionEnd(event);
 
       const storedAuction = analytics["auctions"].get("auction-no-bids");
       expect(storedAuction).toBeDefined();
+
+      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
+      expect(payload.bidderRequests[0].status).toBe("NO_BID");
     });
 
-    it("should handle timeoutBids and update status", async () => {
+    it("should handle timeoutBids via pendingTimeoutBids and update status in toWitness", async () => {
+      // Simulate the bidTimeout event arriving before auctionEnd (the real Prebid flow)
+      analytics["pendingTimeoutBids"].set("auction-timeout", [
+        { bidderRequestId: "req-1", auctionId: "auction-timeout" },
+      ]);
+
       const event = {
         auctionId: "auction-timeout",
         timeout: 3000,
@@ -949,22 +965,27 @@ describe("OptablePrebidAnalytics", () => {
             bidderRequestId: "req-1",
             ortb2: {
               site: { domain: "example.com" },
-              user: {
-                eids: [],
-              },
+              user: { eids: [] },
             },
             bids: [],
           },
         ],
         bidsReceived: [],
         noBids: [],
-        timeoutBids: [{ bidderRequestId: "req-1" }],
       };
 
       await analytics.trackAuctionEnd(event);
 
+      // pendingTimeoutBids should be cleaned up after trackAuctionEnd
+      expect(analytics["pendingTimeoutBids"].has("auction-timeout")).toBe(false);
+
+      // timeoutBids should be stored on the AuctionItem
       const storedAuction = analytics["auctions"].get("auction-timeout");
-      expect(storedAuction).toBeDefined();
+      expect(storedAuction!.timeoutBids).toHaveLength(1);
+
+      // toWitness should mark the bidder request as TIMEOUT
+      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
+      expect(payload.bidderRequests[0].status).toBe("TIMEOUT");
     });
   });
 
@@ -1096,6 +1117,208 @@ describe("OptablePrebidAnalytics", () => {
       expect(result).toMatchObject(customData);
 
       delete (window as any).optable;
+    });
+  });
+
+  describe("visibilitychange flush", () => {
+    let sendBeaconMock: jest.Mock;
+    let mockOptableWithDcn: OptableSDK;
+
+    const fireHidden = () => {
+      Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+
+    beforeEach(() => {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      sendBeaconMock = jest.fn().mockReturnValue(true);
+      (navigator as any).sendBeacon = sendBeaconMock;
+
+      mockOptableWithDcn = {
+        witness: jest.fn().mockResolvedValue(undefined),
+        dcn: {
+          host: "dcn.example.com",
+          cookies: false,
+          sessionID: "test-session-id",
+          consent: {},
+        },
+      } as any;
+
+      analytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
+        analytics: true,
+        tenant: "test-tenant",
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    });
+
+    it("should flush pending auctions via sendBeacon when page becomes hidden", async () => {
+      const event = {
+        auctionId: "auction-unload",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+
+      // Confirm a timeout is pending
+      const storedAuction = analytics["auctions"].get("auction-unload");
+      expect(storedAuction!.auctionEndTimeoutId).not.toBeNull();
+
+      fireHidden();
+
+      // Allow the toWitness promise to resolve
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).toHaveBeenCalledTimes(1);
+      const [url, blob] = sendBeaconMock.mock.calls[0];
+      expect(url).toContain("/witness");
+      const body = JSON.parse(await new Response(blob).text());
+      expect(body.event).toBe("optable.prebid.auction");
+      expect(body.properties.auctionId).toBe("auction-unload");
+      expect(body.properties.bidWonAt).toBeNull();
+    });
+
+    it("should not flush when visibilityState is visible", async () => {
+      const event = {
+        auctionId: "auction-visible",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+
+      // Fire with visible state (e.g. tab becomes foreground)
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).not.toHaveBeenCalled();
+    });
+
+    it("should not flush when analytics is disabled (analytics: false)", async () => {
+      const disabledAnalytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
+        analytics: false,
+        tenant: "test-tenant",
+      });
+
+      const event = {
+        auctionId: "auction-disabled",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await disabledAnalytics.trackAuctionEnd(event);
+      fireHidden();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).not.toHaveBeenCalled();
+      document.removeEventListener("visibilitychange", (disabledAnalytics as any).handleVisibilityChange);
+    });
+
+    it("should not flush auctions in sampling holdout (sampled=false)", async () => {
+      // analytics: true but samplingRate: 0 → shouldSample() returns false → sampled=false
+      const holdoutAnalytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
+        analytics: true,
+        samplingRate: 0,
+        tenant: "test-tenant",
+      });
+
+      const event = {
+        auctionId: "auction-holdout",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await holdoutAnalytics.trackAuctionEnd(event);
+
+      const storedAuction = holdoutAnalytics["auctions"].get("auction-holdout");
+      expect(storedAuction!.sampled).toBe(false);
+
+      fireHidden();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).not.toHaveBeenCalled();
+      document.removeEventListener("visibilitychange", (holdoutAnalytics as any).handleVisibilityChange);
+    });
+
+    it("should not flush auctions that have no pending timeout", async () => {
+      jest.useFakeTimers();
+
+      const auctionEndEvent = {
+        auctionId: "auction-already-sent",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+      const bidWonEvent = {
+        auctionId: "auction-already-sent",
+        bidderCode: "bidder1",
+        requestId: "bid-1",
+        adUnitCode: "ad-unit-1",
+        cpm: 1.5,
+      };
+
+      await analytics.trackAuctionEnd(auctionEndEvent);
+      await analytics.trackBidWon(bidWonEvent);
+
+      // Let the bidWinTimeout fire — sends via witness and deletes the auction
+      await jest.runAllTimersAsync();
+      expect(mockOptableWithDcn.witness).toHaveBeenCalledTimes(1);
+
+      jest.useRealTimers();
+
+      // No auctions remain, so visibilitychange should not trigger sendBeacon
+      fireHidden();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).not.toHaveBeenCalled();
     });
   });
 
@@ -1515,8 +1738,72 @@ describe("OptablePrebidAnalytics", () => {
 
       analytics["setHooks"](mockPbjs);
 
+      expect(mockPbjs.onEvent).toHaveBeenCalledWith("bidTimeout", expect.any(Function));
       expect(mockPbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
       expect(mockPbjs.onEvent).toHaveBeenCalledWith("bidWon", expect.any(Function));
+    });
+
+    it("should accumulate timeout bids into pendingTimeoutBids via live bidTimeout listener", () => {
+      const capturedHandlers: Record<string, Function> = {};
+      const mockPbjs = {
+        getEvents: jest.fn().mockReturnValue([]),
+        onEvent: jest.fn((event: string, handler: Function) => {
+          capturedHandlers[event] = handler;
+        }),
+      };
+
+      analytics["setHooks"](mockPbjs);
+
+      // Simulate bidTimeout firing before auctionEnd
+      capturedHandlers["bidTimeout"]([
+        { auctionId: "auction-live-timeout", bidderRequestId: "req-1" },
+        { auctionId: "auction-live-timeout", bidderRequestId: "req-2" },
+      ]);
+
+      expect(analytics["pendingTimeoutBids"].get("auction-live-timeout")).toHaveLength(2);
+    });
+
+    it("should replay missed bidTimeout events before processing missed auctionEnd", async () => {
+      const mockPbjs = {
+        getEvents: jest.fn().mockReturnValue([
+          {
+            eventType: "bidTimeout",
+            args: [{ auctionId: "auction-missed-timeout", bidderRequestId: "req-1" }],
+          },
+          {
+            eventType: "auctionEnd",
+            args: {
+              auctionId: "auction-missed-timeout",
+              timeout: 3000,
+              bidderRequests: [
+                {
+                  bidderCode: "bidder1",
+                  bidderRequestId: "req-1",
+                  ortb2: {
+                    site: { domain: "example.com" },
+                    user: { eids: [] },
+                  },
+                  bids: [],
+                },
+              ],
+              bidsReceived: [],
+              noBids: [],
+            },
+          },
+        ]),
+        onEvent: jest.fn(),
+      };
+
+      analytics["setHooks"](mockPbjs);
+
+      // Wait for async trackAuctionEnd to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const storedAuction = analytics["auctions"].get("auction-missed-timeout");
+      expect(storedAuction!.timeoutBids).toHaveLength(1);
+
+      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
+      expect(payload.bidderRequests[0].status).toBe("TIMEOUT");
     });
   });
 
@@ -1858,9 +2145,7 @@ describe("OptablePrebidAnalytics", () => {
             bidderRequestId: "req-1",
             ortb2: {
               site: { domain: "example.com" },
-              user: {
-                eids: [],
-              },
+              user: { eids: [] },
             },
             bids: [
               {
@@ -1875,16 +2160,21 @@ describe("OptablePrebidAnalytics", () => {
         ],
         bidsReceived: [],
         noBids: [{ bidderRequestId: "req-1" }],
-        timeoutBids: [],
       };
 
       await analytics.trackAuctionEnd(event);
 
       const storedAuction = analytics["auctions"].get("auction-no-bid-with-bids");
-      expect(storedAuction).toBeDefined();
+      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
+      expect(payload.bidderRequests[0].status).toBe("NO_BID");
     });
 
     it("should mark bids with TIMEOUT status when bids exist", async () => {
+      // Pre-populate pendingTimeoutBids as Prebid's BID_TIMEOUT fires before auctionEnd
+      analytics["pendingTimeoutBids"].set("auction-timeout-with-bids", [
+        { bidderRequestId: "req-1", auctionId: "auction-timeout-with-bids" },
+      ]);
+
       const event = {
         auctionId: "auction-timeout-with-bids",
         timeout: 3000,
@@ -1894,9 +2184,7 @@ describe("OptablePrebidAnalytics", () => {
             bidderRequestId: "req-1",
             ortb2: {
               site: { domain: "example.com" },
-              user: {
-                eids: [],
-              },
+              user: { eids: [] },
             },
             bids: [
               {
@@ -1911,13 +2199,13 @@ describe("OptablePrebidAnalytics", () => {
         ],
         bidsReceived: [],
         noBids: [],
-        timeoutBids: [{ bidderRequestId: "req-1" }],
       };
 
       await analytics.trackAuctionEnd(event);
 
       const storedAuction = analytics["auctions"].get("auction-timeout-with-bids");
-      expect(storedAuction).toBeDefined();
+      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
+      expect(payload.bidderRequests[0].status).toBe("TIMEOUT");
     });
   });
 });
