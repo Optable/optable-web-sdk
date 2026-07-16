@@ -27,6 +27,9 @@ describe("OptablePrebidAnalytics", () => {
   });
 
   afterEach(() => {
+    if (analytics) {
+      window.removeEventListener("beforeunload", (analytics as any).handleBeforeUnload);
+    }
     jest.clearAllMocks();
   });
 
@@ -1112,6 +1115,131 @@ describe("OptablePrebidAnalytics", () => {
       expect(result).toMatchObject(customData);
 
       delete (window as any).optable;
+    });
+  });
+
+  describe("beforeunload flush", () => {
+    let sendBeaconMock: jest.Mock;
+    let mockOptableWithDcn: OptableSDK;
+
+    beforeEach(() => {
+      sendBeaconMock = jest.fn().mockReturnValue(true);
+      (navigator as any).sendBeacon = sendBeaconMock;
+
+      mockOptableWithDcn = {
+        witness: jest.fn().mockResolvedValue(undefined),
+        dcn: {
+          host: "dcn.example.com",
+          cookies: false,
+          sessionID: "test-session-id",
+          consent: {},
+        },
+      } as any;
+
+      analytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
+        analytics: true,
+        tenant: "test-tenant",
+      });
+    });
+
+    it("should flush pending auctions via sendBeacon on beforeunload", async () => {
+      const event = {
+        auctionId: "auction-unload",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+
+      // Confirm a timeout is pending
+      const storedAuction = analytics["auctions"].get("auction-unload");
+      expect(storedAuction!.auctionEndTimeoutId).not.toBeNull();
+
+      window.dispatchEvent(new Event("beforeunload"));
+
+      // Allow the toWitness promise to resolve
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).toHaveBeenCalledTimes(1);
+      const [url, blob] = sendBeaconMock.mock.calls[0];
+      expect(url).toContain("/witness");
+      const body = JSON.parse(await new Response(blob).text());
+      expect(body.event).toBe("optable.prebid.auction");
+      expect(body.properties.auctionId).toBe("auction-unload");
+      expect(body.properties.bidWonAt).toBeNull();
+    });
+
+    it("should not flush when analytics is disabled", async () => {
+      const disabledAnalytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
+        analytics: false,
+        tenant: "test-tenant",
+      });
+
+      const event = {
+        auctionId: "auction-disabled",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      await disabledAnalytics.trackAuctionEnd(event);
+      window.dispatchEvent(new Event("beforeunload"));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(sendBeaconMock).not.toHaveBeenCalled();
+      window.removeEventListener("beforeunload", (disabledAnalytics as any).handleBeforeUnload);
+    });
+
+    it("should not flush auctions that have no pending timeout", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-already-sent",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+      const bidWonEvent = {
+        auctionId: "auction-already-sent",
+        bidderCode: "bidder1",
+        requestId: "bid-1",
+        adUnitCode: "ad-unit-1",
+        cpm: 1.5,
+      };
+
+      await analytics.trackAuctionEnd(auctionEndEvent);
+      await analytics.trackBidWon(bidWonEvent);
+
+      // auction was deleted by trackBidWon, so nothing to flush
+      window.dispatchEvent(new Event("beforeunload"));
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // witness was called once (by trackBidWon), not again by beforeunload
+      expect(mockOptableWithDcn.witness).toHaveBeenCalledTimes(1);
+      expect(sendBeaconMock).not.toHaveBeenCalled();
     });
   });
 
