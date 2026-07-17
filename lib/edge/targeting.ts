@@ -1,4 +1,5 @@
-import type { ResolvedConfig, ABTestConfig, MatcherOverride } from "../config";
+import type { ResolvedConfig, MatcherOverride } from "../config";
+import { determineABTest } from "./abTest";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 import { isBot } from "../addons/botDetection";
@@ -42,31 +43,6 @@ type TargetingResponse = {
 };
 
 const TARGETING_DONE_KEY = "OPTABLE_TARGETING_DONE";
-
-// Determine which A/B test (if any) should be used for this request
-function determineABTest(abTests?: ABTestConfig[]): ABTestConfig | null {
-  if (!abTests || abTests.length === 0) {
-    return null;
-  }
-
-  // Skip A/B testing if traffic percentage sum exceeds 100%
-  const totalTrafficPercentage = abTests.reduce((sum, test) => sum + test.trafficPercentage, 0);
-  if (totalTrafficPercentage > 100) {
-    console.error(`AB Test Config Error: Traffic Percentage Sum Exceeds 100%`);
-    return null;
-  }
-
-  // Simple random number 0-99
-  const bucket = Math.floor(Math.random() * 100);
-  let cumulative = 0;
-  for (const test of abTests) {
-    cumulative += test.trafficPercentage;
-    if (bucket < cumulative) {
-      return test;
-    }
-  }
-  return null;
-}
 
 async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
   const searchParams = new URLSearchParams();
@@ -189,6 +165,6 @@ function TargetingKeyValues(tdata: TargetingResponse | null): TargetingKeyValues
   return result;
 }
 
-export { Targeting, TargetingFromCache, TargetingClearCache, PrebidORTB2, TargetingKeyValues, determineABTest };
+export { Targeting, TargetingFromCache, TargetingClearCache, PrebidORTB2, TargetingKeyValues };
 export default Targeting;
-export type { TargetingResponse, TargetingRequest, ABTestConfig, MatcherOverride };
+export type { TargetingResponse, TargetingRequest, MatcherOverride };
