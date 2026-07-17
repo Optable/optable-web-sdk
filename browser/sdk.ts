@@ -1,6 +1,5 @@
 import Commands from "./commands";
 import { resolveMultiNodeTargeting } from "../lib/core/resolvers/resolveMultiTargeting";
-import { getGeoConfig } from "../lib/addons/geotargeting";
 
 import OptableSDK, { InitConfig } from "../lib/sdk";
 import OptablePrebidAnalytics from "../lib/addons/prebid/analytics";
@@ -29,7 +28,7 @@ window.optable = window.optable || {};
 window.optable.SDK = OptableSDK;
 window.optable.OptablePrebidAnalytics = OptablePrebidAnalytics;
 window.optable.cmd = new Commands(window.optable.cmd || []);
-window.optable.utils = { resolveMultiNodeTargeting, getGeoConfig };
+window.optable.utils = { resolveMultiNodeTargeting };
 
 if (window.optable.instance_config) {
   window.optable.instance = new OptableSDK(window.optable.instance_config);

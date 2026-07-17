@@ -1195,8 +1195,6 @@ if (geoConfig) {
 
 The first argument is the node name: the tenant name, optionally with an `-auth` suffix to select the auth variant of the node (e.g. `"acme-auth"`). `getGeoConfig` returns `null` when the geo is not supported, in which case region-specific initialization should be skipped. For geos served by a dedicated cloud host rather than a regional edge host, `node` is `undefined` and the host's default node is used.
 
-When using a script tag, the helper is available as `window.optable.utils.getGeoConfig`.
-
 The default `GeoMap` supports the `US`, `CA`, `GB`, `UK` and `AU` geos and reflects a specific provisioning shape: regional edge nodes in US/CA and dedicated per-tenant cloud hosts (`<name>.cloud.<region>.optable.co`) in AU and the EU. The dedicated hosts only exist for tenants provisioned that way — pass a custom `GeoMap` as the third argument when your topology differs; see `lib/addons/geotargeting.ts` for the entry format.
 
 ## Demo Pages
