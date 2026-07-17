@@ -12,7 +12,12 @@
  * node name is derived from the tenant name plus the suffix with ".cloud"
  * removed (e.g. "acme" + "-ca-auth" → "acme-ca-auth"). Otherwise the tenant
  * runs on a dedicated cloud host built as `${name}${suffix}.optable.co` and
- * the node is null (the host's default node is used).
+ * the node is undefined (the host's default node is used).
+ *
+ * DEFAULT_GEO_MAP reflects one specific provisioning shape: regional edge
+ * nodes in US/CA and dedicated per-tenant cloud hosts in AU and the EU. The
+ * dedicated hosts only exist for tenants provisioned that way — tenants with
+ * a different topology must pass their own GeoMap.
  */
 
 export type GeoMapEntry = [string, string] | [string, string, string];
@@ -20,14 +25,16 @@ export type GeoMap = Record<string, GeoMapEntry>;
 
 export interface GeoConfig {
   host: string;
-  node: string | null;
+  node: string | undefined;
 }
+
+const EU_ENTRY: GeoMapEntry = [".cloud.eu", "-auth.cloud.eu"];
 
 export const DEFAULT_GEO_MAP: GeoMap = {
   AU: [".cloud.au", "-auth.cloud.au"],
   CA: ["-ca.cloud", "-ca-auth.cloud", "ca.edge.optable.co"],
-  GB: [".cloud.eu", "-auth.cloud.eu"],
-  UK: [".cloud.eu", "-auth.cloud.eu"],
+  GB: EU_ENTRY,
+  UK: EU_ENTRY,
   US: [".cloud", "-auth.cloud", "na.edge.optable.co"],
 };
 
@@ -40,9 +47,15 @@ export const DEFAULT_GEO_MAP: GeoMap = {
  * Returns null when the geo is missing or not present in the map, in which
  * case the caller should skip region-specific initialization.
  */
-export function getGeoConfig(nodeName: string, geo: string, geoMap: GeoMap = DEFAULT_GEO_MAP): GeoConfig | null {
-  const entry = geoMap[geo];
-  if (!entry) {
+export function getGeoConfig(
+  nodeName: string,
+  geo: string | undefined,
+  geoMap: GeoMap = DEFAULT_GEO_MAP
+): GeoConfig | null {
+  const entry = geo === undefined ? undefined : geoMap[geo];
+  // Array.isArray also rejects inherited Object.prototype members picked up
+  // when an unexpected geo like "constructor" is looked up in the map
+  if (!Array.isArray(entry)) {
     return null;
   }
 
@@ -55,5 +68,5 @@ export function getGeoConfig(nodeName: string, geo: string, geoMap: GeoMap = DEF
     return { host: edgeHost, node: name + suffix.replace(/\.cloud/, "") };
   }
 
-  return { host: `${name}${suffix}.optable.co`, node: null };
+  return { host: `${name}${suffix}.optable.co`, node: undefined };
 }
