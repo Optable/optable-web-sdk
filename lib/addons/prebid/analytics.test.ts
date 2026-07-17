@@ -1,4 +1,4 @@
-import OptablePrebidAnalytics from "./analytics";
+import OptablePrebidAnalytics, { initPrebidAnalytics } from "./analytics";
 import type OptableSDK from "../../sdk";
 
 // Mock the SDK_WRAPPER_VERSION global
@@ -2207,5 +2207,105 @@ describe("OptablePrebidAnalytics", () => {
       const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
       expect(payload.bidderRequests[0].status).toBe("TIMEOUT");
     });
+  });
+});
+
+describe("initPrebidAnalytics", () => {
+  // A stub SDK constructor whose instances expose witness(), enough for
+  // OptablePrebidAnalytics. Records the config it was constructed with.
+  function makeFakeSDK() {
+    const witness = jest.fn().mockResolvedValue(undefined);
+    const ctor = jest.fn().mockImplementation(() => ({ witness }));
+    return { ctor: ctor as unknown as new (config: any) => any, calls: ctor.mock.calls, witness };
+  }
+
+  function loadedPrebid() {
+    return { getEvents: jest.fn(() => []), onEvent: jest.fn() };
+  }
+
+  beforeEach(() => {
+    delete (window as any).pbjs;
+    delete (window as any).fusePbjs;
+  });
+
+  it("returns null and creates no SDK when no prebid global is present", () => {
+    const { ctor } = makeFakeSDK();
+    const result = initPrebidAnalytics({ SDK: ctor, instance: { host: "h", site: "s" } });
+
+    expect(result).toBeNull();
+    expect(ctor).not.toHaveBeenCalled();
+  });
+
+  it("creates a read-only analytics SDK instance and hooks the passed prebid global", () => {
+    const pbjs = loadedPrebid();
+    const { ctor } = makeFakeSDK();
+
+    const result = initPrebidAnalytics({
+      SDK: ctor,
+      instance: { host: "h", node: "n", site: "s" },
+      pbjs,
+      analytics: { tenant: "acme" },
+    });
+
+    expect(result).toBeInstanceOf(OptablePrebidAnalytics);
+    expect(ctor).toHaveBeenCalledWith(
+      expect.objectContaining({ host: "h", node: "n", site: "s", readOnly: true, cookies: false })
+    );
+    expect(pbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
+  });
+
+  it("reads the named prebid global from window when pbjs is not passed", () => {
+    (window as any).fusePbjs = loadedPrebid();
+    const { ctor } = makeFakeSDK();
+
+    initPrebidAnalytics({
+      SDK: ctor,
+      instance: { host: "h", site: "s" },
+      prebidGlobal: "fusePbjs",
+      analytics: { tenant: "acme" },
+    });
+
+    expect((window as any).fusePbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
+  });
+
+  it("defaults to window.pbjs when no global is configured", () => {
+    (window as any).pbjs = loadedPrebid();
+    const { ctor } = makeFakeSDK();
+
+    initPrebidAnalytics({ SDK: ctor, instance: { host: "h", site: "s" }, analytics: { tenant: "acme" } });
+
+    expect((window as any).pbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
+  });
+
+  it("forwards the analytics config through to the OptablePrebidAnalytics instance", () => {
+    const pbjs = loadedPrebid();
+    const { ctor } = makeFakeSDK();
+
+    // Any OptablePrebidAnalyticsConfig option flows through, including
+    // getSplitTestAssignment once it lands in the config interface.
+    const result = initPrebidAnalytics({
+      SDK: ctor,
+      instance: { host: "h", site: "s" },
+      pbjs,
+      analytics: { tenant: "acme", samplingRate: 0.25 },
+    });
+
+    expect(result!["config"].analytics).toBe(true);
+    expect(result!["config"].tenant).toBe("acme");
+    expect(result!["config"].samplingRate).toBe(0.25);
+  });
+
+  it("lets the instance config override the read-only defaults", () => {
+    const pbjs = loadedPrebid();
+    const { ctor } = makeFakeSDK();
+
+    initPrebidAnalytics({
+      SDK: ctor,
+      instance: { host: "h", site: "s", readOnly: false },
+      pbjs,
+      analytics: { tenant: "acme" },
+    });
+
+    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ readOnly: false }));
   });
 });

@@ -3,6 +3,7 @@
 import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
 import { buildRequest } from "../../core/network";
+import type { InitConfig } from "../../config";
 
 import * as Bowser from "bowser";
 
@@ -635,3 +636,56 @@ class OptablePrebidAnalytics {
 }
 
 export default OptablePrebidAnalytics;
+
+/**
+ * Options for {@link initPrebidAnalytics}.
+ */
+export interface InitPrebidAnalyticsOptions {
+  /**
+   * The Optable SDK constructor (pass the imported `OptableSDK`). Taken as a
+   * parameter so this module keeps a type-only SDK import and consumers of the
+   * `OptablePrebidAnalytics` class don't bundle the whole SDK.
+   */
+  SDK: new (config: InitConfig) => OptableSDK;
+  /** Config for the dedicated read-only analytics SDK instance (host/node/site/…). */
+  instance: InitConfig;
+  /** Prebid.js global to hook into. When omitted, `window[prebidGlobal]` is used. */
+  pbjs?: any;
+  /** Name of the prebid global on `window` (default `"pbjs"`), used when `pbjs` is not passed. */
+  prebidGlobal?: string;
+  /**
+   * Analytics behavior forwarded to the `OptablePrebidAnalytics` constructor
+   * (tenant, samplingRate, debug, getSplitTestAssignment, …).
+   */
+  analytics?: OptablePrebidAnalyticsConfig;
+}
+
+/**
+ * Bootstrap Prebid.js analytics for a bundle: create a dedicated read-only
+ * analytics SDK instance, construct an `OptablePrebidAnalytics`, and hook it
+ * into the publisher's Prebid.js global.
+ *
+ * Returns the analytics instance, or `null` when no Prebid.js global is present
+ * (in which case no analytics SDK instance is created).
+ * @param options - See {@link InitPrebidAnalyticsOptions}.
+ */
+export function initPrebidAnalytics(options: InitPrebidAnalyticsOptions): OptablePrebidAnalytics | null {
+  const { SDK, instance, pbjs, prebidGlobal, analytics: analyticsConfig } = options;
+
+  const prebid = pbjs ?? (window as any)[prebidGlobal || "pbjs"];
+  if (!prebid) return null;
+
+  const analyticsSDK = new SDK({
+    readOnly: true,
+    cookies: false,
+    ...instance,
+  });
+
+  const analytics = new OptablePrebidAnalytics(analyticsSDK, {
+    analytics: true,
+    ...analyticsConfig,
+  });
+
+  analytics.hookIntoPrebid(prebid);
+  return analytics;
+}
