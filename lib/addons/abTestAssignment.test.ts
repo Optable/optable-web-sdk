@@ -136,40 +136,10 @@ describe("setupAB - control group cache clearing", () => {
   });
 });
 
-describe("setupAB - getSplitTestAssignment", () => {
-  it("returns the variant id", () => {
+describe("setupAB - splitTestAssignment", () => {
+  it("exposes the assigned variant id as a string", () => {
     const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
-    expect(result.getSplitTestAssignment()).toBe(result.variant.id);
-  });
-});
-
-describe("setupAB - applyToAuctionEvent", () => {
-  it("stamps splitTestAssignment onto every bid in bidderRequests", () => {
-    const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
-    const bidA: any = { bidId: "bid-1" };
-    const bidB: any = { bidId: "bid-2" };
-    result.applyToAuctionEvent({ bidderRequests: [{ bids: [bidA, bidB] }] });
-    expect(bidA.ortb2Imp.ext.optable.splitTestAssignment).toBe("all");
-    expect(bidB.ortb2Imp.ext.optable.splitTestAssignment).toBe("all");
-  });
-
-  it("does not overwrite a splitTestAssignment already set on a bid", () => {
-    const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
-    const bid: any = { bidId: "bid-1", ortb2Imp: { ext: { optable: { splitTestAssignment: "control" } } } };
-    result.applyToAuctionEvent({ bidderRequests: [{ bids: [bid] }] });
-    expect(bid.ortb2Imp.ext.optable.splitTestAssignment).toBe("control");
-  });
-
-  it("preserves other fields on ortb2Imp.ext.optable", () => {
-    const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
-    const bid: any = { bidId: "bid-1", ortb2Imp: { ext: { optable: { foo: "bar" } } } };
-    result.applyToAuctionEvent({ bidderRequests: [{ bids: [bid] }] });
-    expect(bid.ortb2Imp.ext.optable).toEqual({ foo: "bar", splitTestAssignment: "all" });
-  });
-
-  it("handles a missing bidderRequests gracefully", () => {
-    const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
-    expect(() => result.applyToAuctionEvent({})).not.toThrow();
+    expect(result.splitTestAssignment).toBe(result.variant.id);
   });
 });
 
@@ -190,6 +160,23 @@ describe("setupAB - setHooks", () => {
     };
     result.setHooks(pbjs);
     expect(bid.ortb2Imp.ext.optable.splitTestAssignment).toBe("all");
+  });
+
+  it("stamps bids and does not overwrite an existing splitTestAssignment", () => {
+    const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
+    const bid: any = { bidId: "bid-1", ortb2Imp: { ext: { optable: { splitTestAssignment: "control" } } } };
+    const pbjs = {
+      getEvents: () => [{ eventType: "auctionEnd", args: { bidderRequests: [{ bids: [bid] }] } }],
+      onEvent: jest.fn(),
+    };
+    result.setHooks(pbjs);
+    expect(bid.ortb2Imp.ext.optable.splitTestAssignment).toBe("control");
+  });
+
+  it("registers hooks automatically when pbjs is passed to setupAB", () => {
+    const pbjs = { getEvents: () => [], onEvent: jest.fn() };
+    setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }], pbjs });
+    expect(pbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
   });
 });
 

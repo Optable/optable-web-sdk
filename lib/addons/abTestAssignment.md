@@ -24,7 +24,7 @@ if (ab.isControl) {
 
 ### With Prebid.js analytics
 
-Call `ab.setHooks(pbjs)` **before** `analytics.hookIntoPrebid()` so bids are stamped before the analytics addon reads them.
+Pass `pbjs` to `setupAB` and hooks are registered automatically. Pass it **before** calling `analytics.hookIntoPrebid()` so bids are stamped before the analytics addon reads them.
 
 ```js
 import { setupAB } from "@optable/web-sdk/lib/addons/abTestAssignment";
@@ -32,12 +32,18 @@ import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics
 
 const ab = setupAB({
   variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }],
+  pbjs, // hooks registered automatically
 });
 
 const analytics = new OptablePrebidAnalytics(sdkInstance, { analytics: true });
+analytics.hookIntoPrebid();
+```
 
-ab.setHooks(pbjs); // stamps ortb2Imp.ext.optable.splitTestAssignment on bids
-analytics.hookIntoPrebid(); // reads splitTestAssignment from bids when recording auctions
+If `pbjs` is not yet available at setup time, call `ab.setHooks(pbjs)` manually once it is:
+
+```js
+const ab = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
+window.pbjs.que.push(() => ab.setHooks(window.pbjs));
 ```
 
 ### Custom variant names
@@ -81,16 +87,17 @@ const ab = setupAB({
 | `storageKey`  | `string`          | `"OPTABLE_SPLIT_TEST"` | `localStorage` key used to persist the assignment across sessions.                                                                                |
 | `controlId`   | `string`          | `"none"`               | The variant `id` considered the control group. Used to resolve `isControl` and the `optableControlGroup` flag override.                           |
 | `treatmentId` | `string`          | `"all"`                | The variant `id` considered the treatment group. Used to resolve `isControl` and the `optableControlGroup` flag override.                         |
+| `sdk`         | `OptableSDK`      | —                      | When provided, uses `sdk.targetingClearCache()` for precise control-group cache clearing instead of a key-prefix scan.                            |
+| `pbjs`        | `object`          | —                      | When provided, bid-stamping hooks are registered on `pbjs` automatically at setup time.                                                           |
 
 **Returned object**
 
-| Property                 | Type              | Description                                                                                                                 |
-| ------------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `variant`                | `ABTestConfig`    | The assigned variant (`id` + `trafficPercentage`).                                                                          |
-| `isControl`              | `boolean`         | `true` when the assigned variant is not the treatment.                                                                      |
-| `getSplitTestAssignment` | `() => string`    | Returns the assigned variant id.                                                                                            |
-| `applyToAuctionEvent`    | `(event) => void` | Stamps `splitTestAssignment` onto all bids in a Prebid `auctionEnd` event object. Skips bids that already have a value set. |
-| `setHooks`               | `(pbjs) => void`  | Registers a Prebid `onEvent("auctionEnd", ...)` handler and replays any past events so all auctions are stamped.            |
+| Property              | Type             | Description                                                                                        |
+| --------------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
+| `variant`             | `ABTestConfig`   | The assigned variant (`id` + `trafficPercentage`).                                                 |
+| `isControl`           | `boolean`        | `true` when the assigned variant is not the treatment.                                             |
+| `splitTestAssignment` | `string`         | The assigned variant id.                                                                           |
+| `setHooks`            | `(pbjs) => void` | Registers bid-stamping hooks on a Prebid instance. Use when `pbjs` is not available at setup time. |
 
 ## Overriding the assignment for testing
 

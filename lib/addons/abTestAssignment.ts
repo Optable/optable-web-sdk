@@ -19,16 +19,15 @@ export interface SetupABConfig {
   // An initialized SDK instance. When provided, targetingClearCache() is used
   // for precise cache clearing in the control group instead of a prefix scan.
   sdk?: { targetingClearCache: () => void };
+  // A Prebid.js instance. When provided, bid stamping hooks are registered automatically.
+  pbjs?: any;
 }
 
 export interface ABTestSetupResult {
   variant: ABTestConfig;
   isControl: boolean;
-  getSplitTestAssignment: () => string;
-  // Stamps splitTestAssignment onto all bids in a prebid auctionEnd event object.
-  applyToAuctionEvent: (event: { bidderRequests?: any[] }) => void;
-  // Registers a prebid onEvent hook so every future auction is stamped automatically.
-  // Call this before analytics.setHooks(pbjs) so the value is present when analytics reads it.
+  splitTestAssignment: string;
+  // For deferred hook registration when pbjs is not yet available at setup time.
   setHooks: (pbjs: any) => void;
 }
 
@@ -43,7 +42,7 @@ function fillTrafficPercentages(variants: ABTestVariant[]): ABTestConfig[] {
 }
 
 export function setupAB(config: SetupABConfig): ABTestSetupResult {
-  const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "none", treatmentId = "all", sdk } = config;
+  const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "none", treatmentId = "all", sdk, pbjs } = config;
 
   // Process the provided variant config so that every variant has an explicit traffic percentage.
   // Variants without one share the remaining percentage equally.
@@ -128,20 +127,23 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     });
   }
 
-  function setHooks(pbjs: any): void {
-    pbjs.getEvents().forEach((event: any) => {
+  function setHooks(pbjsInstance: any): void {
+    pbjsInstance.getEvents().forEach((event: any) => {
       if (event.eventType === "auctionEnd") {
         applyToAuctionEvent(event.args);
       }
     });
-    pbjs.onEvent("auctionEnd", applyToAuctionEvent);
+    pbjsInstance.onEvent("auctionEnd", applyToAuctionEvent);
+  }
+
+  if (pbjs) {
+    setHooks(pbjs);
   }
 
   return {
     variant: selected,
     isControl,
-    getSplitTestAssignment: () => assignment,
-    applyToAuctionEvent,
+    splitTestAssignment: assignment,
     setHooks,
   };
 }
