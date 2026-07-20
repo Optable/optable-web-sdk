@@ -99,6 +99,36 @@ describe("setupAB - custom variant ids", () => {
   });
 });
 
+describe("setupAB - control group cache clearing", () => {
+  it("clears OPTABLE_RESOLVED and OPTABLE_TARGETING_* when assigned to control", () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "stale");
+    localStorage.setItem("OPTABLE_TARGETING_abc123", "stale");
+    localStorage.setItem("OPTABLE_TARGETING_def456", "stale");
+    jest.spyOn(Math, "random").mockReturnValue(0.97); // control bucket
+    setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
+    expect(localStorage.getItem("OPTABLE_RESOLVED")).toBeNull();
+    expect(localStorage.getItem("OPTABLE_TARGETING_abc123")).toBeNull();
+    expect(localStorage.getItem("OPTABLE_TARGETING_def456")).toBeNull();
+  });
+
+  it("does not clear targeting cache when assigned to treatment", () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "valid");
+    localStorage.setItem("OPTABLE_TARGETING_abc123", "valid");
+    jest.spyOn(Math, "random").mockReturnValue(0.0); // treatment bucket
+    setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
+    expect(localStorage.getItem("OPTABLE_RESOLVED")).toBe("valid");
+    expect(localStorage.getItem("OPTABLE_TARGETING_abc123")).toBe("valid");
+  });
+
+  it("clears targeting cache when control is forced via flag override", () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "stale");
+    sessionStorage.setItem("optableControlGroup", "1");
+    resetFlags();
+    setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
+    expect(localStorage.getItem("OPTABLE_RESOLVED")).toBeNull();
+  });
+});
+
 describe("setupAB - getSplitTestAssignment", () => {
   it("returns the variant id", () => {
     const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });

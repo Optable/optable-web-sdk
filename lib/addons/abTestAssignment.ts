@@ -95,6 +95,20 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
   const isControl = selected.id !== treatmentId;
   const assignment = selected.id;
 
+  // Control group: clear cached targeting data so RTD, PPID and TargetingFromCache
+  // serve nothing for this user. Without this, a user moved into the control group
+  // would still receive Optable targeting from a previous session's cache.
+  if (isControl) {
+    try {
+      localStorage.removeItem("OPTABLE_RESOLVED");
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("OPTABLE_TARGETING_"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // localStorage unavailable
+    }
+  }
+
   function applyToAuctionEvent(event: { bidderRequests?: any[] }): void {
     (event.bidderRequests || []).forEach((br: any) => {
       (br.bids || []).forEach((b: any) => {
