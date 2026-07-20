@@ -120,6 +120,13 @@ describe("setupAB - control group cache clearing", () => {
     expect(localStorage.getItem("OPTABLE_TARGETING_abc123")).toBe("valid");
   });
 
+  it("calls sdk.targetingClearCache() instead of prefix scan when sdk is provided", () => {
+    const mockSdk = { targetingClearCache: jest.fn() };
+    jest.spyOn(Math, "random").mockReturnValue(0.97); // control bucket
+    setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }], sdk: mockSdk });
+    expect(mockSdk.targetingClearCache).toHaveBeenCalledTimes(1);
+  });
+
   it("clears targeting cache when control is forced via flag override", () => {
     localStorage.setItem("OPTABLE_RESOLVED", "stale");
     sessionStorage.setItem("optableControlGroup", "1");

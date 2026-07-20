@@ -16,6 +16,9 @@ export interface SetupABConfig {
   controlId?: string;
   // The variant id treated as "treatment" (Optable enabled). Defaults to 'all'.
   treatmentId?: string;
+  // An initialized SDK instance. When provided, targetingClearCache() is used
+  // for precise cache clearing in the control group instead of a prefix scan.
+  sdk?: { targetingClearCache: () => void };
 }
 
 export interface ABTestSetupResult {
@@ -40,7 +43,7 @@ function fillTrafficPercentages(variants: ABTestVariant[]): ABTestConfig[] {
 }
 
 export function setupAB(config: SetupABConfig): ABTestSetupResult {
-  const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "none", treatmentId = "all" } = config;
+  const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "none", treatmentId = "all", sdk } = config;
 
   // Process the provided variant config so that every variant has an explicit traffic percentage.
   // Variants without one share the remaining percentage equally.
@@ -101,9 +104,13 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
   if (isControl) {
     try {
       localStorage.removeItem("OPTABLE_RESOLVED");
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith("OPTABLE_TARGETING_"))
-        .forEach((k) => localStorage.removeItem(k));
+      if (sdk) {
+        sdk.targetingClearCache();
+      } else {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("OPTABLE_TARGETING_"))
+          .forEach((k) => localStorage.removeItem(k));
+      }
     } catch {
       // localStorage unavailable
     }
