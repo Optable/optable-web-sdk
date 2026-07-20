@@ -42,10 +42,15 @@ function fillTrafficPercentages(variants: ABTestVariant[]): ABTestConfig[] {
 export function setupAB(config: SetupABConfig): ABTestSetupResult {
   const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "none", treatmentId = "all" } = config;
 
+  // Process the provided variant config so that every variant has an explicit traffic percentage.
+  // Variants without one share the remaining percentage equally.
   const filled = fillTrafficPercentages(variants);
 
   let selected: ABTestConfig | null = null;
 
+  // Priority 1 — QA/debug override via URL param or sessionStorage flag.
+  // ?optableControlGroup=1 forces the control variant; =0 forces treatment.
+  // This lets QA verify both branches without clearing localStorage.
   const controlGroupFlag = getFlags().optableControlGroup;
   if (controlGroupFlag === "1") {
     selected = filled.find((v) => v.id === controlId) ?? { id: controlId, trafficPercentage: 0 };
@@ -53,6 +58,11 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     selected = filled.find((v) => v.id === treatmentId) ?? { id: treatmentId, trafficPercentage: 0 };
   }
 
+  // Priority 2 — sticky assignment from a previous visit.
+  // Once a user is assigned a variant it must not change across page loads or
+  // sessions, otherwise the same user could appear in both groups. We validate
+  // the cached id against the current variant list so a stale cache from an
+  // old experiment config is silently discarded.
   if (!selected) {
     try {
       const cached = localStorage.getItem(storageKey);
@@ -67,10 +77,15 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     }
   }
 
+  // Priority 3 — first visit: randomly assign based on traffic weights.
+  // determineABTest returns null when the random bucket falls outside all
+  // defined ranges (i.e. weights sum to less than 100). filled[0] is the
+  // fallback so selected is always non-null after this point.
   if (!selected) {
     selected = determineABTest(filled) ?? filled[0];
   }
 
+  // Persist the assignment so subsequent visits return the same variant.
   try {
     localStorage.setItem(storageKey, JSON.stringify(selected));
   } catch {
