@@ -1,8 +1,8 @@
 import type { ABTestConfig } from "../config";
 import { determineABTest } from "../edge/abTest";
+import { getFlags } from "../core/flags";
 
 const DEFAULT_STORAGE_KEY = "OPTABLE_SPLIT_TEST";
-const DEFAULT_SESSION_OVERRIDE_KEY = "optableControlGroup";
 
 export interface ABTestVariant {
   id: string;
@@ -12,7 +12,6 @@ export interface ABTestVariant {
 export interface SetupABConfig {
   variants: ABTestVariant[];
   storageKey?: string;
-  sessionOverrideKey?: string;
   // The variant id treated as "control" (Optable disabled). Defaults to 'none'.
   controlId?: string;
   // The variant id treated as "treatment" (Optable enabled). Defaults to 'all'.
@@ -41,27 +40,17 @@ function fillTrafficPercentages(variants: ABTestVariant[]): ABTestConfig[] {
 }
 
 export function setupAB(config: SetupABConfig): ABTestSetupResult {
-  const {
-    variants,
-    storageKey = DEFAULT_STORAGE_KEY,
-    sessionOverrideKey = DEFAULT_SESSION_OVERRIDE_KEY,
-    controlId = "none",
-    treatmentId = "all",
-  } = config;
+  const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "none", treatmentId = "all" } = config;
 
   const filled = fillTrafficPercentages(variants);
 
   let selected: ABTestConfig | null = null;
 
-  try {
-    const override = sessionStorage.getItem(sessionOverrideKey);
-    if (override === "1") {
-      selected = filled.find((v) => v.id === controlId) ?? { id: controlId, trafficPercentage: 0 };
-    } else if (override === "0") {
-      selected = filled.find((v) => v.id === treatmentId) ?? { id: treatmentId, trafficPercentage: 0 };
-    }
-  } catch {
-    // sessionStorage unavailable
+  const controlGroupFlag = getFlags().optableControlGroup;
+  if (controlGroupFlag === "1") {
+    selected = filled.find((v) => v.id === controlId) ?? { id: controlId, trafficPercentage: 0 };
+  } else if (controlGroupFlag === "0") {
+    selected = filled.find((v) => v.id === treatmentId) ?? { id: treatmentId, trafficPercentage: 0 };
   }
 
   if (!selected) {

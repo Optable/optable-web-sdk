@@ -1,12 +1,13 @@
 import { setupAB } from "./abTestAssignment.ts";
 import { determineABTest } from "../edge/abTest";
+import { resetFlags } from "../core/flags";
 
 const STORAGE_KEY = "OPTABLE_SPLIT_TEST";
-const SESSION_OVERRIDE_KEY = "optableControlGroup";
 
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  resetFlags();
   jest.spyOn(Math, "random").mockReturnValue(0.5);
 });
 
@@ -66,34 +67,28 @@ describe("setupAB - localStorage stickiness", () => {
   });
 });
 
-describe("setupAB - sessionStorage override", () => {
-  it("forces control when sessionStorage override is '1'", () => {
-    sessionStorage.setItem(SESSION_OVERRIDE_KEY, "1");
+describe("setupAB - override via flags", () => {
+  it("forces control when optableControlGroup flag is '1' (sessionStorage)", () => {
+    sessionStorage.setItem("optableControlGroup", "1");
+    resetFlags();
     const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
     expect(result.variant.id).toBe("none");
     expect(result.isControl).toBe(true);
   });
 
-  it("forces treatment when sessionStorage override is '0'", () => {
-    sessionStorage.setItem(SESSION_OVERRIDE_KEY, "0");
+  it("forces treatment when optableControlGroup flag is '0' (sessionStorage)", () => {
+    sessionStorage.setItem("optableControlGroup", "0");
+    resetFlags();
     const result = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
     expect(result.variant.id).toBe("all");
     expect(result.isControl).toBe(false);
   });
-
-  it("respects a custom sessionOverrideKey", () => {
-    sessionStorage.setItem("myOverride", "1");
-    const result = setupAB({
-      variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }],
-      sessionOverrideKey: "myOverride",
-    });
-    expect(result.variant.id).toBe("none");
-  });
 });
 
 describe("setupAB - custom variant ids", () => {
-  it("uses controlId and treatmentId to resolve isControl and overrides", () => {
-    sessionStorage.setItem(SESSION_OVERRIDE_KEY, "0");
+  it("uses controlId and treatmentId to resolve isControl and flag overrides", () => {
+    sessionStorage.setItem("optableControlGroup", "0");
+    resetFlags();
     const result = setupAB({
       variants: [{ id: "treatment" }, { id: "control", trafficPercentage: 10 }],
       controlId: "control",

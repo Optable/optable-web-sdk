@@ -75,13 +75,12 @@ const ab = setupAB({
 
 **Config options**
 
-| Option               | Type              | Default                 | Description                                                                                                                                       |
-| -------------------- | ----------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `variants`           | `ABTestVariant[]` | required                | List of variants. Each has an `id` and an optional `trafficPercentage`. Variants without `trafficPercentage` share the remaining traffic equally. |
-| `storageKey`         | `string`          | `"OPTABLE_SPLIT_TEST"`  | `localStorage` key used to persist the assignment across sessions.                                                                                |
-| `sessionOverrideKey` | `string`          | `"optableControlGroup"` | `sessionStorage` key checked for a manual override. Set to `"1"` to force control, `"0"` to force treatment.                                      |
-| `controlId`          | `string`          | `"none"`                | The variant `id` considered the control group. Used to resolve `isControl` and the `sessionStorage` override.                                     |
-| `treatmentId`        | `string`          | `"all"`                 | The variant `id` considered the treatment group. Used to resolve `isControl` and the `sessionStorage` override.                                   |
+| Option        | Type              | Default                | Description                                                                                                                                       |
+| ------------- | ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `variants`    | `ABTestVariant[]` | required               | List of variants. Each has an `id` and an optional `trafficPercentage`. Variants without `trafficPercentage` share the remaining traffic equally. |
+| `storageKey`  | `string`          | `"OPTABLE_SPLIT_TEST"` | `localStorage` key used to persist the assignment across sessions.                                                                                |
+| `controlId`   | `string`          | `"none"`               | The variant `id` considered the control group. Used to resolve `isControl` and the `optableControlGroup` flag override.                           |
+| `treatmentId` | `string`          | `"all"`                | The variant `id` considered the treatment group. Used to resolve `isControl` and the `optableControlGroup` flag override.                         |
 
 **Returned object**
 
@@ -95,14 +94,18 @@ const ab = setupAB({
 
 ## Overriding the assignment for testing
 
-Set `sessionStorage.optableControlGroup` before the page loads:
+Add `optableControlGroup` to the page URL:
 
-```js
-// Force control group
-sessionStorage.setItem("optableControlGroup", "1");
-
-// Force treatment group
-sessionStorage.setItem("optableControlGroup", "0");
+```
+https://example.com/page?optableControlGroup=1   # force control
+https://example.com/page?optableControlGroup=0   # force treatment
 ```
 
-Clear `localStorage.OPTABLE_SPLIT_TEST` to reset a sticky assignment.
+Or set it in `sessionStorage` before the SDK initializes:
+
+```js
+sessionStorage.setItem("optableControlGroup", "1"); // force control
+sessionStorage.setItem("optableControlGroup", "0"); // force treatment
+```
+
+URL params take precedence over `sessionStorage`. Clear `localStorage.OPTABLE_SPLIT_TEST` to reset a sticky assignment.

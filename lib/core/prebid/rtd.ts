@@ -1,4 +1,5 @@
 // RTD (Real-Time Data) module for Prebid.js integration
+import { getFlags } from "../flags";
 
 // Type definitions
 interface EID {
@@ -370,19 +371,20 @@ function liveIntentUID2(ortb2: ORTB2): boolean {
 }
 
 function buildRTD(options: RTDOptions = {}): RTDConfig {
-  if (sessionStorage.optableForceGlobalRouting || options.forceGlobalRouting) {
+  const flags = getFlags();
+  if (flags.optableForceGlobalRouting || options.forceGlobalRouting) {
     forceGlobalRouting();
   }
 
   return {
-    enableLogging: sessionStorage.optableDebug ?? options.enableLogging ?? false,
+    enableLogging: !!flags.optableDebug || (options.enableLogging ?? false),
     log(level: string, message: string, ...args: any[]) {
       if (this.enableLogging) {
         log(level, message, ...args);
       }
     },
     eidSources: options.eidSources ?? { ...defaultEIDSources },
-    skipMerge: sessionStorage.optableForceSkipMerge
+    skipMerge: flags.optableForceSkipMerge
       ? () => true
       : options.skipMerge !== undefined
         ? options.skipMerge
