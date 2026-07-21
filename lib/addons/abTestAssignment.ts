@@ -42,7 +42,14 @@ function fillTrafficPercentages(variants: ABTestVariant[]): ABTestConfig[] {
 }
 
 export function setupAB(config: SetupABConfig): ABTestSetupResult {
-  const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "test", treatmentId = "production", sdk, pbjs } = config;
+  const {
+    variants,
+    storageKey = DEFAULT_STORAGE_KEY,
+    controlId = "test",
+    treatmentId = "production",
+    sdk,
+    pbjs,
+  } = config;
 
   // Process the provided variant config so that every variant has an explicit traffic percentage.
   // Variants without one share the remaining percentage equally.

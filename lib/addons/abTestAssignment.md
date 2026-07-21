@@ -86,7 +86,7 @@ const ab = setupAB({
 | `variants`    | `ABTestVariant[]` | required               | List of variants. Each has an `id` and an optional `trafficPercentage`. Variants without `trafficPercentage` share the remaining traffic equally. |
 | `storageKey`  | `string`          | `"OPTABLE_SPLIT_TEST"` | `localStorage` key used to persist the assignment across sessions.                                                                                |
 | `controlId`   | `string`          | `"test"`               | The variant `id` considered the control group. Used to resolve `isControl` and the `optableControlGroup` flag override.                           |
-| `treatmentId` | `string`          | `"production"`                | The variant `id` considered the treatment group. Used to resolve `isControl` and the `optableControlGroup` flag override.                         |
+| `treatmentId` | `string`          | `"production"`         | The variant `id` considered the treatment group. Used to resolve `isControl` and the `optableControlGroup` flag override.                         |
 | `sdk`         | `OptableSDK`      | —                      | When provided, uses `sdk.targetingClearCache()` for precise control-group cache clearing instead of a key-prefix scan.                            |
 | `pbjs`        | `object`          | —                      | When provided, bid-stamping hooks are registered on `pbjs` automatically at setup time.                                                           |
 
