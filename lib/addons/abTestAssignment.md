@@ -11,8 +11,8 @@ import { setupAB } from "@optable/web-sdk/lib/addons/abTestAssignment";
 
 const ab = setupAB({
   variants: [
-    { id: "all" }, // treatment — gets remaining traffic (95%)
-    { id: "none", trafficPercentage: 5 }, // control — 5%
+    { id: "production" }, // treatment — gets remaining traffic (95%)
+    { id: "test", trafficPercentage: 5 }, // control — 5%
   ],
 });
 
@@ -31,7 +31,7 @@ import { setupAB } from "@optable/web-sdk/lib/addons/abTestAssignment";
 import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
 
 const ab = setupAB({
-  variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }],
+  variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }],
   pbjs, // hooks registered automatically
 });
 
@@ -42,7 +42,7 @@ analytics.hookIntoPrebid();
 If `pbjs` is not yet available at setup time, call `ab.setHooks(pbjs)` manually once it is:
 
 ```js
-const ab = setupAB({ variants: [{ id: "all" }, { id: "none", trafficPercentage: 5 }] });
+const ab = setupAB({ variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }] });
 window.pbjs.que.push(() => ab.setHooks(window.pbjs));
 ```
 
@@ -85,8 +85,8 @@ const ab = setupAB({
 | ------------- | ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `variants`    | `ABTestVariant[]` | required               | List of variants. Each has an `id` and an optional `trafficPercentage`. Variants without `trafficPercentage` share the remaining traffic equally. |
 | `storageKey`  | `string`          | `"OPTABLE_SPLIT_TEST"` | `localStorage` key used to persist the assignment across sessions.                                                                                |
-| `controlId`   | `string`          | `"none"`               | The variant `id` considered the control group. Used to resolve `isControl` and the `optableControlGroup` flag override.                           |
-| `treatmentId` | `string`          | `"all"`                | The variant `id` considered the treatment group. Used to resolve `isControl` and the `optableControlGroup` flag override.                         |
+| `controlId`   | `string`          | `"test"`               | The variant `id` considered the control group. Used to resolve `isControl` and the `optableControlGroup` flag override.                           |
+| `treatmentId` | `string`          | `"production"`         | The variant `id` considered the treatment group. Used to resolve `isControl` and the `optableControlGroup` flag override.                         |
 | `sdk`         | `OptableSDK`      | —                      | When provided, uses `sdk.targetingClearCache()` for precise control-group cache clearing instead of a key-prefix scan.                            |
 | `pbjs`        | `object`          | —                      | When provided, bid-stamping hooks are registered on `pbjs` automatically at setup time.                                                           |
 

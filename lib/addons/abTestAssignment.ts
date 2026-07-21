@@ -12,9 +12,9 @@ export interface ABTestVariant {
 export interface SetupABConfig {
   variants: ABTestVariant[];
   storageKey?: string;
-  // The variant id treated as "control" (Optable disabled). Defaults to 'none'.
+  // The variant id treated as "control" (Optable disabled). Defaults to 'test'.
   controlId?: string;
-  // The variant id treated as "treatment" (Optable enabled). Defaults to 'all'.
+  // The variant id treated as "treatment" (Optable enabled). Defaults to 'production'.
   treatmentId?: string;
   // An initialized SDK instance. When provided, targetingClearCache() is used
   // for precise cache clearing in the control group instead of a prefix scan.
@@ -42,7 +42,14 @@ function fillTrafficPercentages(variants: ABTestVariant[]): ABTestConfig[] {
 }
 
 export function setupAB(config: SetupABConfig): ABTestSetupResult {
-  const { variants, storageKey = DEFAULT_STORAGE_KEY, controlId = "none", treatmentId = "all", sdk, pbjs } = config;
+  const {
+    variants,
+    storageKey = DEFAULT_STORAGE_KEY,
+    controlId = "test",
+    treatmentId = "production",
+    sdk,
+    pbjs,
+  } = config;
 
   // Process the provided variant config so that every variant has an explicit traffic percentage.
   // Variants without one share the remaining percentage equally.
