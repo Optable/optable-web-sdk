@@ -51,7 +51,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Rules](#rules)
   - [Return Value](#return-value)
   - [Input Type](#input-type)
-- [Georouting](#georouting)
+- [Geo-routing](#geo-routing)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -1175,14 +1175,14 @@ type NodeTargetingRule = {
 };
 ```
 
-## Georouting
+## Geo-routing
 
-The georouting addon maps a visitor's geo (country code) to the Optable edge host that should serve them, so that a single SDK bundle can route traffic to the right regional edge.
+The geo-routing addon maps a visitor's region code to the Optable edge host that should serve them, so that a single SDK bundle can route traffic to the right regional edge.
 
 ```typescript
-import { getGeoRouting } from "@optable/web-sdk/lib/dist/addons/georouting";
+import { getGeoRouting } from "@optable/web-sdk/lib/dist/addons/geo-routing";
 
-const host = getGeoRouting(visitorGeo); // e.g. "na.edge.optable.co" for "US"
+const host = getGeoRouting(visitorRegion); // e.g. "na.edge.optable.co" for "NA"
 
 if (host) {
   const sdk = new OptableSDK({
@@ -1193,9 +1193,9 @@ if (host) {
 }
 ```
 
-`getGeoRouting` returns `null` when the geo is not supported, in which case region-specific initialization should be skipped. The default `GeoMap` supports the `US`, `CA`, `GB`, `UK` and `AU` geos, each mapped to its regional edge host; pass a custom `GeoMap` as the second argument for other regions.
+`getGeoRouting` returns `null` when the region is not supported, in which case region-specific initialization should be skipped. The default `GeoMap` supports the `NA`, `CA`, `EU` and `AU` region codes, each mapped to its regional edge host; pass a custom `GeoMap` as the second argument for other regions.
 
-The default map assumes one edge host per region. If a customer runs distinct DCNs that share an edge host (for example separate US and CA DCNs both on `na.edge`), resolve the host with this addon and select the DCN via `node`/`site` in the SDK config, or pass a custom `GeoMap`.
+Keys are region codes, not country codes. Translating a visitor's country code to a region code (for example `GB`/`UK` → `EU`) is the caller's responsibility — the addon deliberately knows only regions. The caller also supplies the SDK `node`/`site`; this addon only resolves the host.
 
 ## Demo Pages
 
