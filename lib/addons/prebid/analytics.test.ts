@@ -258,6 +258,115 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.optableMatchers).toEqual([]);
       expect(result.optableSources).toEqual([]);
     });
+
+    it("optableTargetingDone: '1' when a single Optable matcher is present", async () => {
+      const result = await analytics.toWitness(
+        {
+          auctionId: "auction-targeting-one-matcher",
+          bidderRequests: [
+            {
+              bidderCode: "bidder1",
+              bidderRequestId: "req-1",
+              ortb2: {
+                site: { domain: "example.com" },
+                user: { eids: [{ inserter: "optable.co", matcher: "uid2", source: "uid2.com" }] },
+              },
+              bids: [],
+            },
+          ],
+          bidsReceived: [],
+          noBids: [],
+          timeoutBids: [],
+        },
+        []
+      );
+
+      expect(result.optableTargetingDone).toBe("1");
+    });
+
+    it("optableTargetingDone: '1' when two Optable matchers are present (uid2 + id5)", async () => {
+      // Regression: previously sent `oMatchersSet.size` (the number 2) which Spark
+      // coerced to "2" — matching neither IN ('1','true') nor IN ('0','false') →
+      // processor classified every such auction as status='unknown' instead of 'enriched'.
+      const result = await analytics.toWitness(
+        {
+          auctionId: "auction-targeting-two-matchers",
+          bidderRequests: [
+            {
+              bidderCode: "bidder1",
+              bidderRequestId: "req-1",
+              ortb2: {
+                site: { domain: "example.com" },
+                user: {
+                  eids: [
+                    { inserter: "optable.co", matcher: "uid2", source: "uid2.com" },
+                    { inserter: "optable.co", matcher: "id5", source: "id5-sync.com" },
+                  ],
+                },
+              },
+              bids: [],
+            },
+          ],
+          bidsReceived: [],
+          noBids: [],
+          timeoutBids: [],
+        },
+        []
+      );
+
+      expect(result.optableTargetingDone).toBe("1");
+      expect(result.optableMatchers).toEqual(["uid2", "id5"]);
+    });
+
+    it("optableTargetingDone: '0' when no Optable EIDs are present", async () => {
+      const result = await analytics.toWitness(
+        {
+          auctionId: "auction-targeting-no-eids",
+          bidderRequests: [
+            {
+              bidderCode: "bidder1",
+              bidderRequestId: "req-1",
+              ortb2: {
+                site: { domain: "example.com" },
+                user: { eids: [] },
+              },
+              bids: [],
+            },
+          ],
+          bidsReceived: [],
+          noBids: [],
+          timeoutBids: [],
+        },
+        []
+      );
+
+      expect(result.optableTargetingDone).toBe("0");
+    });
+
+    it("optableTargetingDone: '1' when Optable sources are present but no named matcher", async () => {
+      const result = await analytics.toWitness(
+        {
+          auctionId: "auction-targeting-source-only",
+          bidderRequests: [
+            {
+              bidderCode: "bidder1",
+              bidderRequestId: "req-1",
+              ortb2: {
+                site: { domain: "example.com" },
+                user: { eids: [{ inserter: "optable.co", source: "liveramp.com" }] },
+              },
+              bids: [],
+            },
+          ],
+          bidsReceived: [],
+          noBids: [],
+          timeoutBids: [],
+        },
+        []
+      );
+
+      expect(result.optableTargetingDone).toBe("1");
+    });
   });
 
   describe("trackAuctionEnd", () => {
