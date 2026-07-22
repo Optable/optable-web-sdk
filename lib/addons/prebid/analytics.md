@@ -131,7 +131,7 @@ The tenant reported in the payload is taken from the SDK instance's `node`.
 | Option         | Type                           | Default  | Description                                                                                         |
 | -------------- | ------------------------------ | -------- | --------------------------------------------------------------------------------------------------- |
 | `sdkInstance`  | `OptableSDK`                   | required | An already-initialized Optable SDK instance. The payload tenant is read from its `node`.            |
-| `pbjsInstance` | `object`                       | required | The Prebid.js instance to hook into (e.g. `window.pbjs`).                                            |
+| `pbjsInstance` | `object`                       | required | The Prebid.js instance to hook into (e.g. `window.pbjs`).                                           |
 | `analytics`    | `OptablePrebidAnalyticsConfig` | —        | Analytics behavior forwarded to the collector (see below). `analytics: true` is applied by default. |
 
 Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance is provided.
