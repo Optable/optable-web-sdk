@@ -65,12 +65,10 @@ describe("OptablePrebidAnalytics", () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
         debug: true,
         samplingRate: 0.5,
-        tenant: "test-tenant",
       });
 
       expect(analytics["config"].debug).toBe(true);
       expect(analytics["config"].samplingRate).toBe(0.5);
-      expect(analytics["config"].tenant).toBe("test-tenant");
     });
   });
 
@@ -153,9 +151,7 @@ describe("OptablePrebidAnalytics", () => {
 
   describe("toWitness", () => {
     beforeEach(() => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
-      });
+      analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
     it("should transform auction and bid won events to witness format", async () => {
@@ -202,7 +198,6 @@ describe("OptablePrebidAnalytics", () => {
         totalRequests: 1,
         optableMatchers: ["matcher1"],
         optableSources: ["source1"],
-        tenant: "test-tenant",
         url: "example.com/test",
         optableWrapperVersion: "1.0.0-test",
         missed: false,
@@ -330,7 +325,6 @@ describe("OptablePrebidAnalytics", () => {
       jest.useFakeTimers();
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
         analytics: true,
-        tenant: "test-tenant",
       });
     });
 
@@ -391,7 +385,6 @@ describe("OptablePrebidAnalytics", () => {
         "optable.prebid.auction",
         expect.objectContaining({
           auctionId: "auction-complete",
-          tenant: "test-tenant",
           missed: false,
           bidWon: [expect.objectContaining({ adUnitCode: "ad-unit-1", bidderCode: "bidder1" })],
         })
@@ -991,9 +984,7 @@ describe("OptablePrebidAnalytics", () => {
 
   describe("toWitness - advanced scenarios", () => {
     beforeEach(() => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
-      });
+      analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
     it("should handle multiple bidder requests", async () => {
@@ -1146,7 +1137,6 @@ describe("OptablePrebidAnalytics", () => {
 
       analytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
         analytics: true,
-        tenant: "test-tenant",
       });
     });
 
@@ -1219,7 +1209,6 @@ describe("OptablePrebidAnalytics", () => {
     it("should not flush when analytics is disabled (analytics: false)", async () => {
       const disabledAnalytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
         analytics: false,
-        tenant: "test-tenant",
       });
 
       const event = {
@@ -1250,7 +1239,6 @@ describe("OptablePrebidAnalytics", () => {
       const holdoutAnalytics = new OptablePrebidAnalytics(mockOptableWithDcn, {
         analytics: true,
         samplingRate: 0,
-        tenant: "test-tenant",
       });
 
       const event = {
@@ -1583,7 +1571,6 @@ describe("OptablePrebidAnalytics", () => {
 
         const testAnalytics = new OptablePrebidAnalytics(testInstance, {
           analytics: true,
-          tenant: "test-tenant",
           debug: true,
         });
 
@@ -1674,7 +1661,6 @@ describe("OptablePrebidAnalytics", () => {
 
       analytics = new OptablePrebidAnalytics(testInstance, {
         analytics: true,
-        tenant: "test-tenant",
         debug: true,
       });
 
@@ -1849,7 +1835,6 @@ describe("OptablePrebidAnalytics", () => {
 
     it("stamps the callback value onto request bids in the payload", async () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
         getSplitTestAssignment: () => "test",
       });
 
@@ -1860,7 +1845,6 @@ describe("OptablePrebidAnalytics", () => {
 
     it("overrides a value already present on the bid", async () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
         getSplitTestAssignment: () => "production",
       });
 
@@ -1872,7 +1856,6 @@ describe("OptablePrebidAnalytics", () => {
 
     it("overrides the value on received bids", async () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
         getSplitTestAssignment: () => "production",
       });
 
@@ -1887,7 +1870,6 @@ describe("OptablePrebidAnalytics", () => {
 
     it("falls back to the bid value when the callback returns undefined", async () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
         getSplitTestAssignment: () => undefined,
       });
 
@@ -1897,9 +1879,7 @@ describe("OptablePrebidAnalytics", () => {
     });
 
     it("uses the bid value when no callback is configured", async () => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
-      });
+      analytics = new OptablePrebidAnalytics(mockOptableInstance);
 
       const payload = await analytics.toWitness(makeAuction("auction-no-cb", "test"), []);
 
@@ -1909,7 +1889,6 @@ describe("OptablePrebidAnalytics", () => {
     it("is invoked once per bid as bids are built", async () => {
       const getSplitTestAssignment = jest.fn(() => "test");
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
         getSplitTestAssignment,
       });
 
@@ -1921,9 +1900,7 @@ describe("OptablePrebidAnalytics", () => {
 
   describe("EID deduplication", () => {
     beforeEach(() => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        tenant: "test-tenant",
-      });
+      analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
     it("should deduplicate EIDs by source when both ext.eids and eids contain same source", async () => {
@@ -2348,15 +2325,14 @@ describe("initPrebidAnalytics", () => {
     expect(ctor).not.toHaveBeenCalled();
   });
 
-  it("creates a read-only analytics SDK instance and hooks the passed prebid global", () => {
+  it("creates a read-only analytics SDK instance and hooks the passed prebid instance", () => {
     const pbjs = loadedPrebid();
     const { ctor } = makeFakeSDK();
 
     const result = initPrebidAnalytics({
       SDK: ctor,
       instance: { host: "h", node: "n", site: "s" },
-      pbjs,
-      analytics: { tenant: "acme" },
+      pbjsInstance: pbjs,
     });
 
     expect(result).toBeInstanceOf(OptablePrebidAnalytics);
@@ -2366,25 +2342,24 @@ describe("initPrebidAnalytics", () => {
     expect(pbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
   });
 
-  it("reads the named prebid global from window when pbjs is not passed", () => {
+  it("reads the named prebid instance from window when pbjsInstance is not passed", () => {
     (window as any).fusePbjs = loadedPrebid();
     const { ctor } = makeFakeSDK();
 
     initPrebidAnalytics({
       SDK: ctor,
       instance: { host: "h", site: "s" },
-      prebidGlobal: "fusePbjs",
-      analytics: { tenant: "acme" },
+      pbjsInstanceName: "fusePbjs",
     });
 
     expect((window as any).fusePbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
   });
 
-  it("defaults to window.pbjs when no global is configured", () => {
+  it("defaults to window.pbjs when no instance is configured", () => {
     (window as any).pbjs = loadedPrebid();
     const { ctor } = makeFakeSDK();
 
-    initPrebidAnalytics({ SDK: ctor, instance: { host: "h", site: "s" }, analytics: { tenant: "acme" } });
+    initPrebidAnalytics({ SDK: ctor, instance: { host: "h", site: "s" } });
 
     expect((window as any).pbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
   });
@@ -2398,12 +2373,11 @@ describe("initPrebidAnalytics", () => {
     const result = initPrebidAnalytics({
       SDK: ctor,
       instance: { host: "h", site: "s" },
-      pbjs,
-      analytics: { tenant: "acme", samplingRate: 0.25 },
+      pbjsInstance: pbjs,
+      analytics: { samplingRate: 0.25 },
     });
 
     expect(result!["config"].analytics).toBe(true);
-    expect(result!["config"].tenant).toBe("acme");
     expect(result!["config"].samplingRate).toBe(0.25);
   });
 
@@ -2414,8 +2388,8 @@ describe("initPrebidAnalytics", () => {
     const result = initPrebidAnalytics({
       SDK: ctor,
       instance: { host: "h", site: "s" },
-      pbjs,
-      analytics: { tenant: "acme", getSplitTestAssignment: () => "test" },
+      pbjsInstance: pbjs,
+      analytics: { getSplitTestAssignment: () => "test" },
     });
 
     const auctionEndEvent = {
@@ -2444,8 +2418,7 @@ describe("initPrebidAnalytics", () => {
     initPrebidAnalytics({
       SDK: ctor,
       instance: { host: "h", site: "s", readOnly: false },
-      pbjs,
-      analytics: { tenant: "acme" },
+      pbjsInstance: pbjs,
     });
 
     expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ readOnly: false }));

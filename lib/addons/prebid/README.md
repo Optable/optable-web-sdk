@@ -20,11 +20,10 @@ initPrebidAnalytics({
   SDK: OptableSDK,
   // Config for the dedicated read-only analytics SDK instance
   instance: { host: "na.edge.optable.co", node: "analytics", site: "analytics" },
-  // Prebid global by name (default "pbjs"), or pass the object directly via `pbjs`
-  prebidGlobal: "pbjs",
+  // Prebid instance by name (default "pbjs"), or pass the object directly via `pbjsInstance`
+  pbjsInstanceName: "pbjs",
   // Forwarded to the OptablePrebidAnalytics constructor
   analytics: {
-    tenant: "my_tenant",
     samplingRate: 0.1,
     debug: !!sessionStorage.optableDebug,
     // Any OptablePrebidAnalyticsConfig option is forwarded, e.g.
@@ -37,6 +36,7 @@ The `SDK` constructor is passed in (rather than imported by this module) so that
 consumers of the `OptablePrebidAnalytics` class don't bundle the whole SDK. The
 `instance` config sets where analytics data is sent; `readOnly: true` and
 `cookies: false` are applied by default and can be overridden through `instance`.
+The tenant reported in every payload is derived from `instance.node`.
 
 ### Manual setup
 
@@ -69,7 +69,6 @@ if (window.optable.runAnalytics && tenant) {
 
   window.optable.analytics = new OptablePrebidAnalytics(window.optable[`${tenant}_analytics`], {
     analytics: true,
-    tenant,
     debug: !!sessionStorage.optableDebug,
     samplingRate: 0.75,
   });
@@ -100,16 +99,16 @@ Bootstraps the integration and returns the `OptablePrebidAnalytics` instance, or
 
 - `options.SDK`: The Optable SDK constructor (pass the imported `OptableSDK`).
 - `options.instance`: Config for the dedicated read-only analytics SDK instance (`host`/`node`/`site`/…). `readOnly: true` and `cookies: false` default on and can be overridden here.
-- `options.pbjs`: The Prebid.js global to hook into. When omitted, `window[prebidGlobal]` is used.
-- `options.prebidGlobal`: Name of the prebid global on `window` (default `"pbjs"`), used when `pbjs` is not passed.
-- `options.analytics`: Config forwarded to the `OptablePrebidAnalytics` constructor (`tenant`, `samplingRate`, `debug`, `getSplitTestAssignment`, …).
+- `options.pbjsInstance`: The Prebid.js instance to hook into. When omitted, `window[pbjsInstanceName]` is used.
+- `options.pbjsInstanceName`: Name of the Prebid.js global on `window` (default `"pbjs"`), used when `pbjsInstance` is not passed.
+- `options.analytics`: Config forwarded to the `OptablePrebidAnalytics` constructor (`samplingRate`, `debug`, `getSplitTestAssignment`, …). The tenant reported in the payload comes from the analytics SDK instance's `node`.
 
 ### `OptablePrebidAnalytics`
 
 - **Constructor**:
   `new OptablePrebidAnalytics(sdkInstance, options)`
   - `sdkInstance`: An instance of the Optable SDK.
-  - `options`: Object with options such as `debug`, `analytics`, and `tenant`.
+  - `options`: Object with options such as `debug`, `analytics`, and `samplingRate`. The payload tenant is derived from the SDK instance's `node`.
 
 - **hookIntoPrebid(pbjs)**:
   Hooks the analytics into the provided Prebid.js instance.

@@ -27,7 +27,6 @@ const SESSION_SAMPLE_KEY = "optable:prebid:analytics:sample-number";
 interface OptablePrebidAnalyticsConfig {
   debug?: boolean;
   analytics?: boolean;
-  tenant?: string;
   bidWinTimeout?: number;
   samplingVolume?: "session" | "event";
   samplingSeed?: string;
@@ -631,7 +630,7 @@ class OptablePrebidAnalytics {
       })),
       missed,
       url: `${window.location.hostname}${window.location.pathname}`,
-      tenant: this.config.tenant!,
+      tenant: this.optableInstance?.dcn?.node ?? "unknown",
       // eslint-disable-next-line no-undef
       optableWrapperVersion: SDK_WRAPPER_VERSION || "unknown",
       userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
@@ -672,13 +671,13 @@ export interface InitPrebidAnalyticsOptions {
   SDK: new (config: InitConfig) => OptableSDK;
   /** Config for the dedicated read-only analytics SDK instance (host/node/site/…). */
   instance: InitConfig;
-  /** Prebid.js global to hook into. When omitted, `window[prebidGlobal]` is used. */
-  pbjs?: any;
-  /** Name of the prebid global on `window` (default `"pbjs"`), used when `pbjs` is not passed. */
-  prebidGlobal?: string;
+  /** Prebid.js instance to hook into. When omitted, `window[pbjsInstanceName]` is used. */
+  pbjsInstance?: any;
+  /** Name of the Prebid.js global on `window` (default `"pbjs"`), used when `pbjsInstance` is not passed. */
+  pbjsInstanceName?: string;
   /**
    * Analytics behavior forwarded to the `OptablePrebidAnalytics` constructor
-   * (tenant, samplingRate, debug, getSplitTestAssignment, …).
+   * (samplingRate, debug, getSplitTestAssignment, …).
    */
   analytics?: OptablePrebidAnalyticsConfig;
 }
@@ -693,9 +692,9 @@ export interface InitPrebidAnalyticsOptions {
  * @param options - See {@link InitPrebidAnalyticsOptions}.
  */
 export function initPrebidAnalytics(options: InitPrebidAnalyticsOptions): OptablePrebidAnalytics | null {
-  const { SDK, instance, pbjs, prebidGlobal, analytics: analyticsConfig } = options;
+  const { SDK, instance, pbjsInstance, pbjsInstanceName, analytics: analyticsConfig } = options;
 
-  const prebid = pbjs ?? (window as any)[prebidGlobal || "pbjs"];
+  const prebid = pbjsInstance ?? (window as any)[pbjsInstanceName || "pbjs"];
   if (!prebid) return null;
 
   const analyticsSDK = new SDK({
