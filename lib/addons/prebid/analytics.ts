@@ -3,7 +3,6 @@
 import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
 import { buildRequest } from "../../core/network";
-import type { InitConfig } from "../../config";
 
 import * as Bowser from "bowser";
 
@@ -664,17 +663,13 @@ export default OptablePrebidAnalytics;
  */
 export interface InitPrebidAnalyticsOptions {
   /**
-   * The Optable SDK constructor (pass the imported `OptableSDK`). Taken as a
-   * parameter so this module keeps a type-only SDK import and consumers of the
-   * `OptablePrebidAnalytics` class don't bundle the whole SDK.
+   * An already-initialized Optable SDK instance. The tenant reported in every
+   * payload is read from its config (`sdkInstance.dcn.node`), so no separate
+   * `tenant` option is needed.
    */
-  SDK: new (config: InitConfig) => OptableSDK;
-  /** Config for the dedicated read-only analytics SDK instance (host/node/site/…). */
-  instance: InitConfig;
-  /** Prebid.js instance to hook into. When omitted, `window[pbjsInstanceName]` is used. */
-  pbjsInstance?: any;
-  /** Name of the Prebid.js global on `window` (default `"pbjs"`), used when `pbjsInstance` is not passed. */
-  pbjsInstanceName?: string;
+  sdkInstance: OptableSDK;
+  /** The Prebid.js instance to hook into. */
+  pbjsInstance: any;
   /**
    * Analytics behavior forwarded to the `OptablePrebidAnalytics` constructor
    * (samplingRate, debug, getSplitTestAssignment, …).
@@ -683,31 +678,24 @@ export interface InitPrebidAnalyticsOptions {
 }
 
 /**
- * Bootstrap Prebid.js analytics for a bundle: create a dedicated read-only
- * analytics SDK instance, construct an `OptablePrebidAnalytics`, and hook it
- * into the publisher's Prebid.js global.
+ * Bootstrap Prebid.js analytics for a bundle: construct an
+ * `OptablePrebidAnalytics` around a caller-provided SDK instance and hook it
+ * into the caller-provided Prebid.js instance.
  *
- * Returns the analytics instance, or `null` when no Prebid.js global is present
- * (in which case no analytics SDK instance is created).
+ * Returns the analytics instance, or `null` when no Prebid.js instance is
+ * provided.
  * @param options - See {@link InitPrebidAnalyticsOptions}.
  */
 export function initPrebidAnalytics(options: InitPrebidAnalyticsOptions): OptablePrebidAnalytics | null {
-  const { SDK, instance, pbjsInstance, pbjsInstanceName, analytics: analyticsConfig } = options;
+  const { sdkInstance, pbjsInstance, analytics: analyticsConfig } = options;
 
-  const prebid = pbjsInstance ?? (window as any)[pbjsInstanceName || "pbjs"];
-  if (!prebid) return null;
+  if (!pbjsInstance) return null;
 
-  const analyticsSDK = new SDK({
-    readOnly: true,
-    cookies: false,
-    ...instance,
-  });
-
-  const analytics = new OptablePrebidAnalytics(analyticsSDK, {
+  const analytics = new OptablePrebidAnalytics(sdkInstance, {
     analytics: true,
     ...analyticsConfig,
   });
 
-  analytics.hookIntoPrebid(prebid);
+  analytics.hookIntoPrebid(pbjsInstance);
   return analytics;
 }

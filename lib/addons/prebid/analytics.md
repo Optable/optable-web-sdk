@@ -20,20 +20,21 @@ It exposes two things:
 import OptableSDK from "@optable/web-sdk";
 import { initPrebidAnalytics } from "@optable/web-sdk/lib/addons/prebid/analytics";
 
+const sdk = new OptableSDK({ host: "na.edge.optable.co", node: "my-tenant", site: "my-site" });
+
 const analytics = initPrebidAnalytics({
-  SDK: OptableSDK,
-  instance: { host: "na.edge.optable.co", node: "my-tenant", site: "my-site" },
+  sdkInstance: sdk,
+  pbjsInstance: window.pbjs,
   analytics: {
     samplingRate: 0.1,
   },
 });
 ```
 
-`initPrebidAnalytics` returns the analytics instance, or `null` when no Prebid.js
-global is present (in which case no SDK instance is created). The analytics SDK
-is created with `readOnly: true` and `cookies: false` by default — you only pass
-`host`/`node`/`site`. The tenant reported in every payload is derived from
-`instance.node`.
+`initPrebidAnalytics` takes an already-initialized Optable SDK instance and the
+Prebid.js instance to hook into, and returns the analytics instance (or `null`
+when no Prebid.js instance is provided). The tenant reported in every payload is
+read from the SDK instance's `node`.
 
 ### With split-test assignment
 
@@ -62,8 +63,8 @@ const ab = setupAB({
 });
 
 const analytics = initPrebidAnalytics({
-  SDK: OptableSDK,
-  instance: { host: "na.edge.optable.co", node: "my-tenant", site: "my-site" },
+  sdkInstance: sdk,
+  pbjsInstance: window.pbjs,
   analytics: {
     samplingRate: 0.1,
     // Map "none" to "test" so control/holdout still reports a comparable bucket.
@@ -77,15 +78,14 @@ The resolved value appears on every bid in the payload as
 
 ### Passing an explicit Prebid instance
 
-By default the addon reads `window.pbjs`. Pass `pbjsInstance` (or `pbjsInstanceName`
-to change the window key) when Prebid lives elsewhere. Hooking is deferred via
-`pbjs.que` automatically when `pbjs.onEvent` is not yet available, so you do not
-need to wrap the call yourself.
+`pbjsInstance` is the Prebid.js instance to hook into — pass `window.pbjs`, or any
+other instance when Prebid lives elsewhere. Hooking is deferred via `pbjs.que`
+automatically when `pbjs.onEvent` is not yet available, so you do not need to wrap
+the call yourself.
 
 ```js
 const analytics = initPrebidAnalytics({
-  SDK: OptableSDK,
-  instance: { host: "na.edge.optable.co", node: "my-tenant", site: "my-site" },
+  sdkInstance: sdk,
   pbjsInstance: myPrebidInstance,
 });
 ```
@@ -128,15 +128,13 @@ The tenant reported in the payload is taken from the SDK instance's `node`.
 
 **Options**
 
-| Option             | Type                           | Default  | Description                                                                                          |
-| ------------------ | ------------------------------ | -------- | ---------------------------------------------------------------------------------------------------- |
-| `SDK`              | `new (config) => OptableSDK`   | required | The Optable SDK constructor. Passed in so this module keeps a type-only SDK import.                  |
-| `instance`         | `InitConfig`                   | required | Config for the read-only analytics SDK (`host`/`node`/`site`/…). `readOnly`/`cookies` default false. |
-| `pbjsInstance`     | `object`                       | —        | Prebid.js instance to hook into. When omitted, `window[pbjsInstanceName]` is used.                   |
-| `pbjsInstanceName` | `string`                       | `"pbjs"` | Window key used to find Prebid when `pbjsInstance` is not passed.                                    |
-| `analytics`        | `OptablePrebidAnalyticsConfig` | —        | Analytics behavior forwarded to the collector (see below). `analytics: true` is applied by default.  |
+| Option         | Type                           | Default  | Description                                                                                         |
+| -------------- | ------------------------------ | -------- | --------------------------------------------------------------------------------------------------- |
+| `sdkInstance`  | `OptableSDK`                   | required | An already-initialized Optable SDK instance. The payload tenant is read from its `node`.            |
+| `pbjsInstance` | `object`                       | required | The Prebid.js instance to hook into (e.g. `window.pbjs`).                                            |
+| `analytics`    | `OptablePrebidAnalyticsConfig` | —        | Analytics behavior forwarded to the collector (see below). `analytics: true` is applied by default. |
 
-Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid global is found.
+Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance is provided.
 
 ### `OptablePrebidAnalyticsConfig`
 

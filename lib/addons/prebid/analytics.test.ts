@@ -2300,79 +2300,40 @@ describe("OptablePrebidAnalytics", () => {
 });
 
 describe("initPrebidAnalytics", () => {
-  // A stub SDK constructor whose instances expose witness(), enough for
-  // OptablePrebidAnalytics. Records the config it was constructed with.
-  function makeFakeSDK() {
+  // A stub SDK instance exposing witness() and a dcn config, enough for
+  // OptablePrebidAnalytics.
+  function makeFakeSDK(node?: string) {
     const witness = jest.fn().mockResolvedValue(undefined);
-    const ctor = jest.fn().mockImplementation(() => ({ witness }));
-    return { ctor: ctor as unknown as new (config: any) => any, calls: ctor.mock.calls, witness };
+    return { witness, dcn: { node } } as unknown as OptableSDK;
   }
 
   function loadedPrebid() {
     return { getEvents: jest.fn(() => []), onEvent: jest.fn() };
   }
 
-  beforeEach(() => {
-    delete (window as any).pbjs;
-    delete (window as any).fusePbjs;
-  });
-
-  it("returns null and creates no SDK when no prebid global is present", () => {
-    const { ctor } = makeFakeSDK();
-    const result = initPrebidAnalytics({ SDK: ctor, instance: { host: "h", site: "s" } });
+  it("returns null when no prebid instance is provided", () => {
+    const result = initPrebidAnalytics({ sdkInstance: makeFakeSDK(), pbjsInstance: undefined });
 
     expect(result).toBeNull();
-    expect(ctor).not.toHaveBeenCalled();
   });
 
-  it("creates a read-only analytics SDK instance and hooks the passed prebid instance", () => {
+  it("hooks the passed prebid instance", () => {
     const pbjs = loadedPrebid();
-    const { ctor } = makeFakeSDK();
 
     const result = initPrebidAnalytics({
-      SDK: ctor,
-      instance: { host: "h", node: "n", site: "s" },
+      sdkInstance: makeFakeSDK("n"),
       pbjsInstance: pbjs,
     });
 
     expect(result).toBeInstanceOf(OptablePrebidAnalytics);
-    expect(ctor).toHaveBeenCalledWith(
-      expect.objectContaining({ host: "h", node: "n", site: "s", readOnly: true, cookies: false })
-    );
     expect(pbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
   });
 
-  it("reads the named prebid instance from window when pbjsInstance is not passed", () => {
-    (window as any).fusePbjs = loadedPrebid();
-    const { ctor } = makeFakeSDK();
-
-    initPrebidAnalytics({
-      SDK: ctor,
-      instance: { host: "h", site: "s" },
-      pbjsInstanceName: "fusePbjs",
-    });
-
-    expect((window as any).fusePbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
-  });
-
-  it("defaults to window.pbjs when no instance is configured", () => {
-    (window as any).pbjs = loadedPrebid();
-    const { ctor } = makeFakeSDK();
-
-    initPrebidAnalytics({ SDK: ctor, instance: { host: "h", site: "s" } });
-
-    expect((window as any).pbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
-  });
-
-  it("forwards the analytics config through to the OptablePrebidAnalytics instance", () => {
+  it("enables analytics and forwards the analytics config to the collector", () => {
     const pbjs = loadedPrebid();
-    const { ctor } = makeFakeSDK();
 
-    // Any OptablePrebidAnalyticsConfig option flows through, including
-    // getSplitTestAssignment once it lands in the config interface.
     const result = initPrebidAnalytics({
-      SDK: ctor,
-      instance: { host: "h", site: "s" },
+      sdkInstance: makeFakeSDK("n"),
       pbjsInstance: pbjs,
       analytics: { samplingRate: 0.25 },
     });
@@ -2381,13 +2342,38 @@ describe("initPrebidAnalytics", () => {
     expect(result!["config"].samplingRate).toBe(0.25);
   });
 
-  it("forwards getSplitTestAssignment so it stamps bids in the payload", async () => {
+  it("reports the tenant from the SDK instance's node in the payload", async () => {
     const pbjs = loadedPrebid();
-    const { ctor } = makeFakeSDK();
 
     const result = initPrebidAnalytics({
-      SDK: ctor,
-      instance: { host: "h", site: "s" },
+      sdkInstance: makeFakeSDK("acme"),
+      pbjsInstance: pbjs,
+    });
+
+    const auctionEndEvent = {
+      auctionId: "auction-tenant",
+      bidderRequests: [
+        {
+          bidderCode: "bidder1",
+          bidderRequestId: "req-1",
+          ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+          bids: [{ bidId: "bid-1", adUnitCode: "ad-unit-1", transactionId: "trans-1", src: "client" }],
+        },
+      ],
+      bidsReceived: [],
+      noBids: [],
+      timeoutBids: [],
+    };
+
+    const payload = await result!.toWitness(auctionEndEvent, []);
+    expect(payload.tenant).toBe("acme");
+  });
+
+  it("forwards getSplitTestAssignment so it stamps bids in the payload", async () => {
+    const pbjs = loadedPrebid();
+
+    const result = initPrebidAnalytics({
+      sdkInstance: makeFakeSDK("n"),
       pbjsInstance: pbjs,
       analytics: { getSplitTestAssignment: () => "test" },
     });
@@ -2409,18 +2395,5 @@ describe("initPrebidAnalytics", () => {
 
     const payload = await result!.toWitness(auctionEndEvent, []);
     expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("test");
-  });
-
-  it("lets the instance config override the read-only defaults", () => {
-    const pbjs = loadedPrebid();
-    const { ctor } = makeFakeSDK();
-
-    initPrebidAnalytics({
-      SDK: ctor,
-      instance: { host: "h", site: "s", readOnly: false },
-      pbjsInstance: pbjs,
-    });
-
-    expect(ctor).toHaveBeenCalledWith(expect.objectContaining({ readOnly: false }));
   });
 });
