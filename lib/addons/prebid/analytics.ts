@@ -600,7 +600,7 @@ class OptablePrebidAnalytics {
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
       // A raw count (e.g. 2) coerces to "2" which matches neither branch → status='unknown'.
-      optableTargetingDone: oMatchersSet.size > 0 || oSourcesSet.size > 0 ? '1' : '0',
+      optableTargetingDone: oMatchersSet.size > 0 || oSourcesSet.size > 0 ? "1" : "0",
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
       bidWon: bidWonEvents.map((e) => ({
