@@ -38,42 +38,10 @@ read from the SDK instance's `node`.
 
 ### With split-test assignment
 
-When A/B testing, the analytics payload can record which variant each bid belonged
-to via a per-bid `splitTestAssignment` field. There are two ways that field gets
-populated:
-
-1. **From the bid itself** — if `ortb2Imp.ext.optable.splitTestAssignment` is already
-   set on the Prebid bid (e.g. the [A/B test addon](../abTestAssignment.md) stamped
-   it), the addon reads it directly.
-2. **From `getSplitTestAssignment`** — a callback you configure. When set, its return
-   value is stamped onto **every** bid as it is built (initial requests, received
-   bids, and won bids), and it **takes precedence** over any value already on the
-   bid. Return `undefined` to fall back to the value on the bid.
-
-Use `getSplitTestAssignment` when the assignment lives in your own code rather than
-on the bids. This replaces the older pattern of wrapping `trackAuctionEnd` to mutate
-Prebid events yourself — the callback covers received/won bids too, which an
-`auctionEnd`-only wrapper would miss.
-
-```js
-import { setupAB } from "@optable/web-sdk/lib/addons/abTestAssignment";
-
-const ab = setupAB({
-  variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }],
-});
-
-const analytics = initPrebidAnalytics({
-  sdkInstance: sdk,
-  pbjsInstance: window.pbjs,
-  analytics: {
-    samplingRate: 0.1,
-    // Map "none" to "test" so control/holdout still reports a comparable bucket.
-    getSplitTestAssignment: () => (ab.variant.id === "none" ? "test" : ab.variant.id),
-  },
-});
-```
-
-The resolved value appears on every bid in the payload as
+The addon reports a per-bid `splitTestAssignment`, read verbatim from the bid's
+`ortb2Imp.ext.optable.splitTestAssignment` (it does no transformation). Use the
+[`setupAB` addon](../abTestAssignment.md) to assign a variant and stamp that field
+onto every bid; the value then appears in the payload as
 `bidderRequests[].bids[].splitTestAssignment`.
 
 ### Passing an explicit Prebid instance
@@ -147,7 +115,6 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 | `samplingVolume`         | `"session"` \| `"event"`    | `"event"` | `"event"` re-rolls sampling per auction; `"session"` decides once per session.                                      |
 | `samplingSeed`           | `string`                    | —         | Deterministic sampling seed (e.g. a user id) instead of random sampling.                                            |
 | `samplingRateFn`         | `() => boolean`             | —         | Custom sampling predicate; overrides the other sampling options when set.                                           |
-| `getSplitTestAssignment` | `() => string \| undefined` | —         | Returns the split-test assignment stamped onto every bid. Takes precedence over the value on the bid.               |
 
 ### `OptablePrebidAnalytics` instance
 

@@ -1793,7 +1793,7 @@ describe("OptablePrebidAnalytics", () => {
     });
   });
 
-  describe("getSplitTestAssignment", () => {
+  describe("splitTestAssignment", () => {
     // Build a minimal auction with one bid, optionally stamping a
     // splitTestAssignment onto the bid's ortb2Imp and/or the received bid.
     const makeAuction = (auctionId: string, bidStamp?: string, receivedStamp?: string) => ({
@@ -1833,68 +1833,32 @@ describe("OptablePrebidAnalytics", () => {
       timeoutBids: [],
     });
 
-    it("stamps the callback value onto request bids in the payload", async () => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        getSplitTestAssignment: () => "test",
-      });
-
-      const payload = await analytics.toWitness(makeAuction("auction-cb-request"), []);
-
-      expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("test");
-    });
-
-    it("overrides a value already present on the bid", async () => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        getSplitTestAssignment: () => "production",
-      });
-
-      const payload = await analytics.toWitness(makeAuction("auction-cb-override", "test"), []);
-
-      // Callback wins over the bid's own ortb2Imp value.
-      expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("production");
-    });
-
-    it("overrides the value on received bids", async () => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        getSplitTestAssignment: () => "production",
-      });
-
-      const event = makeAuction("auction-cb-received", undefined, "test");
-      await analytics.trackAuctionEnd(event);
-
-      const storedAuction = analytics["auctions"].get("auction-cb-received");
-      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
-
-      expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("production");
-    });
-
-    it("falls back to the bid value when the callback returns undefined", async () => {
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        getSplitTestAssignment: () => undefined,
-      });
-
-      const payload = await analytics.toWitness(makeAuction("auction-cb-undefined", "test"), []);
-
-      expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("test");
-    });
-
-    it("uses the bid value when no callback is configured", async () => {
+    it("reads the assignment stamped on the request bid's ortb2Imp", async () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
 
-      const payload = await analytics.toWitness(makeAuction("auction-no-cb", "test"), []);
+      const payload = await analytics.toWitness(makeAuction("auction-request-stamp", "test"), []);
 
       expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("test");
     });
 
-    it("is invoked once per bid as bids are built", async () => {
-      const getSplitTestAssignment = jest.fn(() => "test");
-      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
-        getSplitTestAssignment,
-      });
+    it("reads the assignment stamped on a received bid's ortb2Imp", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance);
 
-      await analytics.toWitness(makeAuction("auction-cb-called"), []);
+      const event = makeAuction("auction-received-stamp", undefined, "test");
+      await analytics.trackAuctionEnd(event);
 
-      expect(getSplitTestAssignment).toHaveBeenCalled();
+      const storedAuction = analytics["auctions"].get("auction-received-stamp");
+      const payload = await analytics.toWitness(storedAuction!.auctionEnd, []);
+
+      expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBe("test");
+    });
+
+    it("leaves the assignment undefined when nothing is stamped on the bid", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance);
+
+      const payload = await analytics.toWitness(makeAuction("auction-no-stamp"), []);
+
+      expect(payload.bidderRequests[0].bids[0].splitTestAssignment).toBeUndefined();
     });
   });
 
@@ -2369,13 +2333,12 @@ describe("initPrebidAnalytics", () => {
     expect(payload.tenant).toBe("acme");
   });
 
-  it("forwards getSplitTestAssignment so it stamps bids in the payload", async () => {
+  it("carries a splitTestAssignment stamped on the bid's ortb2Imp into the payload", async () => {
     const pbjs = loadedPrebid();
 
     const result = initPrebidAnalytics({
       sdkInstance: makeFakeSDK("n"),
       pbjsInstance: pbjs,
-      analytics: { getSplitTestAssignment: () => "test" },
     });
 
     const auctionEndEvent = {
@@ -2385,7 +2348,15 @@ describe("initPrebidAnalytics", () => {
           bidderCode: "bidder1",
           bidderRequestId: "req-1",
           ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
-          bids: [{ bidId: "bid-1", adUnitCode: "ad-unit-1", transactionId: "trans-1", src: "client" }],
+          bids: [
+            {
+              bidId: "bid-1",
+              adUnitCode: "ad-unit-1",
+              transactionId: "trans-1",
+              src: "client",
+              ortb2Imp: { ext: { optable: { splitTestAssignment: "test" } } },
+            },
+          ],
         },
       ],
       bidsReceived: [],

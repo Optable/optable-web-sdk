@@ -13,7 +13,7 @@ when no Prebid.js instance is provided.
 
 ```ts
 import OptableSDK from "@optable/web-sdk";
-import { initPrebidAnalytics } from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
+import { initPrebidAnalytics } from "@optable/web-sdk/lib/addons/prebid/analytics";
 
 const sdk = new OptableSDK({ host: "na.edge.optable.co", node: "analytics", site: "analytics" });
 
@@ -26,8 +26,7 @@ initPrebidAnalytics({
   analytics: {
     samplingRate: 0.1,
     debug: !!sessionStorage.optableDebug,
-    // Any OptablePrebidAnalyticsConfig option is forwarded, e.g.
-    // getSplitTestAssignment: () => window.optable?.selectedTest?.id,
+    // Any OptablePrebidAnalyticsConfig option is forwarded, e.g. samplingVolume.
   },
 });
 ```
@@ -38,56 +37,27 @@ payload is read from that instance's `node`.
 
 ### Manual setup
 
-For full control over the instances, wire the pieces up yourself:
+For full control, construct the collector yourself and hook it into Prebid.js:
 
 ```js
-import OptablePrebidAnalytics from "./analytics";
+import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
 
-// ...
-const tenant = "my_tenant";
-const analyticsSample = sessionStorage.optableEnableAnalytics || 0.1;
-window.optable.runAnalytics = analyticsSample > Math.random();
-// ...
-
-window.optable.customAnalytics = function () {
-  const customAnalyticsObject = {};
-  // ...
-  return customAnalyticsObject;
-};
-
-// ...
-if (window.optable.runAnalytics && tenant) {
-  window.optable[`${tenant}_analytics`] = new window.optable.SDK({
-    host: "na.edge.optable.co",
-    node: "analytics",
-    site: "analytics",
-    readOnly: true,
-    cookies: false,
-  });
-
-  window.optable.analytics = new OptablePrebidAnalytics(window.optable[`${tenant}_analytics`], {
-    analytics: true,
-    debug: !!sessionStorage.optableDebug,
-    samplingRate: 0.75,
-  });
-  window.optable.analytics.hookIntoPrebid(window.pbjs);
-}
-// ...
+const analytics = new OptablePrebidAnalytics(sdk, {
+  analytics: true,
+  debug: !!sessionStorage.optableDebug,
+  samplingRate: 0.75,
+});
+analytics.hookIntoPrebid(window.pbjs);
 ```
 
-- Replace 'my_tenant' with your Optable tenant name.
-- Optionally, implement `window.optable.customAnalytics` to add custom key-value pairs to each analytics event.
+The payload tenant is read from the SDK instance's `node`.
 
 ## Usage
 
-- **Sampling**:
-  The `analyticsSample` variable controls the sampling rate. Set it to a float between 0 and 1 to control what fraction of users send analytics.
-
-- **Debugging**:
-  Set `sessionStorage.optableDebug` to `true` to force analytics to run and enable debug logging.
-
-- **Custom Analytics Data**:
-  Implement `window.optable.customAnalytics` to return an object with custom data to be included in analytics events.
+- **Sampling**: `samplingRate` (0–1) controls the fraction of events/sessions sent.
+- **Debugging**: set `sessionStorage.optableDebug` to enable debug logging.
+- **Custom fields**: set `window.optable.customAnalytics` to an async function
+  returning an object; its keys are merged into every auction payload.
 
 ## API
 
@@ -97,7 +67,7 @@ Bootstraps the integration and returns the `OptablePrebidAnalytics` instance, or
 
 - `options.sdkInstance`: An already-initialized Optable SDK instance. The tenant reported in the payload is read from its `node`.
 - `options.pbjsInstance`: The Prebid.js instance to hook into (e.g. `window.pbjs`).
-- `options.analytics`: Config forwarded to the `OptablePrebidAnalytics` constructor (`samplingRate`, `debug`, `getSplitTestAssignment`, …).
+- `options.analytics`: Config forwarded to the `OptablePrebidAnalytics` constructor (`samplingRate`, `debug`, …).
 
 ### `OptablePrebidAnalytics`
 
@@ -108,14 +78,3 @@ Bootstraps the integration and returns the `OptablePrebidAnalytics` instance, or
 
 - **hookIntoPrebid(pbjs)**:
   Hooks the analytics into the provided Prebid.js instance.
-
-## Example
-
-```js
-window.optable.customAnalytics = function () {
-  return {
-    pageType: "homepage",
-    userSegment: "premium",
-  };
-};
-```

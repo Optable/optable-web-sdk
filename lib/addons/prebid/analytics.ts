@@ -31,13 +31,6 @@ interface OptablePrebidAnalyticsConfig {
   samplingSeed?: string;
   samplingRate?: number;
   samplingRateFn?: () => boolean;
-  /**
-   * Optional callback returning the split-test assignment for the current page.
-   * When provided, it is stamped onto every bid's `splitTestAssignment` field in
-   * the Witness payload, overriding any value already present on the bid. Use this
-   * to attach A/B assignment without mutating Prebid events yourself.
-   */
-  getSplitTestAssignment?: () => string | undefined;
 }
 
 interface AuctionItem {
@@ -136,21 +129,6 @@ class OptablePrebidAnalytics {
     if (this.config.debug) {
       console.log("%cOptable%c [OptablePrebidAnalytics]", this.labelStyle, "color: inherit;", ...args);
     }
-  }
-
-  /**
-   * Resolve the split-test assignment for a bid. When a `getSplitTestAssignment`
-   * callback is configured its value takes precedence; otherwise the assignment
-   * already present on the bid (`ortb2Imp.ext.optable.splitTestAssignment`) is used.
-   * @param bidValue - The assignment already stamped on the bid, if any.
-   * @returns The resolved assignment, or undefined when neither source provides one.
-   */
-  private resolveSplitTestAssignment(bidValue?: string): string | undefined {
-    if (this.config.getSplitTestAssignment) {
-      const value = this.config.getSplitTestAssignment();
-      if (value !== undefined) return value;
-    }
-    return bidValue;
   }
 
   /**
@@ -344,7 +322,7 @@ class OptablePrebidAnalytics {
               transactionId: b.transactionId,
               src: b.src,
               floorMin: b.floorData?.floorMin,
-              splitTestAssignment: this.resolveSplitTestAssignment(b.ortb2Imp?.ext?.optable?.splitTestAssignment),
+              splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
               status: STATUS.REQUESTED,
             })
           ),
@@ -384,7 +362,7 @@ class OptablePrebidAnalytics {
           cpm: b.cpm,
           size: `${b.width}x${b.height}`,
           currency: b.currency,
-          splitTestAssignment: this.resolveSplitTestAssignment(b.ortb2Imp?.ext?.optable?.splitTestAssignment),
+          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
         });
       } else {
         // Create new bid object for this response
@@ -399,7 +377,7 @@ class OptablePrebidAnalytics {
           size: `${b.width}x${b.height}`,
           currency: b.currency,
           status: STATUS.RECEIVED,
-          splitTestAssignment: this.resolveSplitTestAssignment(b.ortb2Imp?.ext?.optable?.splitTestAssignment),
+          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
         };
         br.bids.push(bidObj);
         bidIndex[bidId] = bidObj;
@@ -574,7 +552,7 @@ class OptablePrebidAnalytics {
             transactionId: b.transactionId,
             src: b.src,
             floorMin: b.floorData?.floorMin,
-            splitTestAssignment: this.resolveSplitTestAssignment(b.ortb2Imp?.ext?.optable?.splitTestAssignment),
+            splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
             status: STATUS.REQUESTED,
           })
         ),
@@ -593,9 +571,9 @@ class OptablePrebidAnalytics {
           bid.cpm = bidReceived.cpm;
           bid.size = `${bidReceived.width}x${bidReceived.height}`;
           bid.currency = bidReceived.currency;
-          const resolved = this.resolveSplitTestAssignment(bidReceived.ortb2Imp?.ext?.optable?.splitTestAssignment);
-          if (resolved !== undefined) {
-            bid.splitTestAssignment = resolved;
+          const receivedSplitTest = bidReceived.ortb2Imp?.ext?.optable?.splitTestAssignment;
+          if (receivedSplitTest !== undefined) {
+            bid.splitTestAssignment = receivedSplitTest;
           }
           if (request.status === STATUS.REQUESTED) request.status = STATUS.RECEIVED;
         }
@@ -672,7 +650,7 @@ export interface InitPrebidAnalyticsOptions {
   pbjsInstance: any;
   /**
    * Analytics behavior forwarded to the `OptablePrebidAnalytics` constructor
-   * (samplingRate, debug, getSplitTestAssignment, …).
+   * (samplingRate, debug, …).
    */
   analytics?: OptablePrebidAnalyticsConfig;
 }
