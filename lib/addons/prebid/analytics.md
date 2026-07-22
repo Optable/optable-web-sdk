@@ -106,15 +106,15 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 
 ### `OptablePrebidAnalyticsConfig`
 
-| Option                   | Type                        | Default   | Description                                                                                                         |
-| ------------------------ | --------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------- |
-| `analytics`              | `boolean`                   | —         | Master switch. When falsy, events are logged (in debug) but not sent to Witness. `initPrebidAnalytics` sets `true`. |
-| `debug`                  | `boolean`                   | `false`   | When true, logs collector activity to the console.                                                                  |
-| `bidWinTimeout`          | `number`                    | `10000`   | Milliseconds to wait after `auctionEnd` before sending, to collect `bidWon` events.                                 |
-| `samplingRate`           | `number`                    | `1`       | Fraction of events/sessions sampled (0–1). `<= 0` sends nothing; `>= 1` sends everything.                           |
-| `samplingVolume`         | `"session"` \| `"event"`    | `"event"` | `"event"` re-rolls sampling per auction; `"session"` decides once per session.                                      |
-| `samplingSeed`           | `string`                    | —         | Deterministic sampling seed (e.g. a user id) instead of random sampling.                                            |
-| `samplingRateFn`         | `() => boolean`             | —         | Custom sampling predicate; overrides the other sampling options when set.                                           |
+| Option           | Type                     | Default   | Description                                                                                                         |
+| ---------------- | ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------- |
+| `analytics`      | `boolean`                | —         | Master switch. When falsy, events are logged (in debug) but not sent to Witness. `initPrebidAnalytics` sets `true`. |
+| `debug`          | `boolean`                | `false`   | When true, logs collector activity to the console.                                                                  |
+| `bidWinTimeout`  | `number`                 | `10000`   | Milliseconds to wait after `auctionEnd` before sending, to collect `bidWon` events.                                 |
+| `samplingRate`   | `number`                 | `1`       | Fraction of events/sessions sampled (0–1). `<= 0` sends nothing; `>= 1` sends everything.                           |
+| `samplingVolume` | `"session"` \| `"event"` | `"event"` | `"event"` re-rolls sampling per auction; `"session"` decides once per session.                                      |
+| `samplingSeed`   | `string`                 | —         | Deterministic sampling seed (e.g. a user id) instead of random sampling.                                            |
+| `samplingRateFn` | `() => boolean`          | —         | Custom sampling predicate; overrides the other sampling options when set.                                           |
 
 ### `OptablePrebidAnalytics` instance
 
