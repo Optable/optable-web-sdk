@@ -4,78 +4,77 @@ This addon integrates Optable analytics with Prebid.js, allowing you to send auc
 
 ## Installation
 
-1. **Configure Analytics**
-   Use the following code snippet to enable analytics and configure the integration withing your Optable SDK wrapper:
+### Quick start: `initPrebidAnalytics`
 
-   ```js
-   import OptablePrebidAnalytics from "./analytics";
+`initPrebidAnalytics` bootstraps the integration in one call: it constructs
+`OptablePrebidAnalytics` around an SDK instance you already created and hooks it
+into the Prebid.js instance you pass. It returns the analytics instance, or `null`
+when no Prebid.js instance is provided.
 
-   // ...
-   const tenant = "my_tenant";
-   const analyticsSample = sessionStorage.optableEnableAnalytics || 0.1;
-   window.optable.runAnalytics = analyticsSample > Math.random();
-   // ...
+```ts
+import OptableSDK from "@optable/web-sdk";
+import { initPrebidAnalytics } from "@optable/web-sdk/lib/addons/prebid/analytics";
 
-   window.optable.customAnalytics = function () {
-     const customAnalyticsObject = {};
-     // ...
-     return customAnalyticsObject;
-   };
+const sdk = new OptableSDK({ host: "na.edge.optable.co", node: "analytics", site: "analytics" });
 
-   // ...
-   if (window.optable.runAnalytics && tenant) {
-     window.optable[`${tenant}_analytics`] = new window.optable.SDK({
-       host: "na.edge.optable.co",
-       node: "analytics",
-       site: "analytics",
-       readOnly: true,
-       cookies: false,
-     });
+initPrebidAnalytics({
+  // An already-initialized Optable SDK instance
+  sdkInstance: sdk,
+  // The Prebid.js instance to hook into
+  pbjsInstance: window.pbjs,
+  // Forwarded to the OptablePrebidAnalytics constructor
+  analytics: {
+    samplingRate: 0.1,
+    debug: !!sessionStorage.optableDebug,
+    // Any OptablePrebidAnalyticsConfig option is forwarded, e.g. samplingVolume.
+  },
+});
+```
 
-     window.optable.analytics = new OptablePrebidAnalytics(window.optable[`${tenant}_analytics`], {
-       analytics: true,
-       tenant,
-       debug: !!sessionStorage.optableDebug,
-       samplingRate: 0.75,
-     });
-     window.optable.analytics.hookIntoPrebid(window.pbjs);
-   }
-   // ...
-   ```
+`initPrebidAnalytics` reuses the SDK instance you already set up for
+targeting/identify rather than creating its own. The tenant reported in every
+payload is read from that instance's `node`.
 
-   - Replace 'my_tenant' with your Optable tenant name.
-   - Optionally, implement `window.optable.customAnalytics` to add custom key-value pairs to each analytics event.
+### Manual setup
+
+For full control, construct the collector yourself and hook it into Prebid.js:
+
+```js
+import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
+
+const analytics = new OptablePrebidAnalytics(sdk, {
+  analytics: true,
+  debug: !!sessionStorage.optableDebug,
+  samplingRate: 0.75,
+});
+analytics.hookIntoPrebid(window.pbjs);
+```
+
+The payload tenant is read from the SDK instance's `node`.
 
 ## Usage
 
-- **Sampling**:
-  The `analyticsSample` variable controls the sampling rate. Set it to a float between 0 and 1 to control what fraction of users send analytics.
-
-- **Debugging**:
-  Set `sessionStorage.optableDebug` to `true` to force analytics to run and enable debug logging.
-
-- **Custom Analytics Data**:
-  Implement `window.optable.customAnalytics` to return an object with custom data to be included in analytics events.
+- **Sampling**: `samplingRate` (0–1) controls the fraction of events/sessions sent.
+- **Debugging**: set `sessionStorage.optableDebug` to enable debug logging.
+- **Custom fields**: set `window.optable.customAnalytics` to an async function
+  returning an object; its keys are merged into every auction payload.
 
 ## API
+
+### `initPrebidAnalytics(options)`
+
+Bootstraps the integration and returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid.js instance is provided.
+
+- `options.sdkInstance`: An already-initialized Optable SDK instance. The tenant reported in the payload is read from its `node`.
+- `options.pbjsInstance`: The Prebid.js instance to hook into (e.g. `window.pbjs`).
+- `options.analytics`: Config forwarded to the `OptablePrebidAnalytics` constructor (`samplingRate`, `debug`, …).
 
 ### `OptablePrebidAnalytics`
 
 - **Constructor**:
   `new OptablePrebidAnalytics(sdkInstance, options)`
   - `sdkInstance`: An instance of the Optable SDK.
-  - `options`: Object with options such as `debug`, `analytics`, and `tenant`.
+  - `options`: Object with options such as `debug`, `analytics`, and `samplingRate`. The payload tenant is derived from the SDK instance's `node`.
 
 - **hookIntoPrebid(pbjs)**:
   Hooks the analytics into the provided Prebid.js instance.
-
-## Example
-
-```js
-window.optable.customAnalytics = function () {
-  return {
-    pageType: "homepage",
-    userSegment: "premium",
-  };
-};
-```

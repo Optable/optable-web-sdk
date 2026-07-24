@@ -26,7 +26,6 @@ const SESSION_SAMPLE_KEY = "optable:prebid:analytics:sample-number";
 interface OptablePrebidAnalyticsConfig {
   debug?: boolean;
   analytics?: boolean;
-  tenant?: string;
   bidWinTimeout?: number;
   samplingVolume?: "session" | "event";
   samplingSeed?: string;
@@ -572,8 +571,9 @@ class OptablePrebidAnalytics {
           bid.cpm = bidReceived.cpm;
           bid.size = `${bidReceived.width}x${bidReceived.height}`;
           bid.currency = bidReceived.currency;
-          if (bidReceived.ortb2Imp?.ext?.optable?.splitTestAssignment) {
-            bid.splitTestAssignment = bidReceived.ortb2Imp.ext.optable.splitTestAssignment;
+          const receivedSplitTest = bidReceived.ortb2Imp?.ext?.optable?.splitTestAssignment;
+          if (receivedSplitTest !== undefined) {
+            bid.splitTestAssignment = receivedSplitTest;
           }
           if (request.status === STATUS.REQUESTED) request.status = STATUS.RECEIVED;
         }
@@ -610,7 +610,7 @@ class OptablePrebidAnalytics {
       })),
       missed,
       url: `${window.location.hostname}${window.location.pathname}`,
-      tenant: this.config.tenant!,
+      tenant: this.optableInstance?.dcn?.node ?? "unknown",
       // eslint-disable-next-line no-undef
       optableWrapperVersion: SDK_WRAPPER_VERSION || "unknown",
       userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
@@ -638,3 +638,45 @@ class OptablePrebidAnalytics {
 }
 
 export default OptablePrebidAnalytics;
+
+/**
+ * Options for {@link initPrebidAnalytics}.
+ */
+export interface InitPrebidAnalyticsOptions {
+  /**
+   * An already-initialized Optable SDK instance. The tenant reported in every
+   * payload is read from its config (`sdkInstance.dcn.node`), so no separate
+   * `tenant` option is needed.
+   */
+  sdkInstance: OptableSDK;
+  /** The Prebid.js instance to hook into. */
+  pbjsInstance: any;
+  /**
+   * Analytics behavior forwarded to the `OptablePrebidAnalytics` constructor
+   * (samplingRate, debug, …).
+   */
+  analytics?: OptablePrebidAnalyticsConfig;
+}
+
+/**
+ * Bootstrap Prebid.js analytics for a bundle: construct an
+ * `OptablePrebidAnalytics` around a caller-provided SDK instance and hook it
+ * into the caller-provided Prebid.js instance.
+ *
+ * Returns the analytics instance, or `null` when no Prebid.js instance is
+ * provided.
+ * @param options - See {@link InitPrebidAnalyticsOptions}.
+ */
+export function initPrebidAnalytics(options: InitPrebidAnalyticsOptions): OptablePrebidAnalytics | null {
+  const { sdkInstance, pbjsInstance, analytics: analyticsConfig } = options;
+
+  if (!pbjsInstance) return null;
+
+  const analytics = new OptablePrebidAnalytics(sdkInstance, {
+    analytics: true,
+    ...analyticsConfig,
+  });
+
+  analytics.hookIntoPrebid(pbjsInstance);
+  return analytics;
+}
