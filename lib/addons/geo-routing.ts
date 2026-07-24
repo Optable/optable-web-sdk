@@ -3,11 +3,11 @@
  * that should serve them, so a single SDK bundle can route traffic to the
  * regional edge closest to (and provisioned for) the visitor.
  *
- * Keys are region codes (not country codes) that map 1:1 to Optable edge hosts.
- * Translating a visitor's country code to a region code is the caller's
- * responsibility — the addon deliberately knows only regions, not the full
- * country-to-region table. The caller also supplies the SDK `node`/`site`;
- * this addon only resolves the host.
+ * Keys are region codes that map to Optable edge hosts (`US` and `NA` are
+ * aliases for the North America edge). Translating a visitor's country code to
+ * a supported key is the caller's responsibility — the addon deliberately
+ * knows only regions, not the full country-to-region table. The caller also
+ * supplies the SDK `node`/`site`; this addon only resolves the host.
  */
 
 export type GeoMap = Record<string, string>;
@@ -17,6 +17,7 @@ export const DEFAULT_GEO_MAP: GeoMap = {
   CA: "ca.edge.optable.co",
   EU: "eu.edge.optable.co",
   NA: "na.edge.optable.co",
+  US: "na.edge.optable.co",
 };
 
 /*

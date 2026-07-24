@@ -1182,7 +1182,7 @@ The geo-routing addon maps a visitor's region code to the Optable edge host that
 ```typescript
 import { getGeoRouting } from "@optable/web-sdk/lib/dist/addons/geo-routing";
 
-const host = getGeoRouting(visitorRegion); // e.g. "na.edge.optable.co" for "NA"
+const host = getGeoRouting(visitorRegion); // e.g. "na.edge.optable.co" for "US"
 
 if (host) {
   const sdk = new OptableSDK({
@@ -1193,7 +1193,7 @@ if (host) {
 }
 ```
 
-`getGeoRouting` returns `null` when the region is not supported, in which case region-specific initialization should be skipped. The default `GeoMap` supports the `NA`, `CA`, `EU` and `AU` region codes, each mapped to its regional edge host; pass a custom `GeoMap` as the second argument for other regions.
+`getGeoRouting` returns `null` when the region is not supported, in which case region-specific initialization should be skipped. The default `GeoMap` supports the `US` (alias `NA`), `CA`, `EU` and `AU` region codes, each mapped to its regional edge host; pass a custom `GeoMap` as the second argument for other regions.
 
 Keys are region codes, not country codes. Translating a visitor's country code to a region code (for example `GB`/`UK` → `EU`) is the caller's responsibility — the addon deliberately knows only regions. The caller also supplies the SDK `node`/`site`; this addon only resolves the host.
 
