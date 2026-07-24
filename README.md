@@ -51,7 +51,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Rules](#rules)
   - [Return Value](#return-value)
   - [Input Type](#input-type)
-- [Geotargeting](#geotargeting)
+- [Geo-routing](#geo-routing)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -1175,27 +1175,27 @@ type NodeTargetingRule = {
 };
 ```
 
-## Geotargeting
+## Geo-routing
 
-The geotargeting addon maps a visitor's geo (country code) to the Optable host and node that should serve them, so that a single SDK bundle can route traffic to region-specific DCNs.
+The geo-routing addon maps a visitor's region code to the Optable edge host that should serve them, so that a single SDK bundle can route traffic to the right regional edge.
 
 ```typescript
-import { getGeoConfig } from "@optable/web-sdk/lib/dist/addons/geotargeting";
+import { getGeoRouting } from "@optable/web-sdk/lib/dist/addons/geo-routing";
 
-const geoConfig = getGeoConfig("acme", visitorGeo); // e.g. { host: "na.edge.optable.co", node: "acme" } for "US"
+const host = getGeoRouting(visitorRegion); // e.g. "na.edge.optable.co" for "US"
 
-if (geoConfig) {
+if (host) {
   const sdk = new OptableSDK({
-    host: geoConfig.host,
-    node: geoConfig.node,
+    host,
+    node: "my-node",
     site: "my-site",
   });
 }
 ```
 
-The first argument is the node name: the tenant name, optionally with an `-auth` suffix to select the auth variant of the node (e.g. `"acme-auth"`). `getGeoConfig` returns `null` when the geo is not supported, in which case region-specific initialization should be skipped. For geos served by a dedicated cloud host rather than a regional edge host, `node` is `undefined` and the host's default node is used.
+`getGeoRouting` returns `null` when the region is not supported, in which case region-specific initialization should be skipped. The default `GeoMap` supports the `US` (alias `NA`), `CA`, `EU` and `AU` region codes, each mapped to its regional edge host; pass a custom `GeoMap` as the second argument for other regions.
 
-The default `GeoMap` supports the `US`, `CA`, `GB`, `UK` and `AU` geos and reflects a specific provisioning shape: regional edge nodes in US/CA and dedicated per-tenant cloud hosts (`<name>.cloud.<region>.optable.co`) in AU and the EU. The dedicated hosts only exist for tenants provisioned that way — pass a custom `GeoMap` as the third argument when your topology differs; see `lib/addons/geotargeting.ts` for the entry format.
+Keys are region codes, not country codes. Translating a visitor's country code to a region code (for example `GB`/`UK` → `EU`) is the caller's responsibility — the addon deliberately knows only regions. The caller also supplies the SDK `node`/`site`; this addon only resolves the host.
 
 ## Demo Pages
 
