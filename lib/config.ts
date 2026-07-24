@@ -69,6 +69,8 @@ type InitConfig = {
   // When provided, the server will attempt to answer within the given time limit.
   // Some APIs like targeting may return partial responses depending at which stage the timeout occurred.
   timeout?: string;
+  // Allow insecure HTTP traffic. For testing purposes only — do not use in production.
+  insecure?: boolean;
   // Page context configuration for extracting semantic content from the page.
   // When enabled, context is sent with the first witness() call after page load.
   // Set to true for defaults, or provide a PageContextConfig object for customization.
@@ -105,6 +107,7 @@ type ResolvedConfig = {
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
   timeout?: string;
+  insecure?: boolean;
 };
 
 const DCN_DEFAULTS = {
@@ -141,6 +144,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
     timeout: init.timeout,
+    insecure: init.insecure,
   };
 
   if (init.consent?.static) {

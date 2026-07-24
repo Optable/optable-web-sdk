@@ -3,9 +3,9 @@ import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
-  const { host, cookies } = config;
+  const { host, cookies, insecure } = config;
 
-  const url = new URL(path, `https://${host}`);
+  const url = new URL(path, `${insecure ? "http" : "https"}://${host}`);
   url.searchParams.set("osdk", `web-${buildInfo.version}`);
   url.searchParams.set("sid", config.sessionID);
 
