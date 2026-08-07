@@ -1,0 +1,4 @@
+# Every pull request requires an approving review from a code owner.
+# Listing both teams on one line means an approval from EITHER team satisfies
+# the requirement -- engineering OR solutions can unblock a merge.
+* @Optable/engineering @Optable/solutions
