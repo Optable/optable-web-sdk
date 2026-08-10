@@ -692,7 +692,8 @@ describe("OptablePrebidAnalytics", () => {
       expect(mockOptableInstance.witness).not.toHaveBeenCalled();
     });
 
-    it("should not send when sampling returns false", async () => {
+    it("should not sample - trackAuctionEnd already decided", async () => {
+      // Sampling here as well would make the effective rate rate^2.
       analytics = new OptablePrebidAnalytics(mockOptableInstance, {
         analytics: true,
         samplingRate: 0,
@@ -701,11 +702,11 @@ describe("OptablePrebidAnalytics", () => {
       const result = await analytics.sendToWitnessAPI("test.event", { prop: "value" });
 
       expect(result).toEqual({
-        disabled: true,
+        disabled: false,
         eventName: "test.event",
         properties: { prop: "value" },
       });
-      expect(mockOptableInstance.witness).not.toHaveBeenCalled();
+      expect(mockOptableInstance.witness).toHaveBeenCalledWith("test.event", { prop: "value" });
     });
 
     it("should send to witness API when enabled and sampled", async () => {
@@ -717,6 +718,41 @@ describe("OptablePrebidAnalytics", () => {
         properties: { prop: "value" },
       });
       expect(mockOptableInstance.witness).toHaveBeenCalledWith("test.event", { prop: "value" });
+    });
+
+    it("should draw once per auction at a fractional rate", async () => {
+      // Regression: the rate was applied at trackAuctionEnd and again on send,
+      // so 0.1 behaved as 0.01. The second draw here fails the rate - if it
+      // still gated, the auction would never reach witness.
+      const randomSpy = jest.spyOn(Math, "random").mockReturnValueOnce(0.3).mockReturnValue(0.9);
+      jest.useFakeTimers();
+
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, {
+        analytics: true,
+        samplingRate: 0.5,
+      });
+
+      await analytics.trackAuctionEnd({
+        auctionId: "auction-fractional",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      });
+      await jest.runAllTimersAsync();
+
+      expect(mockOptableInstance.witness).toHaveBeenCalledTimes(1);
+      expect(randomSpy).toHaveBeenCalledTimes(1);
+
+      jest.useRealTimers();
+      randomSpy.mockRestore();
     });
 
     it("should handle errors from witness API", async () => {
