@@ -222,14 +222,18 @@ loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));</cod
       }
 
       // Render the classifications response into a human-readable set of tables.
-      // The DCN returns a single `classifications` object with a `categories` array;
-      // each category carries its own `taxonomy`, so we group categories by taxonomy.
+      // The DCN returns a single `classifications` object that may carry a
+      // `categories` array and/or a `keywords` array, depending on which
+      // classifiers the node has enabled. Each category carries its own
+      // `taxonomy`, so we group categories by taxonomy; keywords are a flat list.
       function renderClassifications(response) {
         var classifications = response && response.classifications;
         var categories =
           classifications && Array.isArray(classifications.categories) ? classifications.categories : [];
+        var keywords =
+          classifications && Array.isArray(classifications.keywords) ? classifications.keywords : [];
 
-        if (categories.length === 0) {
+        if (categories.length === 0 && keywords.length === 0) {
           return "<p><em>No contextual classifications were returned for this URL.</em></p>";
         }
 
@@ -245,7 +249,7 @@ loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));</cod
           byTaxonomy[taxonomy].push(category);
         });
 
-        return order
+        var html = order
           .map(function (taxonomy) {
             var rows = byTaxonomy[taxonomy]
               .map(function (category) {
@@ -278,6 +282,32 @@ loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));</cod
             );
           })
           .join("");
+
+        // Keywords carry no taxonomy tree, so they render as a flat list.
+        // `prominence` is an ordinal rank within this page's keywords (1 = most
+        // prominent), not a score, so it is shown as a plain rank rather than a
+        // score bar.
+        if (keywords.length > 0) {
+          var keywordRows = keywords
+            .map(function (keyword) {
+              return (
+                "<tr><td>" +
+                escapeHtml(keyword.keyword) +
+                "</td><td>" +
+                escapeHtml(keyword.prominence) +
+                "</td></tr>"
+              );
+            })
+            .join("");
+
+          html +=
+            "<h6>Keywords</h6>" +
+            '<table class="u-full-width"><thead><tr><th>Keyword</th><th>Prominence (rank)</th></tr></thead><tbody>' +
+            keywordRows +
+            "</tbody></table>";
+        }
+
+        return html;
       }
 
       document.getElementById("ctx-button").addEventListener("click", function () {
