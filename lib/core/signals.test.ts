@@ -30,9 +30,11 @@ function stubDevice(signals: {
   stub(window.navigator, "hardwareConcurrency", signals.cores);
   stub(window.screen, "width", signals.width ?? 0);
   stub(window.screen, "height", signals.height ?? 0);
-  jest.spyOn(Intl, "DateTimeFormat").mockImplementation(
-    () => ({ resolvedOptions: () => ({ timeZone: signals.timeZone ?? "" }) }) as Intl.DateTimeFormat
-  );
+  jest
+    .spyOn(Intl, "DateTimeFormat")
+    .mockImplementation(
+      () => ({ resolvedOptions: () => ({ timeZone: signals.timeZone ?? "" }) }) as Intl.DateTimeFormat
+    );
 }
 
 const fullDevice = {
@@ -92,8 +94,11 @@ it("omits signals that are unavailable, out of range, or throw", () => {
   expect(signals).toEqual({ lang: "en-US,en", scr: "3440x1440" });
 });
 
-it("returns an empty blob when no signal is available", () => {
+it("returns an empty blob when no signal is available, and reuses it", () => {
   stubDevice({});
 
+  expect(deviceSignals()).toBe("");
+
+  stubDevice(fullDevice);
   expect(deviceSignals()).toBe("");
 });

@@ -1,3 +1,4 @@
+import { encodeBase64URL } from "./core/base64";
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 import type { PageContextConfig } from "./core/context";
@@ -161,10 +162,7 @@ function generateSessionID(): string {
   crypto.getRandomValues(arr);
 
   // Equivalent to esnext arr.toBase64({ omitPadding: true, alphabet: "base64url" })
-  return btoa(String.fromCharCode(...arr))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
+  return encodeBase64URL(String.fromCharCode(...arr));
 }
 
 export type {

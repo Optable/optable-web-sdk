@@ -5,7 +5,9 @@
 // forwarding an empty value, so a reader that cannot read its signal returns
 // undefined rather than an empty string.
 
-type  SignalKey = "lang" | "tz" | "scr" | "mem" | "cores";
+import { encodeBase64URL } from "./base64";
+
+type SignalKey = "lang" | "tz" | "scr" | "mem" | "cores";
 type Signals = Partial<Record<SignalKey, string>>;
 type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number };
 const NUMERIC_MAX = 1024;
@@ -53,13 +55,6 @@ function readSignals(): Signals {
   return signals;
 }
 
-function encodeBase64URL(value: string): string {
-  return btoa(value)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
-
 function encodeSignals(signals: Signals): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(signals)) {
@@ -70,11 +65,15 @@ function encodeSignals(signals: Signals): string {
   return query ? encodeBase64URL(query) : "";
 }
 
+// Every signal is fixed for the lifetime of the page, so the blob is read once
+// and reused rather than rebuilt on each request.
+let blob: string | undefined;
+
 // Returns the encoded `sig` blob to forward, or an empty string when no signal
 // is available.
 function deviceSignals(): string {
-  return encodeSignals(readSignals());
+  blob ??= encodeSignals(readSignals());
+  return blob;
 }
 
 export { deviceSignals, readSignals, encodeSignals };
-export type { SignalKey, Signals };
