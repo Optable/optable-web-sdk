@@ -83,6 +83,24 @@ describe("setupAB - override via flags", () => {
     expect(result.variant.id).toBe("production");
     expect(result.isControl).toBe(false);
   });
+
+  it("forces treatment when optableDebug flag is set", () => {
+    sessionStorage.setItem("optableDebug", "1");
+    resetFlags();
+    jest.spyOn(Math, "random").mockReturnValue(0.97); // would normally land in control
+    const result = setupAB({ variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }] });
+    expect(result.variant.id).toBe("production");
+    expect(result.isControl).toBe(false);
+  });
+
+  it("optableControlGroup=1 takes priority over optableDebug", () => {
+    sessionStorage.setItem("optableDebug", "1");
+    sessionStorage.setItem("optableControlGroup", "1");
+    resetFlags();
+    const result = setupAB({ variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }] });
+    expect(result.variant.id).toBe("test");
+    expect(result.isControl).toBe(true);
+  });
 });
 
 describe("setupAB - custom variant ids", () => {
