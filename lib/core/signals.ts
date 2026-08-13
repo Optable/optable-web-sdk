@@ -1,16 +1,16 @@
 // The blob is built as query-string style key=value pairs, then base64url
 // encoded without padding into a single opaque param, readable by design.
 //
-// An absent key means "not collected", which is distinct from "collected as
-// empty", so a collector that cannot read its signal returns undefined rather
-// than an empty string.
+// An absent key means the signal was not forwarded, which is distinct from
+// forwarding an empty value, so a reader that cannot read its signal returns
+// undefined rather than an empty string.
 
 type  SignalKey = "lang" | "tz" | "scr" | "mem" | "cores";
 type Signals = Partial<Record<SignalKey, string>>;
 type NavigatorWithDeviceMemory = Navigator & { deviceMemory?: number };
 const NUMERIC_MAX = 1024;
 
-const COLLECTORS: Record<SignalKey, () => string | undefined> = {
+const READERS: Record<SignalKey, () => string | undefined> = {
   lang: () => {
     const { languages, language } = navigator;
     return languages?.length ? languages.join(",") : language || undefined;
@@ -35,18 +35,18 @@ function numeric(value: number | undefined): string | undefined {
   return `${value}`;
 }
 
-function collectSignals(): Signals {
+function readSignals(): Signals {
   const signals: Signals = {};
 
-  for (const key of Object.keys(COLLECTORS) as SignalKey[]) {
+  for (const key of Object.keys(READERS) as SignalKey[]) {
     try {
-      const value = COLLECTORS[key]();
+      const value = READERS[key]();
       if (value) {
         signals[key] = value;
       }
     } catch {
       // The API is absent or blocked by a privacy shield; treat the signal as
-      // not collected and keep the remaining collectors running.
+      // unavailable and keep the remaining readers running.
     }
   }
 
@@ -70,11 +70,11 @@ function encodeSignals(signals: Signals): string {
   return query ? encodeBase64URL(query) : "";
 }
 
-// Returns the encoded `sig` blob, or an empty string when no signal could be
-// collected.
+// Returns the encoded `sig` blob to forward, or an empty string when no signal
+// is available.
 function deviceSignals(): string {
-  return encodeSignals(collectSignals());
+  return encodeSignals(readSignals());
 }
 
-export { deviceSignals, collectSignals, encodeSignals };
+export { deviceSignals, readSignals, encodeSignals };
 export type { SignalKey, Signals };

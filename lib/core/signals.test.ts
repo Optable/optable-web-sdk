@@ -1,4 +1,4 @@
-import { collectSignals, deviceSignals, encodeSignals } from "./signals";
+import { readSignals, deviceSignals, encodeSignals } from "./signals";
 
 const restores: Array<() => void> = [];
 
@@ -66,10 +66,10 @@ it("encodes signals to base64url without padding", () => {
   expect(sig).toMatch(/^[A-Za-z0-9_-]+$/);
 });
 
-it("collects every signal the blob accepts, in a stable order", () => {
+it("forwards every signal the blob accepts, in a stable order", () => {
   stubDevice(fullDevice);
 
-  const signals = collectSignals();
+  const signals = readSignals();
   expect(signals).toEqual({
     lang: "en-US,en",
     tz: "America/Toronto",
@@ -80,15 +80,15 @@ it("collects every signal the blob accepts, in a stable order", () => {
   expect(Object.keys(signals)).toEqual(["lang", "tz", "scr", "mem", "cores"]);
 });
 
-// An absent key means "not collected", so an unreadable signal is omitted rather
-// than sent empty, and it must not cost us the others.
+// An absent key means the signal was not forwarded, so an unreadable signal is
+// omitted rather than sent empty, and it must not cost us the others.
 it("omits signals that are unavailable, out of range, or throw", () => {
   stubDevice({ ...fullDevice, deviceMemory: undefined, cores: 2048 });
   jest.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
     throw new Error("blocked");
   });
 
-  const signals = collectSignals();
+  const signals = readSignals();
   expect(signals).toEqual({ lang: "en-US,en", scr: "3440x1440" });
 });
 
