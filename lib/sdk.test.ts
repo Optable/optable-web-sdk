@@ -8,6 +8,11 @@ import { waitFor } from "./test/utils";
 
 const defaultConsent = DCN_DEFAULTS.consent;
 
+// buildRequest appends the device signal blob last, and its contents vary by
+// environment. Anchored so it still pins everything ahead of it.
+const withSig = (url: string) =>
+  expect.stringMatching(new RegExp(`^${url.replace(/[.?*+^$[\]\\(){}|]/g, "\\$&")}(&sig=[A-Za-z0-9_-]+)?$`));
+
 describe("eid", () => {
   test("is correct", () => {
     const expected = "e:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3";
@@ -244,7 +249,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f5"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=no&passport=`,
+        url: withSig(`${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=no&passport=`),
       })
     );
 
@@ -254,7 +259,9 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f6"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=no&passport=PASSPORT`,
+        url: withSig(
+          `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=no&passport=PASSPORT`
+        ),
       })
     );
   });
@@ -297,7 +304,7 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         method: "POST",
         _bodyText: '["c:a1a335b8216658319f96a4b0c718557ba41dd1f5"]',
-        url: `${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=yes`,
+        url: withSig(`${TEST_BASE_URL}/identify?osdk=web-0.0.0-experimental&sid=session&o=site&cookies=yes`),
       })
     );
   });
