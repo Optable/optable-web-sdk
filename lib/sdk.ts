@@ -25,6 +25,7 @@ import {
   ContextualSegments,
   ContextualSegmentsResponse,
   ContextualTargetingKeyValues,
+  ContextualTargetingKeyValuesOptions,
 } from "./edge/contextual_segments";
 import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
@@ -181,8 +182,11 @@ class OptableSDK {
     return response;
   }
 
-  ctxTargetingKeyValues(taxonomyKeys?: Record<string, string>): ContextualTargetingKeyValues {
-    return ContextualTargetingKeyValues(this.contextualResponse, taxonomyKeys);
+  ctxTargetingKeyValues(
+    taxonomyKeys?: Record<string, string>,
+    options?: ContextualTargetingKeyValuesOptions
+  ): ContextualTargetingKeyValues {
+    return ContextualTargetingKeyValues(this.contextualResponse, taxonomyKeys, options);
   }
 
   async tokenize(id: string): Promise<TokenizeResponse> {
