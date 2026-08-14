@@ -200,6 +200,15 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
           </p>
           <pre><code>loadGAM(optable.instance.ctxTargetingKeyValues());</code></pre>
           <p>
+            By default the returned map has one key per taxonomy the DCN classified into (keyed by the raw taxonomy
+            value) plus the page's keywords under <code>ctx_kw</code>. For example,
+            <code>ctxTargetingKeyValues()</code> might return:
+          </p>
+          <pre><code>{
+  "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
+  "ctx_kw": ["advertising", "programmatic", "ad tech"]
+}</code></pre>
+          <p>
             If you want <code>loadGAM()</code> to run as soon as the contextual segments arrive — without making a
             second <code>ctxSegments()</code> call — pass a callback to <code>initContextual</code>. The SDK fires the
             contextual request automatically during initialization and invokes the callback with the response,
@@ -235,10 +244,17 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
           <pre><code>// Emit only the "iab_ct_3_1" taxonomy, under the GAM key "ctx_iab":
 loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));</code></pre>
           <p>
-            <strong>Note:</strong> <code>ctxTargetingKeyValues()</code> currently derives key-values from
-            <code>classifications.categories</code> only. The <code>classifications.keywords</code> array is not part of
-            the map, so keyword classifications are not emitted as GAM key-values.
+            Keyword classifications are also emitted, by default under the GAM key <code>ctx_kw</code>. The values are
+            the page's keywords ordered by <code>prominence</code> (most prominent first), capped to the top 10, and
+            sanitized to GAM's value rules (lowercased, reserved characters stripped, truncated to 40 characters). Pass
+            <code>keywordKey</code> to rename the key or <code>maxKeywords</code> to change the cap, or set
+            <code>keywordKey</code> to an empty string to opt out of keyword key-values entirely:
           </p>
+          <pre><code>// Rename the keyword key and emit only the top 5 keywords:
+loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }, { keywordKey: "kw", maxKeywords: 5 }));
+
+// Opt out of keyword key-values:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { keywordKey: "" }));</code></pre>
           <div class="twelve column code-result" id="kv-result">—</div>
         </div>
       </div>
