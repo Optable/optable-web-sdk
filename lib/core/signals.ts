@@ -62,7 +62,17 @@ function encodeSignals(signals: Signals): string {
   }
 
   const query = params.toString();
-  return query ? encodeBase64URL(query) : "";
+  if (!query) {
+    return "";
+  }
+
+  try {
+    return encodeBase64URL(query);
+  } catch {
+    // A value the base64 alphabet cannot represent must not break the request;
+    // forward nothing instead.
+    return "";
+  }
 }
 
 // Every signal is fixed for the lifetime of the page, so the blob is read once
