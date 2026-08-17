@@ -69,20 +69,58 @@
         <div class="twelve column">
           <h4>Example: contextual segments API</h4>
           <p>
-            Shows how to call <code>ctxSegments()</code> to classify a page URL against one or more contextual
-            taxonomies (e.g. the
-            <a href="https://iabtechlab.com/standards/content-taxonomy/">IAB Content Taxonomy</a>) and inspect the
-            categories the DCN returns for it.
+            Shows how to call <code>ctxSegments()</code> to classify a page URL and inspect the classifications the DCN
+            returns for it: taxonomy categories (e.g. against the
+            <a href="https://iabtechlab.com/standards/content-taxonomy/">IAB Content Taxonomy</a>) and/or free-form
+            keywords, depending on which classifiers the DCN has enabled.
           </p>
           <pre><code>// Classify the URL of the current page (defaults to window.location.href):
 optable.instance.ctxSegments();
 
 // Or classify an explicit URL:
 optable.instance.ctxSegments("https://optable.co/");</code></pre>
+          <p>The response is a <code>ContextualSegmentsResponse</code>:</p>
+          <pre><code>{
+  classifications: {
+    categories: [{ id, name, score, taxonomy }],
+    keywords: [{ keyword, prominence }],
+  },
+}</code></pre>
           <p>
-            The response is a <code>ContextualSegmentsResponse</code> of the form
-            <code>{ classifications: { categories: [{ id, name, score, taxonomy }] } }</code>.
+            The <code>classifications</code> object groups results by classification method, and the DCN includes only
+            the methods it has enabled. Two methods exist today:
           </p>
+          <h6><code>categories</code>: taxonomy classifications</h6>
+          <table class="u-full-width">
+            <thead>
+              <tr><th>Field</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>id</code></td><td>Category id within its taxonomy (e.g. an IAB category id).</td></tr>
+              <tr><td><code>name</code></td><td>Human-readable category name.</td></tr>
+              <tr><td><code>score</code></td><td>Relevance score from 0 to 1.</td></tr>
+              <tr>
+                <td><code>taxonomy</code></td>
+                <td>Id of the taxonomy the category belongs to (e.g. <code>iab_ct_3_1</code>).</td>
+              </tr>
+            </tbody>
+          </table>
+          <h6><code>keywords</code>: free-form terms extracted from the page</h6>
+          <table class="u-full-width">
+            <thead>
+              <tr><th>Field</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>keyword</code></td><td>The extracted keyword text.</td></tr>
+              <tr>
+                <td><code>prominence</code></td>
+                <td>
+                  Per-page ordinal rank (1 = most prominent), not a score, so prominences are not comparable across
+                  pages.
+                </td>
+              </tr>
+            </tbody>
+          </table>
           <p>
             Alternatively, configure the SDK with <code>initContextual</code> set to a callback. The SDK will
             automatically call <code>ctxSegments()</code> for the URL of the current page on initialization, and
@@ -160,6 +198,15 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
           </p>
           <pre><code>loadGAM(optable.instance.ctxTargetingKeyValues());</code></pre>
           <p>
+            By default the returned map has one key per taxonomy the DCN classified into (keyed by the raw taxonomy
+            value) plus the page's keywords under <code>ctx_kw</code>. For example,
+            <code>ctxTargetingKeyValues()</code> might return:
+          </p>
+          <pre><code>{
+  "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
+  "ctx_kw": ["advertising", "programmatic", "ad tech"]
+}</code></pre>
+          <p>
             If you want <code>loadGAM()</code> to run as soon as the contextual segments arrive — without making a
             second <code>ctxSegments()</code> call — pass a callback to <code>initContextual</code>. The SDK fires the
             contextual request automatically during initialization and invokes the callback with the response,
@@ -193,6 +240,18 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
           </p>
           <pre><code>// Emit only the "iab_ct_3_1" taxonomy, under the GAM key "ctx_iab":
 loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));</code></pre>
+          <p>
+            Keyword classifications are also emitted, by default under the GAM key <code>ctx_kw</code>. The values are
+            the page's keywords ordered by <code>prominence</code> (most prominent first), capped to the top 10, and
+            sanitized to GAM's value rules (lowercased, reserved characters stripped, truncated to 40 characters). Pass
+            <code>keywordKey</code> to rename the key or <code>maxKeywords</code> to change the cap, or set
+            <code>keywordKey</code> to an empty string to opt out of keyword key-values entirely:
+          </p>
+          <pre><code>// Rename the keyword key and emit only the top 5 keywords:
+loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }, { keywordKey: "kw", maxKeywords: 5 }));
+
+// Opt out of keyword key-values:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { keywordKey: "" }));</code></pre>
           <div class="twelve column code-result" id="kv-result">—</div>
         </div>
       </div>
