@@ -66,7 +66,8 @@ const DEFAULT_KEYWORD_KEY = "ctx_kw";
 const DEFAULT_MAX_KEYWORDS = 10;
 
 // Characters GAM reserves in custom targeting keys and values, stripped from
-// keyword values before emitting. See "Valid key-value entry" in the GAM docs.
+// keyword values before emitting. See "Valid key-value entry" in the GAM docs:
+// https://support.google.com/admanager/answer/10020177
 const GAM_RESERVED_CHARS = /["'=!+#*~^()<>[\],;&]/g;
 
 // GAM custom targeting values are capped at 40 characters.
