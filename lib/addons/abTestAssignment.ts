@@ -134,13 +134,28 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     });
   }
 
-  function setHooks(pbjsInstance: any): void {
+  function registerHooks(pbjsInstance: any): void {
     pbjsInstance.getEvents().forEach((event: any) => {
       if (event.eventType === "auctionEnd") {
         applyToAuctionEvent(event.args);
       }
     });
     pbjsInstance.onEvent("auctionEnd", applyToAuctionEvent);
+  }
+
+  // Mirrors OptablePrebidAnalytics.hookIntoPrebid: when Prebid.js has not
+  // finished loading yet (`onEvent` is not a function), defer registration onto
+  // its command queue so hooks attach once the real global drains `que`.
+  // This lets callers pass a queue-only stub (`{ que: [] }`) safely instead of
+  // having to queue `setHooks` themselves.
+  function setHooks(pbjsInstance: any): void {
+    if (!pbjsInstance) return;
+    if (typeof pbjsInstance.onEvent !== "function") {
+      pbjsInstance.que = pbjsInstance.que || [];
+      pbjsInstance.que.push(() => registerHooks(pbjsInstance));
+    } else {
+      registerHooks(pbjsInstance);
+    }
   }
 
   if (pbjs) {
