@@ -1,3 +1,4 @@
+import { encodeBase64URL } from "./core/base64";
 import { getConsent, inferRegulation } from "./core/regs/consent";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 import type { PageContextConfig } from "./core/context";
@@ -65,6 +66,9 @@ type InitConfig = {
   abTests?: ABTestConfig[];
   // Additional targeting signals to pass to the targeting call
   additionalTargetingSignals?: TargetingSignals;
+  // Forward soft device/browser signals in the 'sig' param. Opt in; also
+  // requires device access consent.
+  forwardSignals?: boolean;
   // Timeout hint for API calls (must include unit, e.g. '100ms', '2s', '1m')
   // When provided, the server will attempt to answer within the given time limit.
   // Some APIs like targeting may return partial responses depending at which stage the timeout occurred.
@@ -106,6 +110,7 @@ type ResolvedConfig = {
   initContextual?: boolean | ((response: ContextualSegmentsResponse) => void);
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
+  forwardSignals?: boolean;
   timeout?: string;
   insecure?: boolean;
 };
@@ -143,6 +148,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     initContextual: init.initContextual,
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
+    forwardSignals: init.forwardSignals,
     timeout: init.timeout,
     insecure: init.insecure,
   };
@@ -161,10 +167,7 @@ function generateSessionID(): string {
   crypto.getRandomValues(arr);
 
   // Equivalent to esnext arr.toBase64({ omitPadding: true, alphabet: "base64url" })
-  return btoa(String.fromCharCode(...arr))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
+  return encodeBase64URL(String.fromCharCode(...arr));
 }
 
 export type {
