@@ -161,7 +161,10 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Send an event to the Witness API when analytics are enabled and sampling passes.
+   * Send an event to the Witness API when analytics are enabled.
+   *
+   * Does not sample: `trackAuctionEnd` already decided that once per auction.
+   * Sampling again here would make the effective rate rate^2.
    * @param eventName - The name of the event to send (e.g. "optable.prebid.auction").
    * @param properties - An object of event properties to include in the payload.
    * @returns A small result object indicating whether the call was disabled or sent.
@@ -169,11 +172,6 @@ class OptablePrebidAnalytics {
   async sendToWitnessAPI(eventName: string, properties: Record<string, any> = {}) {
     if (!this.config.analytics) {
       this.log("Witness API calls disabled - would send:", eventName, properties);
-      return { disabled: true, eventName, properties };
-    }
-
-    if (!this.shouldSample()) {
-      this.log("Event not sampled - skipping Witness API call for:", eventName, properties);
       return { disabled: true, eventName, properties };
     }
 

@@ -163,6 +163,9 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`optableCacheTargeting` (string, defaults: `optable-cache:targeting`)**
   Local storage cache key used to store latest targeting response.
 
+- **`forwardSignals` (boolean, default: `false`)**
+  When set to `true`, forwards soft device/browser signals (language, timezone, screen size, device memory, CPU cores) to the DCN in a `sig` request parameter. Also requires device access consent, so it is a no-op when consent is not granted. A signal the browser does not expose is omitted rather than sent empty.
+
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
 ## Usage Example
@@ -426,30 +429,46 @@ The response has the shape:
 type ContextualSegmentsResponse = {
   classifications: {
     categories: { id: string; name: string; score: number; taxonomy: string }[];
+    keywords: { keyword: string; prominence: number }[];
   };
 };
 ```
 
+`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page. A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
+
 Each call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
 
-> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain an empty `categories` array.
+> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays.
 
 #### Contextual targeting key-values
 
-`ctxTargetingKeyValues(taxonomyKeys?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>` of category ids grouped by taxonomy, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`.
-
-Without arguments, each taxonomy value is used as the key:
+`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under the key `ctx_kw`:
 
 ```javascript
 sdk.ctxTargetingKeyValues();
-// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"] }
+// => {
+//   "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
+//   "ctx_kw": ["advertising", "programmatic", "ad tech"]
+// }
 ```
 
-Pass a `taxonomyKeys` map to rename keys. Only taxonomies present in the map are emitted (filter + rename), which is useful when you only want to set keys you have configured in your ad server:
+Pass a `taxonomyKeys` map to rename category keys. Only taxonomies present in the map are emitted (filter + rename), which is useful when you only want to set keys you have configured in your ad server:
 
 ```javascript
 sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" });
-// => { "foo": ["53", "91", "58", "115", "90", "52"] }
+// => { "foo": ["53", "91", "58", "115", "90", "52"], "ctx_kw": ["advertising", "programmatic", "ad tech"] }
+```
+
+Keyword values are ordered by `prominence` (most prominent first), capped to the top 10, and sanitized to GAM's value rules (lowercased, [reserved characters](https://support.google.com/admanager/answer/10020177) stripped, truncated to the 40-character value limit). Use the `options` argument to change the keyword key (`keywordKey`), change the cap (`maxKeywords`), or opt out of keyword key-values by passing an empty `keywordKey`:
+
+```javascript
+// Rename the keyword key and emit only the top 5 keywords:
+sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" }, { keywordKey: "kw", maxKeywords: 5 });
+// => { "foo": ["53", ...], "kw": ["advertising", "programmatic", "ad tech", "marketing", "audience targeting"] }
+
+// Opt out of keyword key-values entirely:
+sdk.ctxTargetingKeyValues(undefined, { keywordKey: "" });
+// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"] }
 ```
 
 A typical Google Ad Manager activation uses a `loadGAM()` helper:
