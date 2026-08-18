@@ -777,6 +777,19 @@ It's also possible to avoid disabling of the initial ad load by using the SDK's 
 
 Note that the above example fetches locally cached targeting key values and calls `googletag.pubads().setTargeting()` with them. Note also that the usual `targeting()` call is done as well, though its return value is ignored. This ensures that the local targeting cache is kept updated as activations are modified.
 
+### GPT addon helpers
+
+The GPT addon wraps the `googletag` calls shown above. `setGPTTargeting()` merges page-level custom targeting via `googletag.setConfig()`, `setGPTContextualTargeting()` pushes contextual key-values to `pubads().setTargeting()`, and `installGPTSecureSignalsFromEIDs()` derives GAM secure signals from ORTB2 EIDs with source, inserter and matcher filtering. All of them queue on `googletag.cmd`, so they are safe to call before GPT has loaded.
+
+```js
+import "@optable/web-sdk/lib/addons/gpt";
+
+sdk.setGPTTargeting({ optableEnriched: "enriched" });
+sdk.installGPTSecureSignalsFromEIDs(eids, { sources: ["uidapi.com"] });
+```
+
+For the full method list, filtering rules and contextual wiring, see the [GPT addon README](lib/addons/gpt.md).
+
 ### Witnessing ad events
 
 To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.slotrenderendedevent) and [ImpressionViewableEvent](https://developers.google.com/doubleclick-gpt/reference#googletag.events.impressionviewableevent) and send log data to your DCN using the **witness API**, simply install GPT event listeners on the SDK instance as follows:
