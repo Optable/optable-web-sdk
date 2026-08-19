@@ -29,7 +29,7 @@ jobs:
         run: pnpm build-web --mode=production
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-web
           path: browser/dist/**/*
@@ -51,7 +51,7 @@ jobs:
         run: pnpm build-lib
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-lib
           path: lib/dist/**/*
@@ -76,7 +76,7 @@ jobs:
         run: make demo-html
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-demo-vanilla
           path: demos/**/*.html
@@ -93,7 +93,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download web artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: dist-lib
           path: lib/dist
@@ -109,7 +109,7 @@ jobs:
         run: pnpm run build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-react-demo
           path: demos/react/dist/**/*
@@ -131,7 +131,7 @@ jobs:
         run: pnpm run build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-npm-demo
           path: demos/npm/dist/**/*
