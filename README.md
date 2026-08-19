@@ -46,6 +46,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
 - [Passport and Visitor ID](#passport-and-visitor-id)
+- [QA and debug flags](#qa-and-debug-flags)
 - [Multi-Node Targeting Resolver](#multi-node-targeting-resolver)
   - [Usage](#usage)
   - [Rules](#rules)
@@ -1115,6 +1116,33 @@ If the returned value is `null`, the SDK logs a one-time warning per instance to
 
 1. The method was called before the passport was cached (e.g. before `sdk.site()` resolved).
 2. The DCN is configured to not echo the passport in response bodies, in which case the client-side cache is never populated.
+
+## QA and debug flags
+
+Flags are per-session overrides for exercising SDK behaviour that is otherwise decided automatically — forcing a split-test variant, bypassing consent, turning on verbose logging. They are set from the page URL and read back through `getFlags()`.
+
+```
+https://example.com/article?optableDebug&optableForceTargeting
+```
+
+A bare flag name means enabled, `=0` means explicitly off. Flags supplied in the URL are persisted to `sessionStorage`, so a flag set once stays in effect for the rest of the tab session without re-appending the query string.
+
+Use `flagEnabled()` for on/off flags, and `getFlags()` when a flag has more than two meanings:
+
+```typescript
+import { flagEnabled, getFlags } from "@optable/web-sdk/lib/dist/core/flags";
+
+if (flagEnabled("optableDebug")) {
+  console.log("[wrapper]", ...args);
+}
+
+// optableControlGroup is two-state: "1" forces control, "0" forces treatment.
+const controlGroup = getFlags().optableControlGroup;
+```
+
+Flag values are strings, and `"0"` is truthy in JavaScript, so do not test a raw value for truthiness — `if (getFlags().optableDebug)` is `true` for `?optableDebug=0`. Use `flagEnabled()` instead.
+
+These are a QA and debugging facility; none of them should be set on production traffic. For the full flag table and resolution order, see the [flags README](lib/core/flags.md).
 
 ## Multi-Node Targeting Resolver
 
