@@ -53,6 +53,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Return Value](#return-value)
   - [Input Type](#input-type)
 - [Geo-routing](#geo-routing)
+- [Bot detection](#bot-detection)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -1243,6 +1244,34 @@ if (host) {
 `getGeoRouting` returns `null` when the region is not supported, in which case region-specific initialization should be skipped. The default `GeoMap` supports the `US` (alias `NA`), `CA`, `EU` and `AU` region codes, each mapped to its regional edge host; pass a custom `GeoMap` as the second argument for other regions.
 
 Keys are region codes, not country codes. Translating a visitor's country code to a region code (for example `GB`/`UK` → `EU`) is the caller's responsibility — the addon deliberately knows only regions. The caller also supplies the SDK `node`/`site`; this addon only resolves the host.
+
+For the full region table and custom `GeoMap` usage, see the [geo-routing addon README](lib/addons/geo-routing.md).
+
+## Bot detection
+
+The bot detection addon identifies requests coming from known bots and crawlers, so a wrapper can skip work that only makes sense for real visitors — edge calls, identity resolution, analytics samples. It is a pure function over the user agent, with no network calls or storage access.
+
+```typescript
+import { isBot } from "@optable/web-sdk/lib/dist/addons/botDetection";
+
+if (isBot()) {
+  return; // Skip targeting and analytics for this request.
+}
+```
+
+With no argument it reads `navigator.userAgent`; pass a string to test one explicitly.
+
+When the page also runs a Prebid RTD provider, prefer `SkipTargetingForBots()`. It calls `isBot()` and, for a bot, marks targeting as already done so the RTD module short-circuits instead of waiting for a targeting call that will never be made:
+
+```typescript
+import { SkipTargetingForBots } from "@optable/web-sdk/lib/dist/edge/targeting";
+
+if (!SkipTargetingForBots()) {
+  await sdk.targeting();
+}
+```
+
+Matching is substring-based and case-insensitive, covering generic crawlers, headless browsers, HTTP clients and Google's non-search agents. It is deliberately broad and user-agent only — a cost-saving filter, not a fraud signal. For the full match list, see the [bot detection addon README](lib/addons/botDetection.md).
 
 ## Demo Pages
 
