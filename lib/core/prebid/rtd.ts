@@ -1,5 +1,6 @@
 // RTD (Real-Time Data) module for Prebid.js integration
 import { flagEnabled } from "../flags";
+import { consoleLog } from "../log";
 
 // Type definitions
 interface EID {
@@ -144,14 +145,6 @@ function forceGlobalRouting(): void {
   Object.values(defaultEIDSources).forEach((source) => {
     source.routes = ["global"];
   });
-}
-
-// Simple logging utility
-function log(level: string, message: string, ...args: any[]): void {
-  const prefix = "Optable RTD:";
-
-  const logMethod = ["error", "warn", "info"].includes(level) ? level : "log";
-  (console as any)[logMethod](`${prefix} ${message}`, ...args); // eslint-disable-line no-console
 }
 
 // Helper function to get targeting data from cache
@@ -380,7 +373,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     enableLogging: flagEnabled("optableDebug") || (options.enableLogging ?? false),
     log(level: string, message: string, ...args: any[]) {
       if (this.enableLogging) {
-        log(level, message, ...args);
+        consoleLog("Optable RTD:", level, message, ...args);
       }
     },
     eidSources: options.eidSources ?? { ...defaultEIDSources },

@@ -1,5 +1,6 @@
 import type { Regulation } from "./regulations";
 import { inferRegulation } from "./regulations";
+import { flagEnabled } from "../flags";
 import * as gpp from "./gpp";
 import * as tcf from "./tcf";
 
@@ -168,6 +169,17 @@ function computeConsent(defaultReg: Regulation | null, cmp: CMPSignals, conf: CM
 }
 
 function getConsent(defaultReg: Regulation | null, conf: CMPApiConfig = {}): Consent {
+  // QA bypass: grant all permissions and skip the CMP entirely.
+  if (flagEnabled("optableDisableConsent")) {
+    return {
+      reg: null,
+      deviceAccess: true,
+      createProfilesForAdvertising: true,
+      useProfilesForAdvertising: true,
+      measureAdvertisingPerformance: true,
+    };
+  }
+
   const cmp: CMPSignals = {};
   tcf.cmpapi.installFrameProxy();
   gpp.cmpapi.installFrameProxy();
