@@ -24,7 +24,7 @@ isBot("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"); // false
 
 ## Skipping targeting for bots
 
-`SkipTargetingForBots()` is the companion helper for the common case. It calls `isBot()` and, when true, writes `OPTABLE_TARGETING_DONE` to `sessionStorage` so a Prebid RTD provider short-circuits and returns no EIDs instead of waiting on a targeting call that will never come.
+`SkipTargetingForBots()` is the companion helper for the common case. It calls `isBot()` and, when true, writes `OPTABLE_TARGETING_DONE` to `sessionStorage`.
 
 ```js
 import { SkipTargetingForBots } from "@optable/web-sdk/lib/dist/edge/targeting";
@@ -35,7 +35,7 @@ if (!skipped) {
 }
 ```
 
-It returns whether the request was identified as a bot, and is a no-op for real visitors. Prefer it over a bare `isBot()` early-return whenever the page also runs an RTD provider — an early return alone leaves the RTD module waiting for targeting data that never arrives.
+It returns whether the request was identified as a bot, and is a no-op for real visitors. Prefer it over a bare `isBot()` early-return when other code on the page can also trigger targeting.
 
 ## What is matched
 

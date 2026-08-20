@@ -61,8 +61,8 @@ The addon also resolves only the host. The SDK `node` and `site` are separate co
 
 ## API
 
-| Export            | Signature                                              | Description                                                                                         |
-| ----------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `getGeoRouting`   | `(region?: string, geoMap?: GeoMap) => string \| null` | Resolves the edge host for a region code. `null` when the region is missing or absent from the map. |
-| `DEFAULT_GEO_MAP` | `GeoMap`                                               | The built-in region-to-host table. Spread it to extend rather than replace it.                      |
-| `GeoMap`          | `Record<string, string>`                               | Type alias for a region-code-to-host map.                                                           |
+| Export            | Signature                                                          | Description                                                                                         |
+| ----------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `getGeoRouting`   | `(region: string \| undefined, geoMap?: GeoMap) => string \| null` | Resolves the edge host for a region code. `null` when the region is missing or absent from the map. |
+| `DEFAULT_GEO_MAP` | `GeoMap`                                                           | The built-in region-to-host table. Spread it to extend rather than replace it.                      |
+| `GeoMap`          | `Record<string, string>`                                           | Type alias for a region-code-to-host map.                                                           |
