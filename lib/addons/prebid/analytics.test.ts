@@ -1,5 +1,6 @@
 import OptablePrebidAnalytics, { initPrebidAnalytics } from "./analytics";
 import type OptableSDK from "../../sdk";
+import { resetFlags } from "../../core/flags";
 
 // Mock the SDK_WRAPPER_VERSION global
 declare global {
@@ -31,6 +32,8 @@ describe("OptablePrebidAnalytics", () => {
       document.removeEventListener("visibilitychange", (analytics as any).handleVisibilityChange);
     }
     jest.clearAllMocks();
+    sessionStorage.clear();
+    resetFlags();
   });
 
   describe("Class instantiation", () => {
@@ -146,6 +149,13 @@ describe("OptablePrebidAnalytics", () => {
       expect(analytics.shouldSample()).toBe(false);
 
       mockRandom.mockRestore();
+    });
+
+    it("should return true when optableDebug flag is set, even with samplingRate 0", () => {
+      sessionStorage.setItem("optableDebug", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(true);
     });
   });
 

@@ -3,6 +3,7 @@
 import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
 import { buildRequest } from "../../core/network";
+import { getFlags } from "../../core/flags";
 
 import * as Bowser from "bowser";
 
@@ -137,6 +138,7 @@ class OptablePrebidAnalytics {
    * @returns true if the event should be sampled and analytics calls may proceed.
    */
   shouldSample(): boolean {
+    if (getFlags().optableDebug) return true;
     if (this.config.samplingRate! <= 0) return false;
     if (this.config.samplingRate! >= 1) return true;
 
