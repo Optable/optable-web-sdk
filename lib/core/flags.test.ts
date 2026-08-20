@@ -104,10 +104,9 @@ describe("getFlags - URL flag persistence", () => {
 
   it("does not write flags that were only read back from sessionStorage", () => {
     sessionStorage.setItem("optableDebug", "1");
-    const setItem = jest.spyOn(Storage.prototype, "setItem");
+    (sessionStorage.setItem as jest.Mock).mockClear();
     getFlags();
-    expect(setItem).not.toHaveBeenCalled();
-    setItem.mockRestore();
+    expect(sessionStorage.setItem).not.toHaveBeenCalled();
   });
 });
 
@@ -131,6 +130,12 @@ describe("flagEnabled", () => {
   });
 
   it("is false when the flag is absent", () => {
+    expect(flagEnabled("optableDebug")).toBe(false);
+  });
+
+  it("is false for an empty value in sessionStorage", () => {
+    sessionStorage.setItem("optableDebug", "");
+    resetFlags();
     expect(flagEnabled("optableDebug")).toBe(false);
   });
 

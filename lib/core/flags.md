@@ -27,7 +27,7 @@ sessionStorage.removeItem("optableDebug");
 
 Two accessors, and picking the right one matters.
 
-**`flagEnabled(key)`** — for on/off flags. Returns `true` when the flag is present and not `"0"`:
+**`flagEnabled(key)`** — for on/off flags. Returns `true` when the flag carries a value that is not `"0"`. An empty value counts as disabled:
 
 ```js
 import { flagEnabled } from "@optable/web-sdk/lib/dist/core/flags";

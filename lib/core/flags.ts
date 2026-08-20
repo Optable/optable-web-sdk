@@ -70,17 +70,20 @@ export function resetFlags(): void {
 }
 
 /*
- * True when a flag is present and not explicitly disabled.
+ * True when a flag carries a value and is not explicitly disabled.
  *
  * Flags carry string values ("?optableDebug" and "?optableDebug=1" both yield
  * "1"), so a bare truthiness test treats the string "0" as enabled. Callers
  * that only care whether a flag is on should use this rather than testing the
  * raw value, so "?optableDebug=0" turns the flag off as a reader would expect.
  *
+ * An empty value counts as disabled. A URL cannot produce one, but sessionStorage
+ * written by other code can.
+ *
  * Flags with more than two states — optableControlGroup, where "1" and "0"
  * select different variants — should read getFlags() and compare explicitly.
  */
 export function flagEnabled(key: FlagKey): boolean {
   const value = getFlags()[key];
-  return value !== undefined && value !== "0";
+  return !!value && value !== "0";
 }
