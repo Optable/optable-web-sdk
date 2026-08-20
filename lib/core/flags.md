@@ -54,20 +54,20 @@ if (controlGroup === "1") {
 
 ## Available flags
 
-| Flag                        | Read by                  | Effect                                                                                |
-| --------------------------- | ------------------------ | ------------------------------------------------------------------------------------- |
-| `optableDebug`              | `debugLog`, RTD module   | Verbose logging.                                                                      |
-| `optableDisableConsent`     | `getConsent`             | Bypass the CMP and treat all permissions as granted.                                  |
-| `optableControlGroup`       | `setupAB`                | `1` forces the control variant, `0` forces treatment. Two-state — read the raw value. |
-| `optableForceTargeting`     | wrapper code             | Re-run targeting even when a session guard says it already ran.                       |
-| `optableForceTokenize`      | wrapper code             | Re-run tokenize even when a session guard says it already ran.                        |
-| `optableForceGlobalRouting` | `buildRTD`               | Route every EID to `global` instead of per-bidder.                                    |
-| `optableForceSkipMerge`     | `buildRTD`               | Skip merging EIDs into the auction entirely.                                          |
-| `optableResolve1P`          | wrapper code             | Resolve using a first-party test identifier.                                          |
-| `optableResolve3P`          | wrapper code             | Resolve using a third-party test IP.                                                  |
-| `optableEnableAnalytics`    | wrapper code             | Force analytics on, ignoring the sampling rate.                                       |
-| `optableResolveId5`         | wrapper code             | Return a placeholder ID5 value without loading the ID5 API.                           |
-| `optableResolveID5ID`       | wrapper code             | Return a specific ID5 value without loading the ID5 API.                              |
+| Flag                        | Read by                | Effect                                                                                |
+| --------------------------- | ---------------------- | ------------------------------------------------------------------------------------- |
+| `optableDebug`              | `debugLog`, RTD module | Verbose logging.                                                                      |
+| `optableDisableConsent`     | `getConsent`           | Bypass the CMP and treat all permissions as granted.                                  |
+| `optableControlGroup`       | `setupAB`              | `1` forces the control variant, `0` forces treatment. Two-state — read the raw value. |
+| `optableForceTargeting`     | wrapper code           | Re-run targeting even when a session guard says it already ran.                       |
+| `optableForceTokenize`      | wrapper code           | Re-run tokenize even when a session guard says it already ran.                        |
+| `optableForceGlobalRouting` | `buildRTD`             | Route every EID to `global` instead of per-bidder.                                    |
+| `optableForceSkipMerge`     | `buildRTD`             | Skip merging EIDs into the auction entirely.                                          |
+| `optableResolve1P`          | wrapper code           | Resolve using a first-party test identifier.                                          |
+| `optableResolve3P`          | wrapper code           | Resolve using a third-party test IP.                                                  |
+| `optableEnableAnalytics`    | wrapper code           | Force analytics on, ignoring the sampling rate.                                       |
+| `optableResolveId5`         | wrapper code           | Return a placeholder ID5 value without loading the ID5 API.                           |
+| `optableResolveID5ID`       | wrapper code           | Return a specific ID5 value without loading the ID5 API.                              |
 
 "Wrapper code" means the flag is recognised and persisted by the SDK, but acted on by the bundle built around it. Unknown query parameters are ignored — only the keys above are parsed.
 
