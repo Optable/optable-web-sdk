@@ -26,4 +26,4 @@ window.optable.cmd = new OptableCommands(window.optable.cmd || []);
 
 The constructor drains everything queued while the script was loading. After the swap, `push()` executes its argument immediately and returns its value.
 
-Non-function entries in the pre-load queue are ignored, and a missing or non-array queue is tolerated, so a page that clobbers the stub cannot break wrapper initialization.
+Non-function entries in the pre-load queue are ignored, a missing or non-array queue is tolerated, and a queued function that throws is logged to the console without stopping the rest of the queue — so a page that clobbers the stub or queues a broken function cannot break wrapper initialization.

@@ -6,12 +6,17 @@ class OptableCommands {
   constructor(cmds?: unknown) {
     if (Array.isArray(cmds)) {
       cmds.forEach((cmd) => {
-        if (typeof cmd === "function") cmd();
+        if (typeof cmd !== "function") return;
+        try {
+          cmd();
+        } catch (e) {
+          console.error(e); // eslint-disable-line no-console
+        }
       });
     }
   }
 
-  push(cmd: () => unknown): unknown {
+  push<T>(cmd: () => T): T {
     return cmd();
   }
 }

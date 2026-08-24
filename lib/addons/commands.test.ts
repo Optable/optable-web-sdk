@@ -13,6 +13,24 @@ describe("OptableCommands", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it("logs a throwing queued function and continues draining", () => {
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const after = jest.fn();
+    const boom = new Error("boom");
+    expect(
+      () =>
+        new OptableCommands([
+          () => {
+            throw boom;
+          },
+          after,
+        ])
+    ).not.toThrow();
+    expect(after).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(boom);
+    spy.mockRestore();
+  });
+
   it("tolerates a missing or non-array queue", () => {
     expect(() => new OptableCommands()).not.toThrow();
     expect(() => new OptableCommands(undefined)).not.toThrow();
