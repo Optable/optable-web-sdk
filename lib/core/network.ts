@@ -2,7 +2,7 @@ import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 import { deviceSignals } from "./signals";
-import { applyOISResponse, oisHeaderName, oisRequestID } from "./ois";
+import { applyOISResponse, oisHeaderName, oisParamName, oisRequestID } from "./ois";
 
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { host, cookies, insecure } = config;
@@ -74,7 +74,14 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   // Replay a stored OIS id so the node still recognizes this browser where the
   // OPTABLE_OID cookie is blocked. The node reads the cookie first, so this
   // never overrides a cookie that did arrive.
+  //
+  // The `ois` param is a separate opt-in: the node only returns the id to a
+  // caller that asks for it. It is set on every request, including the ones that
+  // do not replay the header, because the first response is what bootstraps the
+  // stored id. A query param keeps the request CORS-simple, unlike the header.
   if (config.ois && config.consent.deviceAccess) {
+    url.searchParams.set(oisParamName, "1");
+
     const oisID = oisRequestID(config, url.pathname);
     if (oisID) {
       requestInit.headers = new Headers(requestInit.headers);

@@ -1210,7 +1210,11 @@ The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>`, al
 
 Storing the cookie's own value is what makes the identity survive third-party cookies being turned off later: the fallback replays the same ID the cookie was carrying, rather than introducing a new one. The `minted` rule is what keeps the ID stable — a mint arrives on every request to an endpoint that does not replay the header, so treating it as authoritative would churn the ID on each page load.
 
-The header is sent on `/identify`, `/sync`, `/uid2/token`, `/v2/targeting`, `/witness` and `/profile`. It is deliberately **not** sent on `/config`: a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load.
+Two things go on the wire. An `ois=1` query parameter opts into receiving the ID: the DCN returns it only to a caller that asks, because it is a stable cross-site identifier — the same reason the passport is echoed in-band only when the client selects query-string transport. That parameter is sent on every request, since the first response is what bootstraps the stored ID.
+
+The `X-Optable-OID` header, which replays a stored ID, is sent only on `/identify`, `/sync`, `/uid2/token`, `/v2/targeting`, `/witness` and `/profile`. It is deliberately **not** sent on `/config`: a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load. A query parameter has no such cost, which is why the opt-in and the replay are carried differently.
+
+The DCN also withholds the ID without read consent, so a visitor whose consent does not permit identity reads gets no ID and the SDK stores nothing.
 
 The DCN reads the cookie **before** the header, so replaying an ID never overrides a cookie that did arrive. The SDK always sends the header when it holds an ID and lets the DCN arbitrate.
 

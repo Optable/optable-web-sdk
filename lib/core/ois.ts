@@ -19,6 +19,12 @@ import { generateOISKeys } from "./storage-keys";
 // Carries a stored id back to the edge. Already allowed by the edge CORS policy.
 const oisHeaderName = "X-Optable-OID";
 
+// Opts into receiving the resolved OIS id in the response body. The edge returns
+// the id only to a caller that asks for it, because it is a stable cross-site
+// identifier — the same reason the passport is echoed in-band only when the
+// client selected query-string transport.
+const oisParamName = "ois";
+
 // Dispatched on window whenever the stored id changes, so a page can react
 // without polling. Mirrors the targeting cache-refresh event.
 const oisChangeEventName = "optable-ois:change";
@@ -236,6 +242,7 @@ function notifyChange(config: ResolvedConfig): void {
 
 export {
   oisHeaderName,
+  oisParamName,
   oisChangeEventName,
   applyOISResponse,
   oisRequestID,

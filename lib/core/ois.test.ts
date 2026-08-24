@@ -194,6 +194,40 @@ describe("getOISState transport", () => {
   });
 });
 
+describe("buildRequest OIS opt-in param", () => {
+  // The DCN returns the id only to a caller that asks for it, and the first
+  // response is what bootstraps storage — so the param must be sent even on
+  // endpoints that do not replay the header, and before anything is stored.
+  it.each(["/config", "/identify", "/v2/targeting"])("opts in on %s", (path) => {
+    const request = buildRequest(path, baseConfig, { method: "GET" });
+
+    expect(new URL(request.url).searchParams.get("ois")).toBe("1");
+  });
+
+  it("opts in with nothing stored yet, so the id can bootstrap", () => {
+    const request = buildRequest("/config", baseConfig, { method: "GET" });
+
+    expect(new URL(request.url).searchParams.get("ois")).toBe("1");
+    expect(request.headers.get("X-Optable-OID")).toBeNull();
+  });
+
+  it("does not opt in unless enabled", () => {
+    const config = { ...baseConfig, ois: undefined } as unknown as ResolvedConfig;
+
+    const request = buildRequest("/identify", config, { method: "POST" });
+
+    expect(new URL(request.url).searchParams.has("ois")).toBe(false);
+  });
+
+  it("does not opt in without device access consent", () => {
+    const config = { ...baseConfig, consent: { deviceAccess: false } } as ResolvedConfig;
+
+    const request = buildRequest("/identify", config, { method: "POST" });
+
+    expect(new URL(request.url).searchParams.has("ois")).toBe(false);
+  });
+});
+
 describe("buildRequest OIS header", () => {
   it("sends a stored id on a replay path", () => {
     seed("send-me", "cookie");
