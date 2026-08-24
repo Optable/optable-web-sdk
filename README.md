@@ -1273,6 +1273,18 @@ if (!SkipTargetingForBots()) {
 
 Matching is substring-based and case-insensitive, covering generic crawlers, headless browsers, HTTP clients and Google's non-search agents. It is deliberately broad and user-agent only — a cost-saving filter, not a fraud signal. For the full match list, see the [bot detection addon README](lib/addons/botDetection.md).
 
+## Command queue
+
+The command queue addon lets a page interact with a wrapper loaded via an async script tag before the script has arrived, in the style of `googletag.cmd` and `pbjs.que`. The page queues functions on a plain-array stub; the wrapper replaces the stub with an instance, which drains the queue and executes later pushes immediately.
+
+```typescript
+import { OptableCommands } from "@optable/web-sdk/lib/dist/addons/commands";
+
+window.optable.cmd = new OptableCommands(window.optable.cmd || []);
+```
+
+For the page-side stub and behaviour details, see the [command queue addon README](lib/addons/commands.md).
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
