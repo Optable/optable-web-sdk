@@ -46,6 +46,11 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
 - [Passport and Visitor ID](#passport-and-visitor-id)
+- [Optable Identity System (OIS)](#optable-identity-system-ois)
+  - [Enabling OIS](#enabling-ois)
+  - [Reading the OIS ID](#reading-the-ois-id)
+  - [How the ID is stored and replayed](#how-the-id-is-stored-and-replayed)
+  - [Which transport is in use](#which-transport-is-in-use)
 - [QA and debug flags](#qa-and-debug-flags)
 - [Multi-Node Targeting Resolver](#multi-node-targeting-resolver)
   - [Usage](#usage)
@@ -167,6 +172,9 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 
 - **`forwardSignals` (boolean, default: `false`)**
   When set to `true`, forwards soft device/browser signals (language, timezone, screen size, device memory, CPU cores) to the DCN in a `sig` request parameter. Also requires device access consent, so it is a no-op when consent is not granted. A signal the browser does not expose is omitted rather than sent empty.
+
+- **`ois` (boolean, default: `false`)**
+  When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK persists the OIS ID the DCN reports and replays it on subsequent requests, so the browser keeps one identity where the third-party `OPTABLE_OID` cookie is unavailable. Requires an OIS-enabled DCN node and device access consent, so it is a no-op otherwise.
 
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
@@ -1118,6 +1126,104 @@ If the returned value is `null`, the SDK logs a one-time warning per instance to
 1. The method was called before the passport was cached (e.g. before `sdk.site()` resolved).
 2. The DCN is configured to not echo the passport in response bodies, in which case the client-side cache is never populated.
 
+## Optable Identity System (OIS)
+
+The Optable Identity System is a cross-tenant identity system. On a DCN node configured to use it, the OIS ID replaces the [visitor ID](#passport-and-visitor-id) as the canonical profile identifier for collected events — the DCN makes that substitution itself, based on the node's identity selector.
+
+The DCN normally carries the OIS ID in an `OPTABLE_OID` cookie. That cookie is scoped to `Domain=optable.co` with `SameSite=None`, which makes it a **third-party** cookie for a publisher page, so it is dropped wherever cross-site cookies are blocked (Safari/ITP, Firefox ETP, Chrome's third-party cookie restrictions). When it is dropped, the DCN cannot recognize the browser and mints a throwaway ID on every request.
+
+Enabling `ois` closes that gap: the SDK stores the ID the DCN reports and replays it on an `X-Optable-OID` request header, so the browser presents the same identity whether or not the cookie survives.
+
+> :warning: **Requires an OIS-enabled node.** On a node that does not use OIS the DCN returns no OIS ID and the option is inert. Ask your Optable contact whether your node has OIS enabled.
+
+### Enabling OIS
+
+```javascript
+const sdk = new OptableSDK({
+  host: "dcn.customer.com",
+  site: "my-site",
+  ois: true,
+  // Optional, but recommended alongside OIS: lets the DCN derive a
+  // fingerprint-based ID for browsers with no usable storage at all.
+  forwardSignals: true,
+});
+```
+
+Or with a script tag:
+
+```html
+<script type="text/javascript">
+  window.optable = window.optable || { cmd: [] };
+
+  optable.cmd.push(function () {
+    optable.instance = new optable.SDK({
+      host: "dcn.customer.com",
+      site: "my-site",
+      ois: true,
+      forwardSignals: true,
+    });
+  });
+</script>
+<script async src="https://cdn.optable.co/web-sdk/vX.Y.Z/sdk.js"></script>
+```
+
+Nothing is stored and no header is sent without device access consent, so the option is also a no-op when consent has not been granted.
+
+### Reading the OIS ID
+
+```javascript
+const id = sdk.oisId(); // string | null — the stored OIS ID
+const state = sdk.oisState(); // full state, including which transport carried it
+sdk.oisClear(); // forget the stored ID; the DCN issues a new one on the next call
+```
+
+`oisState()` returns:
+
+```typescript
+type OISState = {
+  id: string | null;
+  source: "cookie" | "header" | "minted" | null; // transport the DCN last resolved from
+  transport: "cookie" | "localstorage" | "unknown";
+  storageKey: string;
+  storageWritable: boolean | null; // null until a write has been attempted
+  updatedAt: number | null;
+};
+```
+
+The SDK dispatches an `optable-ois:change` event on `window` whenever the stored ID changes, so a page can react without polling:
+
+```javascript
+window.addEventListener("optable-ois:change", (e) => console.log(e.detail));
+```
+
+Like `passport()` and `visitorId()`, these return `null` until a DCN response has reported an ID. By default (`initPassport: true`) the `/config` call made at construction time is the first response to carry one.
+
+### How the ID is stored and replayed
+
+The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>`, alongside the transport the DCN reported it from. The DCN returns that transport as `oid_source`, and the SDK uses it to decide whether to overwrite what it already holds:
+
+| `oid_source` | Meaning                                              | Action                                   |
+| ------------ | ---------------------------------------------------- | ---------------------------------------- |
+| `cookie`     | The `OPTABLE_OID` cookie reached the DCN             | Always stored                            |
+| `header`     | The DCN used the ID the SDK replayed                 | Nothing to do                            |
+| `minted`     | Neither transport carried an ID, so the DCN made one | Stored **only** if nothing is stored yet |
+
+Storing the cookie's own value is what makes the identity survive third-party cookies being turned off later: the fallback replays the same ID the cookie was carrying, rather than introducing a new one. The `minted` rule is what keeps the ID stable — a mint arrives on every request to an endpoint that does not replay the header, so treating it as authoritative would churn the ID on each page load.
+
+The header is sent on `/identify`, `/sync`, `/uid2/token`, `/v2/targeting`, `/witness` and `/profile`. It is deliberately **not** sent on `/config`: a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load.
+
+The DCN reads the cookie **before** the header, so replaying an ID never overrides a cookie that did arrive. The SDK always sends the header when it holds an ID and lets the DCN arbitrate.
+
+The `ois_id` and `oid_source` fields are removed from the response payload once consumed, for the same reason the passport is: a targeting response is handed to ad servers and written to the targeting cache.
+
+### Which transport is in use
+
+`OPTABLE_OID` is `HttpOnly`, so JavaScript can never read it and a browser cannot observe for itself whether the cookie was sent. `transport` is therefore derived from what the DCN reports, not guessed:
+
+- **`cookie`** — the cookie reached the DCN on the last call.
+- **`localstorage`** — the cookie did not arrive and the DCN used the replayed ID.
+- **`unknown`** — nothing stored yet, or the DCN minted an ID. A mint happens both on a first visit and when the cookie is blocked, and those are indistinguishable from the browser, so this case does not claim either.
+
 ## QA and debug flags
 
 Flags are per-session overrides for exercising SDK behaviour that is otherwise decided automatically — forcing a split-test variant, bypassing consent, turning on verbose logging. They are set from the page URL and read back through `getFlags()`.
@@ -1304,3 +1410,5 @@ docker-compose up
 Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
+
+The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) shows the OIS ID assigned to the browser, which transport carried it, and the decoded `sig` signals, and logs the `X-Optable-OID` header sent on each call. It requires an OIS-enabled DCN node. Because the demo is served from a different site than the DCN, `OPTABLE_OID` is a third-party cookie there — which is what makes it a realistic test: allow third-party cookies to see the `cookie` transport, block them to see the `localstorage` fallback take over while the ID stays the same.

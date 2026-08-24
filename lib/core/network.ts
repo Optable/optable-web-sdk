@@ -2,6 +2,7 @@ import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 import { deviceSignals } from "./signals";
+import { applyOISResponse, oisHeaderName, oisRequestID } from "./ois";
 
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { host, cookies, insecure } = config;
@@ -70,6 +71,17 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     requestInit.headers.set("X-Forwarded-For", config.mockedIP);
   }
 
+  // Replay a stored OIS id so the node still recognizes this browser where the
+  // OPTABLE_OID cookie is blocked. The node reads the cookie first, so this
+  // never overrides a cookie that did arrive.
+  if (config.ois && config.consent.deviceAccess) {
+    const oisID = oisRequestID(config, url.pathname);
+    if (oisID) {
+      requestInit.headers = new Headers(requestInit.headers);
+      requestInit.headers.set(oisHeaderName, oisID);
+    }
+  }
+
   const request = new Request(url.toString(), requestInit);
 
   return request;
@@ -95,6 +107,13 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     // the `passport` attribute here, it may end up sent as targeting data to ad servers.
     // Not the end of the world, but something we want to avoid due to passport size.
     delete data.passport;
+  }
+
+  // Persist the OIS id the node reported and strip it from the payload, for the
+  // same reason as the passport above: a targeting response is handed to ad
+  // servers and written to the targeting cache.
+  if (config.ois && data && typeof data === "object") {
+    applyOISResponse(config, data);
   }
 
   return data;

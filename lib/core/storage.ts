@@ -4,6 +4,7 @@ import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
 import {
   generatedPairKeys,
+  generateOISKeys,
   generatePassportKeys,
   generateSiteKeys,
   generateTargetingKeys,
@@ -17,6 +18,7 @@ class LocalStorage {
   private targetingKeys: StorageKeys;
   private siteKeys: StorageKeys;
   private pairKeys: StorageKeys;
+  private oisKeys: StorageKeys;
   private storage: LocalStorageProxy;
 
   constructor(private config: ResolvedConfig) {
@@ -24,6 +26,7 @@ class LocalStorage {
     this.targetingKeys = generateTargetingKeys(config);
     this.siteKeys = generateSiteKeys(config);
     this.pairKeys = generatedPairKeys();
+    this.oisKeys = generateOISKeys(config);
     this.storage = new LocalStorageProxy(this.config.consent);
   }
 
@@ -53,6 +56,20 @@ class LocalStorage {
     } catch {
       return null;
     }
+  }
+
+  // The OIS envelope is stored as an opaque string; lib/core/ois.ts owns its
+  // shape and tolerates a malformed value.
+  getOIS(): string | null {
+    return this.readStorageKeys(this.oisKeys);
+  }
+
+  setOIS(envelope: string) {
+    this.writeToStorageKeys(this.oisKeys, envelope);
+  }
+
+  clearOIS() {
+    this.clearStorageKeys(this.oisKeys);
   }
 
   getTargeting(): TargetingResponse | null {

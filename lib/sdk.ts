@@ -30,6 +30,8 @@ import {
 import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 import { LocalStorage } from "./core/storage";
+import { clearOISID, getOISID, getOISState } from "./core/ois";
+import type { OISState } from "./core/ois";
 
 class OptableSDK {
   public static version = buildInfo.version;
@@ -42,6 +44,7 @@ class OptableSDK {
   private contextualResponse: ContextualSegmentsResponse | null = null;
   private passportNullWarned: boolean = false;
   private visitorIdNullWarned: boolean = false;
+  private oisNullWarned: boolean = false;
 
   constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
@@ -127,6 +130,33 @@ class OptableSDK {
       );
     }
     return value;
+  }
+
+  // The OIS id currently stored for this node, or null when the node has not
+  // reported one yet. Requires the `ois` config option.
+  oisId(): string | null {
+    const value = getOISID(this.dcn);
+    if (value === null && this.dcn.ois && !this.oisNullWarned) {
+      this.oisNullWarned = true;
+      console.warn(
+        "[Optable] oisId() returned null. The OIS id is cached in localStorage once the DCN returns one. " +
+          "A call before initialization (await sdk.site() or sdk.targeting()) may return null, and a node that is " +
+          "not OIS-enabled never returns one."
+      );
+    }
+    return value;
+  }
+
+  // The stored OIS id plus the transport the node last resolved it from. Useful
+  // for confirming whether the OPTABLE_OID cookie or the localStorage fallback
+  // is carrying the id.
+  oisState(): OISState {
+    return getOISState(this.dcn);
+  }
+
+  // Forgets the stored OIS id. The node issues a new one on the next call.
+  oisClear(): void {
+    clearOISID(this.dcn);
   }
 
   targetingClearCache(): void {
