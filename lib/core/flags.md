@@ -85,7 +85,7 @@ Both storage steps are wrapped in `try`/`catch`, so a browser with `sessionStora
 
 ## Using flags from a wrapper bundle
 
-A wrapper does not need its own query-string parser. Call `getFlags()` once during initialization — that parses the URL and persists it — then read flags wherever needed:
+A wrapper does not need its own query-string parser. Call `getFlags()` once during initialization to parse the URL and persist every known flag for the session, then read flags wherever needed:
 
 ```js
 import { getFlags, flagEnabled } from "@optable/web-sdk/lib/dist/core/flags";
@@ -101,6 +101,18 @@ function log(...args) {
 
 Call it before anything that reads a flag. Addons that read flags internally — `setupAB` and `buildRTD` — call `getFlags()` themselves, so ordering only matters for a wrapper's own reads.
 
+A bundle with flags of its own that don't belong in the shared key list can additionally call `persistFlagsFromURL()` with those keys. They follow the same URL rules (a bare key means `"1"`) and are persisted to `sessionStorage` for the bundle to read back directly — they do not appear in the typed `Flags` object:
+
+```js
+import { persistFlagsFromURL } from "@optable/web-sdk/lib/dist/core/flags";
+
+persistFlagsFromURL(["optableMyBundleFlag"]);
+
+sessionStorage.getItem("optableMyBundleFlag"); // "1" after ?optableMyBundleFlag
+```
+
+Because `flagEnabled()` only accepts known keys, a bundle reading such a key back must apply the same convention itself: treat `"0"` (and an empty value) as disabled, not just test truthiness — `?optableMyBundleFlag=0` stores the string `"0"`.
+
 ## Testing
 
 `resetFlags()` clears the memoized result so the next `getFlags()` re-parses. It is intended for tests, which need to simulate successive page loads:
@@ -113,10 +125,11 @@ expect(flagEnabled("optableDebug")).toBe(true);
 
 ## API
 
-| Export        | Signature                          | Description                                                                  |
-| ------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
-| `getFlags`    | `() => Flags`                      | Parsed flags for this page load. Memoized; persists URL flags on first call. |
-| `flagEnabled` | `(key: FlagKey) => boolean`        | True when a flag is present and not `"0"`. Use for on/off flags.             |
-| `resetFlags`  | `() => void`                       | Clears the memoized result so the next `getFlags()` re-parses.               |
-| `FlagKey`     | union of flag names                | Type of a recognised flag key.                                               |
-| `Flags`       | `Partial<Record<FlagKey, string>>` | Type of the parsed flag object.                                              |
+| Export                | Signature                                             | Description                                                                                            |
+| --------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `getFlags`            | `() => Flags`                                         | Parsed flags for this page load. Memoized; persists URL flags on first call.                           |
+| `flagEnabled`         | `(key: FlagKey) => boolean`                           | True when a flag is present and not `"0"`. Use for on/off flags.                                       |
+| `resetFlags`          | `() => void`                                          | Clears the memoized result so the next `getFlags()` re-parses.                                         |
+| `persistFlagsFromURL` | `(keys: readonly string[]) => Record<string, string>` | Parses + persists the given bundle-specific keys from the URL (persist-only); returns the values read. |
+| `FlagKey`             | union of flag names                                   | Type of a recognised flag key.                                                                         |
+| `Flags`               | `Partial<Record<FlagKey, string>>`                    | Type of the parsed flag object.                                                                        |

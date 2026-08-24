@@ -16,29 +16,36 @@ const FLAG_KEYS = [
 export type FlagKey = (typeof FLAG_KEYS)[number];
 export type Flags = Partial<Record<FlagKey, string>>;
 
-function parseFlags(): Flags {
-  const flags: Flags = {};
+// Reads the given keys from the URL query string (a bare key means "1") and
+// persists them to sessionStorage for the rest of the tab session. Exported
+// for wrapper bundles with keys of their own outside FLAG_KEYS.
+export function persistFlagsFromURL(keys: readonly string[]): Record<string, string> {
+  const found: Record<string, string> = {};
 
   try {
     const params = new URLSearchParams(window.location.search);
-    for (const key of FLAG_KEYS) {
+    for (const key of keys) {
       if (params.has(key)) {
-        flags[key] = params.get(key) || "1";
+        found[key] = params.get(key) || "1";
       }
     }
   } catch {
     // URL params unavailable
   }
 
-  // Persist URL-supplied flags so a flag set once survives navigation within
-  // the session, rather than only applying to the page it was set on.
   try {
-    for (const key of Object.keys(flags) as FlagKey[]) {
-      sessionStorage.setItem(key, flags[key] as string);
+    for (const key of Object.keys(found)) {
+      sessionStorage.setItem(key, found[key]);
     }
   } catch {
     // sessionStorage unavailable
   }
+
+  return found;
+}
+
+function parseFlags(): Flags {
+  const flags: Flags = persistFlagsFromURL(FLAG_KEYS);
 
   try {
     for (const key of FLAG_KEYS) {
