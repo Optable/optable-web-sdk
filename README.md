@@ -1489,6 +1489,21 @@ On Prebid versions without the fix for [prebid/Prebid.js#15562](https://github.c
 
 For behavior details and options, see the [pubProvidedId README](lib/core/prebid/pubProvidedId.md).
 
+## Static mappings
+
+The static mappings helper applies a wrapper's customer configuration defaults onto `window.optable`, so values a publisher sets on the page before the wrapper script loads always win. Plain-object config sections merge recursively; any other default only fills in a value the publisher left `null` or `undefined`.
+
+```typescript
+import { setStaticMappings } from "@optable/web-sdk/lib/dist/core/staticMappings";
+
+setStaticMappings({
+  defaultSite: "customer-sdk",
+  analytics: { tenant: "customer", sample: 0.1 },
+});
+```
+
+For the merge rules and a full wrapper example, see the [static mappings README](lib/core/staticMappings.md).
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
