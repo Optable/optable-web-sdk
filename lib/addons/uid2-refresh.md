@@ -7,11 +7,21 @@ Refreshes an issued UID2 token against the UID2 operator, without a round-trip t
 ```js
 import { refreshUid2Token } from "@optable/web-sdk/lib/dist/addons/uid2-refresh";
 
-const body = await refreshUid2Token(refreshToken, refreshResponseKey);
+const result = await refreshUid2Token(refreshToken, refreshResponseKey);
+if (result.status === "success") {
+  // result.body: advertising_token, refresh_token, refresh_response_key,
+  //              refresh_from, refresh_expires, identity_expires
+}
 ```
 
-POSTs the refresh token to `https://prod.uidapi.com/v2/token/refresh`. The response is `base64(12-byte nonce || AES-GCM ciphertext)`, decrypted with the `refresh_response_key` issued alongside the refresh token.
+POSTs the refresh token to the UID2 operator — `https://prod.uidapi.com/v2/token/refresh` by default, overridable via a third `endpoint` argument. The response is `base64(12-byte nonce || AES-GCM ciphertext)`, decrypted with the `refresh_response_key` issued alongside the refresh token.
 
-Returns the decrypted body — `advertising_token`, `refresh_token`, `refresh_response_key`, `refresh_from`, `refresh_expires`, `identity_expires` — or `null` when the operator rejects the request, the user has opted out, or the response carries no `advertising_token`. A malformed response throws; error policy stays with the caller.
+Returns one of:
+
+- `{ status: "success", body }` — the validated new token bundle
+- `{ status: "optout" }` — the user opted out of UID2; the caller should drop the cached token
+- `{ status: "error", reason }` — non-OK response, unexpected operator status, or a success payload missing required fields
+
+A response that cannot be decoded or decrypted throws; error policy stays with the caller.
 
 Cache updates and the stale-token refresh loop ship separately.

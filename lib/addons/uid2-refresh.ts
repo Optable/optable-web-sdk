@@ -9,22 +9,49 @@ type Uid2RefData = {
   identity_expires: number;
 };
 
+type Uid2RefreshResult =
+  | { status: "success"; body: Uid2RefData }
+  | { status: "optout" }
+  | { status: "error"; reason: string };
+
 const UID2_REFRESH_ENDPOINT = "https://prod.uidapi.com/v2/token/refresh";
+
+function isUid2RefData(body: unknown): body is Uid2RefData {
+  const b = body as Record<string, unknown> | null | undefined;
+  return (
+    !!b &&
+    typeof b.advertising_token === "string" &&
+    typeof b.refresh_token === "string" &&
+    typeof b.refresh_response_key === "string" &&
+    typeof b.refresh_from === "number" &&
+    typeof b.refresh_expires === "number" &&
+    typeof b.identity_expires === "number"
+  );
+}
 
 // Refresh responses are base64(12-byte nonce || AES-GCM ciphertext), keyed by
 // the refresh_response_key issued alongside the refresh token.
 //
-// Returns null when the operator rejects the request, the user has opted out,
-// or the response carries no advertising_token. A malformed response throws;
-// error policy stays with the caller.
-async function refreshUid2Token(refreshToken: string, refreshResponseKey: string): Promise<Uid2RefData | null> {
-  const response = await fetch(UID2_REFRESH_ENDPOINT, {
+// A response that cannot be decoded or decrypted throws; error policy stays
+// with the caller.
+async function refreshUid2Token(
+  refreshToken: string,
+  refreshResponseKey: string,
+  endpoint: string = UID2_REFRESH_ENDPOINT
+): Promise<Uid2RefreshResult> {
+  const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "text/plain" },
     body: refreshToken,
   });
   if (!response.ok) {
-    return null;
+    // Error responses (400/401) are unencrypted JSON carrying a documented
+    // status: client_error, invalid_token, expired_token or unauthorized.
+    const reason = await response
+      .text()
+      .then((text) => (JSON.parse(text)?.status as string) || `HTTP ${response.status}`)
+      .catch(() => `HTTP ${response.status}`);
+    return { status: "error", reason };
   }
 
   const encrypted = await response.text();
@@ -36,8 +63,18 @@ async function refreshUid2Token(refreshToken: string, refreshResponseKey: string
   const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]);
   const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: nonce }, cryptoKey, ciphertext);
   const parsed = JSON.parse(new TextDecoder().decode(decrypted));
-  return parsed.body?.advertising_token ? (parsed.body as Uid2RefData) : null;
+
+  if (parsed?.status === "optout") {
+    return { status: "optout" };
+  }
+  if (parsed?.status !== "success") {
+    return { status: "error", reason: `operator status "${parsed?.status}"` };
+  }
+  if (!isUid2RefData(parsed.body)) {
+    return { status: "error", reason: "malformed response body" };
+  }
+  return { status: "success", body: parsed.body };
 }
 
 export { refreshUid2Token, UID2_REFRESH_ENDPOINT };
-export type { Uid2RefData };
+export type { Uid2RefData, Uid2RefreshResult };

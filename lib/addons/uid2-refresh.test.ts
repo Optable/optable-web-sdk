@@ -30,42 +30,81 @@ async function encryptResponse(payload: unknown): Promise<string> {
   return Buffer.from(out).toString("base64");
 }
 
-function respondWith(text: string, status = 200) {
-  server.use(http.post(UID2_REFRESH_ENDPOINT, () => new HttpResponse(text, { status })));
+function respondWith(text: string, status = 200, endpoint = UID2_REFRESH_ENDPOINT) {
+  server.use(http.post(endpoint, () => new HttpResponse(text, { status })));
 }
 
 describe("refreshUid2Token", () => {
   it("decrypts a successful refresh response and returns its body", async () => {
     respondWith(await encryptResponse({ status: "success", body: BODY }));
-    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual(BODY);
+    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual({ status: "success", body: BODY });
   });
 
-  it("posts the refresh token as the raw request body", async () => {
+  it("posts the refresh token as a raw text/plain body", async () => {
     let sent: string | undefined;
+    let contentType: string | null = null;
     const encrypted = await encryptResponse({ status: "success", body: BODY });
     server.use(
       http.post(UID2_REFRESH_ENDPOINT, async ({ request }) => {
         sent = await request.text();
+        contentType = request.headers.get("content-type");
         return new HttpResponse(encrypted, { status: 200 });
       })
     );
     await refreshUid2Token("REFRESH_TOKEN", KEY_B64);
     expect(sent).toBe("REFRESH_TOKEN");
+    expect(contentType).toContain("text/plain");
   });
 
-  it("returns null on a non-OK response", async () => {
+  it("uses a caller-provided endpoint", async () => {
+    const endpoint = "https://operator-integ.uidapi.com/v2/token/refresh";
+    respondWith(await encryptResponse({ status: "success", body: BODY }), 200, endpoint);
+    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64, endpoint)).resolves.toEqual({
+      status: "success",
+      body: BODY,
+    });
+  });
+
+  it("returns the operator's status as the reason on a non-OK response", async () => {
+    respondWith(JSON.stringify({ status: "expired_token", message: "refresh token expired" }), 400);
+    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual({
+      status: "error",
+      reason: "expired_token",
+    });
+  });
+
+  it("falls back to the HTTP status on a non-OK response without a JSON body", async () => {
     respondWith("", 400);
-    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toBeNull();
+    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual({
+      status: "error",
+      reason: "HTTP 400",
+    });
   });
 
-  it("returns null on an opt-out response", async () => {
+  it("returns an optout result on an opt-out response", async () => {
     respondWith(await encryptResponse({ status: "optout" }));
-    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toBeNull();
+    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual({ status: "optout" });
   });
 
-  it("returns null when the body has no advertising_token", async () => {
-    respondWith(await encryptResponse({ status: "success", body: { refresh_token: "X" } }));
-    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toBeNull();
+  it("returns an error result on an encrypted 200 that is neither success nor optout", async () => {
+    respondWith(await encryptResponse({ status: "something_new" }));
+    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual({
+      status: "error",
+      reason: 'operator status "something_new"',
+    });
+  });
+
+  it.each([
+    ["missing advertising_token", { ...BODY, advertising_token: undefined }],
+    ["missing refresh_token", { ...BODY, refresh_token: undefined }],
+    ["missing refresh_expires", { ...BODY, refresh_expires: undefined }],
+    ["non-numeric refresh_from", { ...BODY, refresh_from: "soon" }],
+  ])("returns an error result on a success payload with %s", async (_label, body) => {
+    respondWith(await encryptResponse({ status: "success", body }));
+    await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual({
+      status: "error",
+      reason: "malformed response body",
+    });
   });
 
   it("throws on a payload that does not decrypt", async () => {
