@@ -20,7 +20,7 @@ Returns one of:
 
 - `{ status: "success", body }` — the validated new token bundle
 - `{ status: "optout" }` — the user opted out of UID2; the caller should drop the cached token
-- `{ status: "error", reason }` — non-OK response, unexpected operator status, or a success payload missing required fields
+- `{ status: "error", reason, message? }` — non-OK response, unexpected operator status, or a success payload missing required fields; `reason` is the operator's status code when one was returned, `message` its free-form text
 
 A response that cannot be decoded or decrypted throws; error policy stays with the caller.
 

@@ -12,7 +12,7 @@ type Uid2RefData = {
 type Uid2RefreshResult =
   | { status: "success"; body: Uid2RefData }
   | { status: "optout" }
-  | { status: "error"; reason: string };
+  | { status: "error"; reason: string; message?: string };
 
 const UID2_REFRESH_ENDPOINT = "https://prod.uidapi.com/v2/token/refresh";
 
@@ -46,12 +46,22 @@ async function refreshUid2Token(
   });
   if (!response.ok) {
     // Error responses (400/401) are unencrypted JSON carrying a documented
-    // status: client_error, invalid_token, expired_token or unauthorized.
-    const reason = await response
-      .text()
-      .then((text) => (JSON.parse(text)?.status as string) || `HTTP ${response.status}`)
-      .catch(() => `HTTP ${response.status}`);
-    return { status: "error", reason };
+    // status (client_error, invalid_token, expired_token, unauthorized) and a
+    // free-form message.
+    let reason = `HTTP ${response.status}`;
+    let message: string | undefined;
+    try {
+      const body = JSON.parse(await response.text());
+      if (typeof body?.status === "string") {
+        reason = body.status;
+      }
+      if (typeof body?.message === "string") {
+        message = body.message;
+      }
+    } catch {
+      // Non-JSON error body; keep the HTTP status as the reason.
+    }
+    return { status: "error", reason, message };
   }
 
   const encrypted = await response.text();

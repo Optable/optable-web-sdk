@@ -65,11 +65,12 @@ describe("refreshUid2Token", () => {
     });
   });
 
-  it("returns the operator's status as the reason on a non-OK response", async () => {
+  it("returns the operator's status and message on a non-OK response", async () => {
     respondWith(JSON.stringify({ status: "expired_token", message: "refresh token expired" }), 400);
     await expect(refreshUid2Token("REFRESH_TOKEN", KEY_B64)).resolves.toEqual({
       status: "error",
       reason: "expired_token",
+      message: "refresh token expired",
     });
   });
 
