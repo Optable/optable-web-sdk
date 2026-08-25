@@ -23,6 +23,8 @@
           node: "${DCN_NODE}",
           cookies: false,
           ois: true,
+          // The DCN derives this identity from these signals, so
+          // without them there is nothing to derive it from.
           forwardSignals: true,
         });
       });
@@ -46,26 +48,18 @@
       table.ois th {
         padding: 4px 12px 4px 0;
         font-size: 0.85rem;
-      }
-      .badge {
-        display: inline-block;
-        padding: 1px 8px;
-        border-radius: 10px;
-        font-size: 0.75rem;
-        background: #e1e1e1;
-      }
-      .badge.cookie {
-        background: #d3ecd3;
-      }
-      .badge.localstorage {
-        background: #ffe7c2;
-      }
-      .badge.unknown {
-        background: #e1e1e1;
+        vertical-align: top;
       }
       .note {
         font-size: 0.8rem;
         color: #666;
+      }
+      .warn {
+        font-size: 0.8rem;
+        background: #fff6e0;
+        border: 1px solid #f0dca8;
+        border-radius: 4px;
+        padding: 0.6rem 1rem;
       }
     </style>
   </head>
@@ -82,17 +76,39 @@
         <div class="twelve column">
           <h4>Example: Optable Identity System (OIS) using LocalStorage</h4>
           <p>
-            The DCN assigns this browser an OIS ID and returns it as <code>ois_id</code>, alongside
-            <code>oid_source</code> naming the transport it was resolved from. With <code>ois: true</code> the SDK stores
-            that ID and replays it on the <code>X-Optable-OID</code> header, so this browser keeps the same identity
-            where the <code>OPTABLE_OID</code> cookie is blocked.
+            An OIS-enabled DCN recognizes a browser two ways, and only one of them involves the SDK. This page shows
+            both. See the
+            <a href="https://github.com/Optable/optable-web-sdk#optable-identity-system-ois">OIS section of the README</a>
+            for the full description.
           </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="twelve column">
+          <h5>1. Cookie identity &mdash; nothing to do</h5>
           <p class="note">
-            The <code>OPTABLE_OID</code> cookie is <code>HttpOnly</code> and scoped to <code>Domain=optable.co</code>, so
-            JavaScript can never read it. Everything below comes from the response body. The DCN reads the cookie
-            <em>before</em> the header, so the header is a fallback and never an override. This page is served from a
-            different site than the DCN, so the cookie is a third-party cookie here &mdash; exactly the situation a
-            publisher is in.
+            The browser attaches <code>OPTABLE_OID</code> on its own, so <code>identify</code>, <code>profile</code> and
+            <code>targeting</code> are already attributed to it. It is <code>HttpOnly</code>, so there is deliberately
+            nothing to display here. Block third-party cookies and the DCN falls back to the identity below.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="twelve column">
+          <h5>2. Derived identity &mdash; stored and replayed by the SDK</h5>
+          <p class="note">
+            Derived from the device signals below and returned on the <code>X-Optable-OID</code> response header. With
+            <code>ois: true</code> the SDK stores it and replays it on that header. It arrives on the first
+            <code>identify</code>, <code>targeting</code> or <code>profile</code> call &mdash; not during
+            initialization.
+          </p>
+          <table class="ois" id="state"></table>
+          <p class="warn">
+            Blank after a call? The DCN only derives this identity when ID derivation is enabled for the node
+            <em>and</em> the request comes from a residential IP &mdash; a VPN, datacenter or office IP returns no
+            header. It also requires the DCN to expose <code>X-Optable-OID</code> to the browser.
           </p>
         </div>
       </div>
@@ -100,9 +116,9 @@
       <div class="row">
         <div class="twelve column">
           <fieldset>
-            <button id="targeting-button" class="button-primary">Run targeting call</button>
-            <button id="identify-button">Run identify call</button>
-            <button id="clear-button">Clear stored OIS ID</button>
+            <button id="identify-button" class="button-primary">Run identify call</button>
+            <button id="targeting-button">Run targeting call</button>
+            <button id="clear-button">Clear stored ID</button>
             <button id="reload-button">Reload page</button>
           </fieldset>
         </div>
@@ -110,17 +126,10 @@
 
       <div class="row">
         <div class="twelve column">
-          <h5>OIS state</h5>
-          <table class="ois" id="state"></table>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="twelve column">
           <h5>Forwarded device signals (<code>sig</code>)</h5>
           <p class="note">
-            Decoded from the <code>sig</code> param the SDK forwards when <code>forwardSignals: true</code>. The DCN uses
-            these to derive a fingerprint-based OIS ID for browsers with no usable storage at all.
+            What <code>forwardSignals: true</code> sends, and what the identity above is derived from. A signal this
+            browser does not expose is omitted rather than sent empty.
           </p>
           <table class="ois" id="signals"></table>
         </div>
@@ -146,143 +155,107 @@
     </div>
 
     <script>
-      // What each transport value actually tells you. A minted ID means the DCN
-      // saw neither a cookie nor a header, which happens both on a first visit
-      // and when the cookie is blocked, so it cannot claim either.
-      const TRANSPORT_NOTE = {
-        cookie: "The OPTABLE_OID cookie reached the DCN on the last call.",
-        localstorage: "The cookie did not arrive; the DCN used the ID replayed from localStorage.",
-        unknown: "No ID stored yet, or the DCN minted one (first visit, or the cookie was dropped).",
-      };
-
-      const SOURCE_NOTE = {
-        cookie: "Resolved from the OPTABLE_OID cookie. Stored, so it survives the cookie being blocked later.",
-        header: "Resolved from the X-Optable-OID header the SDK sent. This is the stored ID being replayed.",
-        minted: "No ID arrived, so the DCN minted a fresh one. Only stored if nothing was stored yet.",
-      };
-
       function row(label, value, note) {
         return (
-          "<tr><th align='left'>" +
-          label +
-          "</th><td>" +
-          value +
-          "</td><td class='note'>" +
-          (note || "") +
-          "</td></tr>"
+          "<tr><th align='left'>" + label + "</th><td>" + value + "</td><td class='note'>" + (note || "") + "</td></tr>"
         );
       }
 
       function render() {
         const state = optable.instance.oisState();
-        const transport = state.transport || "unknown";
 
         document.getElementById("state").innerHTML =
-          row("OIS ID", state.id ? "<code>" + state.id + "</code>" : "<em>none stored yet</em>") +
           row(
-            "Transport",
-            "<span class='badge " + transport + "'>" + transport + "</span>",
-            TRANSPORT_NOTE[transport]
-          ) +
-          row(
-            "Reported source",
-            state.source ? "<code>" + state.source + "</code>" : "<em>n/a</em>",
-            state.source ? SOURCE_NOTE[state.source] : "No call has returned an OIS ID yet."
-          ) +
-          row("Storage key", "<code>" + state.storageKey + "</code>") +
-          row(
-            "Storage writable",
-            state.storageWritable === null ? "<em>not attempted yet</em>" : String(state.storageWritable)
-          ) +
-          row("Last updated", state.updatedAt ? new Date(state.updatedAt).toISOString() : "<em>n/a</em>");
+            "Derived OIS ID",
+            state.id ? "<code>" + state.id + "</code>" : "<em>none yet</em>",
+            state.id ? "Replayed on X-Optable-OID on the next call." : "Run a call below."
+          ) + row("Storage key", "<code>" + state.storageKey + "</code>");
 
         renderSignals();
       }
 
       function renderSignals() {
         const target = document.getElementById("signals");
-        // Show the blob the SDK actually forwarded rather than re-reading the
-        // device APIs independently, so this matches what the DCN received.
-        const sig = lastSig;
-        if (!sig) {
+        if (!lastSig) {
           target.innerHTML = row("sig", "<em>no call made yet</em>");
           return;
         }
 
-        let decoded = "";
+        let html = row("Encoded", "<code style='word-break:break-all'>" + lastSig + "</code>");
         try {
-          decoded = atob(sig.replace(/-/g, "+").replace(/_/g, "/"));
-        } catch (e) {
-          decoded = "";
-        }
-
-        let html = row("Encoded", "<code style='word-break:break-all'>" + sig + "</code>");
-        if (decoded) {
+          // base64url -> base64 before decoding.
+          const decoded = atob(lastSig.replace(/-/g, "+").replace(/_/g, "/"));
           new URLSearchParams(decoded).forEach(function (value, key) {
             html += row(key, "<code>" + value + "</code>");
           });
+        } catch (e) {
+          html += row("decode", "<em>failed</em>");
         }
         target.innerHTML = html;
       }
 
-      // The SDK does not expose the sig blob, so capture it off the outgoing
-      // request URL instead of duplicating the collection logic.
+      // The SDK does not expose the sig blob or the outgoing header, and the
+      // received header is only visible on the Response, so wrap fetch to show
+      // what actually went over the wire rather than re-deriving it here.
       let lastSig = "";
       const nativeFetch = window.fetch;
       window.fetch = function (input) {
+        let path = "";
         try {
           const url = new URL(input instanceof Request ? input.url : String(input));
+          path = url.pathname;
           const sig = url.searchParams.get("sig");
           if (sig) {
             lastSig = sig;
           }
-          const oid = input instanceof Request ? input.headers.get("X-Optable-OID") : null;
-          log(url.pathname + (oid ? "  X-Optable-OID: " + oid : "  (no OIS header)"));
+          const sent = input instanceof Request ? input.headers.get("X-Optable-OID") : null;
+          log(path + "  ->  X-Optable-OID: " + (sent || "(none stored yet)"));
         } catch (e) {
           // Never let instrumentation break a request.
         }
-        return nativeFetch.apply(this, arguments);
+
+        return nativeFetch.apply(this, arguments).then(function (response) {
+          try {
+            const received = response.headers.get("X-Optable-OID");
+            log(path + "  <-  X-Optable-OID: " + (received || "(not returned)"));
+          } catch (e) {
+            // Ignore.
+          }
+          return response;
+        });
       };
 
       function log(line) {
-        const result = document.getElementById("result");
-        result.innerHTML += line + "\n";
+        document.getElementById("result").append(line + "\n");
       }
 
+      // Fires whenever the stored ID changes, so the table follows the wire
+      // without the handlers below having to re-render.
       window.addEventListener("optable-ois:change", render);
 
       optable.cmd.push(function () {
-        document.getElementById("targeting-button").addEventListener("click", () => {
-          optable.instance
-            .targeting()
-            .then(() => {
-              log("targeting ok");
-              render();
-            })
-            .catch((err) => log("targeting error: " + err.message));
-        });
-
         document.getElementById("identify-button").addEventListener("click", () => {
           optable.instance
             .identify(optable.SDK.eid("ois-demo@example.com"))
-            .then(() => {
-              log("identify ok");
-              render();
-            })
+            .then(() => log("identify ok"))
             .catch((err) => log("identify error: " + err.message));
+        });
+
+        document.getElementById("targeting-button").addEventListener("click", () => {
+          optable.instance
+            .targeting()
+            .then(() => log("targeting ok"))
+            .catch((err) => log("targeting error: " + err.message));
         });
 
         document.getElementById("clear-button").addEventListener("click", () => {
           optable.instance.oisClear();
-          log("cleared stored OIS ID");
-          render();
+          log("cleared stored ID");
         });
 
         document.getElementById("reload-button").addEventListener("click", () => window.location.reload());
 
-        // The SDK fetches /config during init, which is the call that first
-        // reports an OIS ID, so wait for it before the initial render.
-        optable.instance.site().finally(render);
+        render();
       });
     </script>
   </body>

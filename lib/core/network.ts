@@ -2,7 +2,7 @@ import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 import { deviceSignals } from "./signals";
-import { applyOISResponse, oisHeaderName, oisParamName, oisRequestID } from "./ois";
+import { oisHeaderName, oisRequestID, readOISHeader } from "./ois";
 
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { host, cookies, insecure } = config;
@@ -65,27 +65,21 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
 
   const requestInit: RequestInit = { ...init };
   requestInit.credentials = config.consent.deviceAccess ? "include" : "omit";
+  const headers = new Headers(requestInit.headers);
+  requestInit.headers = headers;
 
   if (config.mockedIP) {
-    requestInit.headers = new Headers(requestInit.headers);
-    requestInit.headers.set("X-Forwarded-For", config.mockedIP);
+    headers.set("X-Forwarded-For", config.mockedIP);
   }
 
-  // Replay a stored OIS id so the node still recognizes this browser where the
-  // OPTABLE_OID cookie is blocked. The node reads the cookie first, so this
-  // never overrides a cookie that did arrive.
-  //
-  // The `ois` param is a separate opt-in: the node only returns the id to a
-  // caller that asks for it. It is set on every request, including the ones that
-  // do not replay the header, because the first response is what bootstraps the
-  // stored id. A query param keeps the request CORS-simple, unlike the header.
+  // Replay the stored derived OIS id so the node recognizes this browser
+  // instead of deriving a new id for it. The cookie identity is not involved:
+  // the browser attaches OPTABLE_OID on its own and its value is not readable
+  // from here.
   if (config.ois && config.consent.deviceAccess) {
-    url.searchParams.set(oisParamName, "1");
-
     const oisID = oisRequestID(config, url.pathname);
     if (oisID) {
-      requestInit.headers = new Headers(requestInit.headers);
-      requestInit.headers.set(oisHeaderName, oisID);
+      headers.set(oisHeaderName, oisID);
     }
   }
 
@@ -95,7 +89,8 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
 }
 
 async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
-  const response = await globalThis.fetch(buildRequest(path, config, init));
+  const request = buildRequest(path, config, init);
+  const response = await globalThis.fetch(request);
 
   const contentType = response.headers.get("Content-Type");
   const data = contentType?.startsWith("application/json") ? await response.json() : await response.text();
@@ -116,11 +111,10 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     delete data.passport;
   }
 
-  // Persist the OIS id the node reported and strip it from the payload, for the
-  // same reason as the passport above: a targeting response is handed to ad
-  // servers and written to the targeting cache.
-  if (config.ois && data && typeof data === "object") {
-    applyOISResponse(config, data);
+  // The derived OIS id arrives on a response header rather than in the body,
+  // so unlike the passport there is nothing to strip out of the payload.
+  if (config.ois) {
+    readOISHeader(config, new URL(request.url).pathname, response.headers);
   }
 
   return data;

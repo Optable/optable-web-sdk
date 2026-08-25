@@ -47,10 +47,10 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
 - [Passport and Visitor ID](#passport-and-visitor-id)
 - [Optable Identity System (OIS)](#optable-identity-system-ois)
-  - [Enabling OIS](#enabling-ois)
-  - [Reading the OIS ID](#reading-the-ois-id)
-  - [How the ID is stored and replayed](#how-the-id-is-stored-and-replayed)
-  - [Which transport is in use](#which-transport-is-in-use)
+  - [The cookie identity needs no SDK code](#the-cookie-identity-needs-no-sdk-code)
+  - [The derived identity is what the SDK holds](#the-derived-identity-is-what-the-sdk-holds)
+  - [Reading the stored ID](#reading-the-stored-id)
+  - [How it travels](#how-it-travels)
 - [QA and debug flags](#qa-and-debug-flags)
 - [Multi-Node Targeting Resolver](#multi-node-targeting-resolver)
   - [Usage](#usage)
@@ -174,7 +174,7 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
   When set to `true`, forwards soft device/browser signals (language, timezone, screen size, device memory, CPU cores) to the DCN in a `sig` request parameter. Also requires device access consent, so it is a no-op when consent is not granted. A signal the browser does not expose is omitted rather than sent empty.
 
 - **`ois` (boolean, default: `false`)**
-  When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK persists the OIS ID the DCN reports and replays it on subsequent requests, so the browser keeps one identity where the third-party `OPTABLE_OID` cookie is unavailable. Requires an OIS-enabled DCN node and device access consent, so it is a no-op otherwise.
+  When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK stores the derived OIS ID the DCN returns on the `X-Optable-OID` response header and replays it on subsequent requests, so the DCN recognizes the browser instead of deriving a new identity each visit. Pair it with `forwardSignals: true`, which sends the signals the identity is derived from. Requires a DCN node with OIS ID derivation enabled and device access consent, so it is a no-op otherwise. The `OPTABLE_OID` cookie identity is separate and needs no configuration.
 
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
@@ -1130,21 +1130,25 @@ If the returned value is `null`, the SDK logs a one-time warning per instance to
 
 The Optable Identity System is a cross-tenant identity system. On a DCN node configured to use it, the OIS ID replaces the [visitor ID](#passport-and-visitor-id) as the canonical profile identifier for collected events — the DCN makes that substitution itself, based on the node's identity selector.
 
-The DCN normally carries the OIS ID in an `OPTABLE_OID` cookie. That cookie is scoped to `Domain=optable.co` with `SameSite=None`, which makes it a **third-party** cookie for a publisher page, so it is dropped wherever cross-site cookies are blocked (Safari/ITP, Firefox ETP, Chrome's third-party cookie restrictions). When it is dropped, the DCN cannot recognize the browser and mints a throwaway ID on every request.
+An OIS-enabled node recognizes a browser two ways, and only one of them involves the SDK.
 
-Enabling `ois` closes that gap: the SDK stores the ID the DCN reports and replays it on an `X-Optable-OID` request header, so the browser presents the same identity whether or not the cookie survives.
+### The cookie identity needs no SDK code
 
-> :warning: **Requires an OIS-enabled node.** On a node that does not use OIS the DCN returns no OIS ID and the option is inert. Ask your Optable contact whether your node has OIS enabled.
+The DCN sets an `OPTABLE_OID` cookie and the browser attaches it to every call on its own, so `identify()`, `profile()` and `targeting()` are already attributed to it with nothing enabled client-side.
 
-### Enabling OIS
+That cookie is `HttpOnly` and scoped to `optable.co`, which has two consequences worth knowing. Its value is never readable from JavaScript — not via `document.cookie`, and not from the response, because `Set-Cookie` is a forbidden response header name. And because it is a third-party cookie for a publisher page, it is dropped wherever cross-site cookies are blocked (Safari/ITP, Firefox ETP, Chrome's third-party cookie restrictions) — a different problem from the first-party eTLD+1 case described under [Domains and Cookies](#domains-and-cookies), and one a publisher cannot configure away. When that happens the DCN cannot recognize the browser from the cookie, and the derived identity below is what carries it instead. The SDK cannot bridge that gap: if the browser is willing to send the cookie it is already doing so, and if it is not, there is nothing to forward.
+
+### The derived identity is what the SDK holds
+
+The DCN derives this identity from the device signals sent in the `sig` parameter and returns it on the `X-Optable-OID` response header. With `ois: true` the SDK stores it and replays it on the same header, so the DCN recognizes the browser rather than deriving a fresh identity on every visit.
 
 ```javascript
 const sdk = new OptableSDK({
   host: "dcn.customer.com",
   site: "my-site",
   ois: true,
-  // Optional, but recommended alongside OIS: lets the DCN derive a
-  // fingerprint-based ID for browsers with no usable storage at all.
+  // The identity is derived from these signals, so without them there is
+  // nothing to derive it from.
   forwardSignals: true,
 });
 ```
@@ -1167,27 +1171,14 @@ Or with a script tag:
 <script async src="https://cdn.optable.co/web-sdk/vX.Y.Z/sdk.js"></script>
 ```
 
-Nothing is stored and no header is sent without device access consent, so the option is also a no-op when consent has not been granted.
+> :warning: **Requires DCN support.** The node must have OIS ID derivation enabled and must expose `X-Optable-OID` to the browser. The DCN also only derives the identity for requests from a residential IP, so a VPN, datacenter or office IP returns no header. On a node without it the option is inert.
 
-### Reading the OIS ID
+### Reading the stored ID
 
 ```javascript
-const id = sdk.oisId(); // string | null — the stored OIS ID
-const state = sdk.oisState(); // full state, including which transport carried it
-sdk.oisClear(); // forget the stored ID; the DCN issues a new one on the next call
-```
-
-`oisState()` returns:
-
-```typescript
-type OISState = {
-  id: string | null;
-  source: "cookie" | "header" | "minted" | null; // transport the DCN last resolved from
-  transport: "cookie" | "localstorage" | "unknown";
-  storageKey: string;
-  storageWritable: boolean | null; // null until a write has been attempted
-  updatedAt: number | null;
-};
+const id = sdk.oisId(); // string | null — the stored derived OIS ID
+const state = sdk.oisState(); // { id, storageKey }
+sdk.oisClear(); // forget it; the DCN returns a fresh derivation on the next call
 ```
 
 The SDK dispatches an `optable-ois:change` event on `window` whenever the stored ID changes, so a page can react without polling:
@@ -1196,37 +1187,17 @@ The SDK dispatches an `optable-ois:change` event on `window` whenever the stored
 window.addEventListener("optable-ois:change", (e) => console.log(e.detail));
 ```
 
-Like `passport()` and `visitorId()`, these return `null` until a DCN response has reported an ID. By default (`initPassport: true`) the `/config` call made at construction time is the first response to carry one.
+`oisId()` returns `null` until a response has returned an ID. Unlike `passport()`, that does **not** happen during initialization: `/config` derives no identity, so the first ID arrives on the first `identify()`, `targeting()` or `profile()` call.
 
-### How the ID is stored and replayed
+### How it travels
 
-The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>`, alongside the transport the DCN reported it from. The DCN returns that transport as `oid_source`, and the SDK uses it to decide whether to overwrite what it already holds:
+The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>` as an opaque string, and sent back on `X-Optable-OID`.
 
-| `oid_source` | Meaning                                              | Action                                   |
-| ------------ | ---------------------------------------------------- | ---------------------------------------- |
-| `cookie`     | The `OPTABLE_OID` cookie reached the DCN             | Always stored                            |
-| `header`     | The DCN used the ID the SDK replayed                 | Nothing to do                            |
-| `minted`     | Neither transport carried an ID, so the DCN made one | Stored **only** if nothing is stored yet |
+Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token`, `/sync`, `/profile` and `/v2/targeting`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
 
-Storing the cookie's own value is what makes the identity survive third-party cookies being turned off later: the fallback replays the same ID the cookie was carrying, rather than introducing a new one. The `minted` rule is what keeps the ID stable — a mint arrives on every request to an endpoint that does not replay the header, so treating it as authoritative would churn the ID on each page load.
+There is no write policy to reason about. The DCN returns the identity it derived for the _current_ request rather than the one the client replayed, so as those signals drift (a new IP subnet, a browser upgrade, a resized window) the stored value simply rolls forward. The SDK stores whatever the last response returned.
 
-Two things go on the wire. An `ois=1` query parameter opts into receiving the ID: the DCN returns it only to a caller that asks, because it is a stable cross-site identifier — the same reason the passport is echoed in-band only when the client selects query-string transport. That parameter is sent on every request, since the first response is what bootstraps the stored ID.
-
-The `X-Optable-OID` header, which replays a stored ID, is sent only on `/identify`, `/sync`, `/uid2/token`, `/v2/targeting`, `/witness` and `/profile`. It is deliberately **not** sent on `/config`: a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load. A query parameter has no such cost, which is why the opt-in and the replay are carried differently.
-
-The DCN also withholds the ID without read consent, so a visitor whose consent does not permit identity reads gets no ID and the SDK stores nothing.
-
-The DCN reads the cookie **before** the header, so replaying an ID never overrides a cookie that did arrive. The SDK always sends the header when it holds an ID and lets the DCN arbitrate.
-
-The `ois_id` and `oid_source` fields are removed from the response payload once consumed, for the same reason the passport is: a targeting response is handed to ad servers and written to the targeting cache.
-
-### Which transport is in use
-
-`OPTABLE_OID` is `HttpOnly`, so JavaScript can never read it and a browser cannot observe for itself whether the cookie was sent. `transport` is therefore derived from what the DCN reports, not guessed:
-
-- **`cookie`** — the cookie reached the DCN on the last call.
-- **`localstorage`** — the cookie did not arrive and the DCN used the replayed ID.
-- **`unknown`** — nothing stored yet, or the DCN minted an ID. A mint happens both on a first visit and when the cookie is blocked, and those are indistinguishable from the browser, so this case does not claim either.
+Nothing is stored and no header is sent without device access consent, so the option is a no-op when consent has not been granted.
 
 ## QA and debug flags
 
@@ -1415,4 +1386,4 @@ Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. Yo
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
 
-The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) shows the OIS ID assigned to the browser, which transport carried it, and the decoded `sig` signals, and logs the `X-Optable-OID` header sent on each call. It requires an OIS-enabled DCN node. Because the demo is served from a different site than the DCN, `OPTABLE_OID` is a third-party cookie there — which is what makes it a realistic test: allow third-party cookies to see the `cookie` transport, block them to see the `localstorage` fallback take over while the ID stays the same.
+The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) covers both OIS identities: it explains why the `OPTABLE_OID` cookie identity is invisible to JavaScript, and shows the derived OIS ID the DCN returned, the `localStorage` key holding it, the decoded `sig` signals it was derived from, and the `X-Optable-OID` header sent and received on each call. It needs a DCN node with OIS ID derivation enabled, and only produces an ID for requests from a residential IP.

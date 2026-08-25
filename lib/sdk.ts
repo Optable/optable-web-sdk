@@ -31,6 +31,7 @@ import { sha256 } from "js-sha256";
 import { Tokenize, TokenizeResponse } from "./edge/tokenize";
 import { LocalStorage } from "./core/storage";
 import { clearOISID, getOISID, getOISState } from "./core/ois";
+import { consoleLog } from "./core/log";
 import type { OISState } from "./core/ois";
 
 class OptableSDK {
@@ -42,9 +43,9 @@ class OptableSDK {
   private contextSent: boolean = false;
   private contextConfig: PageContextConfig | null = null;
   private contextualResponse: ContextualSegmentsResponse | null = null;
-  private passportNullWarned: boolean = false;
-  private visitorIdNullWarned: boolean = false;
-  private oisNullWarned: boolean = false;
+  // Accessors that can legitimately return null before initialization warn once
+  // per instance, so a page polling one of them does not flood the console.
+  private warned = new Set<string>();
 
   constructor(dcn: InitConfig) {
     this.dcn = getConfig(dcn);
@@ -106,12 +107,20 @@ class OptableSDK {
     return SiteFromCache(this.dcn);
   }
 
+  private warnOnce(key: string, message: string): void {
+    if (this.warned.has(key)) {
+      return;
+    }
+    this.warned.add(key);
+    consoleLog("[Optable]", "warn", message);
+  }
+
   passport(): string | null {
     const value = new LocalStorage(this.dcn).getPassport();
-    if (value === null && !this.passportNullWarned) {
-      this.passportNullWarned = true;
-      console.warn(
-        "[Optable] passport() returned null. The passport is cached in localStorage once the DCN returns one. " +
+    if (value === null) {
+      this.warnOnce(
+        "passport",
+        "passport() returned null. The passport is cached in localStorage once the DCN returns one. " +
           "Call before initialization (await sdk.site() or sdk.targeting()) may return null, and deployments where the DCN " +
           "does not echo the passport in response bodies will never populate it client-side."
       );
@@ -121,10 +130,10 @@ class OptableSDK {
 
   visitorId(): string | null {
     const value = new LocalStorage(this.dcn).getVisitorId();
-    if (value === null && !this.visitorIdNullWarned) {
-      this.visitorIdNullWarned = true;
-      console.warn(
-        "[Optable] visitorId() returned null. The visitor ID is derived from the passport JWT in localStorage. " +
+    if (value === null) {
+      this.warnOnce(
+        "visitorId",
+        "visitorId() returned null. The visitor ID is derived from the passport JWT in localStorage. " +
           "Call before initialization (await sdk.site() or sdk.targeting()) may return null, and deployments where the DCN " +
           "does not echo the passport in response bodies will never populate it client-side."
       );
@@ -132,24 +141,25 @@ class OptableSDK {
     return value;
   }
 
-  // The OIS id currently stored for this node, or null when the node has not
-  // reported one yet. Requires the `ois` config option.
+  // The stored derived OIS id, or null when the node has not returned one
+  // yet. Requires the `ois` config option.
+  //
+  // This is not the cookie identity: OPTABLE_OID is HttpOnly and never readable
+  // from JavaScript.
   oisId(): string | null {
     const value = getOISID(this.dcn);
-    if (value === null && this.dcn.ois && !this.oisNullWarned) {
-      this.oisNullWarned = true;
-      console.warn(
-        "[Optable] oisId() returned null. The OIS id is cached in localStorage once the DCN returns one. " +
-          "A call before initialization (await sdk.site() or sdk.targeting()) may return null, and a node that is " +
-          "not OIS-enabled never returns one."
+    if (value === null && this.dcn.ois) {
+      this.warnOnce(
+        "oisId",
+        "oisId() returned null. The derived OIS id is cached once the DCN returns it on the X-Optable-OID " +
+          "response header, which happens on the first identify(), targeting() or profile() call — not during " +
+          "initialization. A node with OIS ID derivation disabled, or a non-residential IP, never returns one."
       );
     }
     return value;
   }
 
-  // The stored OIS id plus the transport the node last resolved it from. Useful
-  // for confirming whether the OPTABLE_OID cookie or the localStorage fallback
-  // is carrying the id.
+  // The stored derived OIS id and the localStorage key holding it.
   oisState(): OISState {
     return getOISState(this.dcn);
   }
