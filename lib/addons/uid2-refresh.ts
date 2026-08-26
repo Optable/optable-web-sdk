@@ -104,6 +104,7 @@ function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2Re
   const ls = new LocalStorage(config);
   const cached = ls.getTargeting();
   const eids: RefreshableEID[] | undefined = cached?.ortb2?.user?.eids;
+  // If cache does not exist don't try to set.
   if (!cached || !eids) {
     return;
   }
