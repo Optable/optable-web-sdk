@@ -24,4 +24,14 @@ Returns one of:
 
 A response that cannot be decoded or decrypted throws; error policy stays with the caller.
 
-Cache updates and the stale-token refresh loop ship separately.
+## applyUid2Refresh
+
+```js
+import { applyUid2Refresh } from "@optable/web-sdk/lib/dist/addons/uid2-refresh";
+
+applyUid2Refresh(config, "uidapi.com", result);
+```
+
+Applies a refresh outcome to the SDK's targeting cache. On `success`, the EID matching `source` gets its `uids` replaced with `[{ atype: 3, id: advertising_token }]` and its `_ref` rewritten from the response body. On `optout` or `error`, the EID is removed. Either write is followed by the `optable-targeting:change` event so consumers (e.g. a pubProvidedId merge) can re-read the cache. A cache without a matching EID is left untouched.
+
+The stale-token refresh loop ships separately.
