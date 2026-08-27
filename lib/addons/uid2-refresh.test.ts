@@ -119,7 +119,12 @@ describe("refreshUid2Token", () => {
 });
 
 describe("applyUid2Refresh", () => {
-  const config = { host: "uid2-apply-host.com", site: "site", consent: DCN_DEFAULTS.consent } as ResolvedConfig;
+  const config = {
+    host: "uid2-apply-host.com",
+    site: "site",
+    consent: DCN_DEFAULTS.consent,
+    optableCacheTargeting: "OPTABLE_RESOLVED",
+  } as ResolvedConfig;
 
   const OLD_REF: Uid2RefData = {
     advertising_token: "OLD_TOKEN",
@@ -185,12 +190,46 @@ describe("applyUid2Refresh", () => {
     expect(events).toHaveLength(1);
   });
 
-  it("removes the EID on error", () => {
+  it("updates each cache copy independently, preserving a merged public copy", () => {
     seedCache();
-    applyUid2Refresh(config, "uidapi.com", { status: "error", reason: "expired_token" });
+    // A wrapper's merged public copy carries an EID the raw private copy does
+    // not have; the refresh must update the UID2 entry in both copies without
+    // one representation overwriting the other.
+    const merged = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string);
+    merged.ortb2.user.eids.push({ source: "carryover.com", uids: [{ id: "CARRIED" }] });
+    localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
+
+    applyUid2Refresh(config, "uidapi.com", { status: "success", body: BODY });
+
+    const privateEids = cachedEids();
+    expect(privateEids.map((e) => e.source)).toEqual(["uidapi.com", "other.com"]);
+    expect(privateEids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+
+    const publicEids = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string).ortb2.user.eids;
+    expect(publicEids.map((e: { source: string }) => e.source)).toEqual(["uidapi.com", "other.com", "carryover.com"]);
+    expect(publicEids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    expect(publicEids[0]._ref).toEqual(BODY);
+  });
+
+  it.each(["invalid_token", "expired_token"])("removes the EID on a definitive %s rejection", (reason) => {
+    seedCache();
+    applyUid2Refresh(config, "uidapi.com", { status: "error", reason });
 
     expect(cachedEids().map((e) => e.source)).toEqual(["other.com"]);
   });
+
+  it.each(["HTTP 500", "client_error", "unauthorized", "malformed response body"])(
+    "leaves the cache untouched on a transient %s error",
+    (reason) => {
+      seedCache();
+      const before = localStorage.getItem("OPTABLE_RESOLVED");
+      applyUid2Refresh(config, "uidapi.com", { status: "error", reason });
+
+      expect(localStorage.getItem("OPTABLE_RESOLVED")).toBe(before);
+      expect(cachedEids().map((e) => e.source)).toEqual(["uidapi.com", "other.com"]);
+      expect(events).toHaveLength(0);
+    }
+  );
 
   it("does nothing when the source is not in the cache", () => {
     seedCache();

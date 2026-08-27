@@ -94,42 +94,56 @@ async function refreshUid2Token(
   return { status: "success", body: parsed.body };
 }
 
+// Operator rejections that mean the cached identity is definitively dead.
+const EVICTION_REASONS = new Set(["invalid_token", "expired_token"]);
+
 /**
  * Applies a refresh outcome to the targeting cache: success rewrites the
- * matching EID's uids and _ref in place, any other outcome removes the EID.
+ * matching EID's uids and _ref in place, opt-out and definitive rejections
+ * remove the EID, and any other error leaves the cache untouched — the cached
+ * token stays valid until identity_expires and the next page load retries.
  * Sends the targeting change event after each cache write so consumers
  * (e.g. a pubProvidedId merge) can re-read the cache.
  */
 function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2RefreshResult): void {
-  const ls = new LocalStorage(config);
-  const cached = ls.getTargeting();
-  const eids: RefreshableEID[] | undefined = cached?.ortb2?.user?.eids;
-  // If cache does not exist don't try to set.
-  if (!cached || !eids) {
+  if (result.status === "error" && !EVICTION_REASONS.has(result.reason)) {
     return;
   }
 
-  const idx = eids.findIndex((e) => e.source === source);
-  if (idx === -1) {
-    return;
-  }
+  // The private and public copies of the cache can hold different
+  // representations (wrappers merge into the public one), so each copy is
+  // updated in place rather than read from one key and written over the other.
+  const updated = new LocalStorage(config).updateTargeting((cached) => {
+    const eids: RefreshableEID[] | undefined = cached?.ortb2?.user?.eids;
+    // If cache does not exist don't try to set.
+    if (!eids) {
+      return false;
+    }
 
-  if (result.status === "success") {
-    eids[idx].uids = [{ atype: AgentType.PERSON_BASED, id: result.body.advertising_token }];
-    eids[idx]._ref = {
-      advertising_token: result.body.advertising_token,
-      refresh_token: result.body.refresh_token,
-      refresh_response_key: result.body.refresh_response_key,
-      refresh_from: result.body.refresh_from,
-      refresh_expires: result.body.refresh_expires,
-      identity_expires: result.body.identity_expires,
-    };
-  } else {
-    eids.splice(idx, 1);
-  }
+    const idx = eids.findIndex((e) => e.source === source);
+    if (idx === -1) {
+      return false;
+    }
 
-  ls.setTargeting(cached);
-  sendTargetingUpdateEvent(config, cached);
+    if (result.status === "success") {
+      eids[idx].uids = [{ atype: AgentType.PERSON_BASED, id: result.body.advertising_token }];
+      eids[idx]._ref = {
+        advertising_token: result.body.advertising_token,
+        refresh_token: result.body.refresh_token,
+        refresh_response_key: result.body.refresh_response_key,
+        refresh_from: result.body.refresh_from,
+        refresh_expires: result.body.refresh_expires,
+        identity_expires: result.body.identity_expires,
+      };
+    } else {
+      eids.splice(idx, 1);
+    }
+    return true;
+  });
+
+  if (updated) {
+    sendTargetingUpdateEvent(config, updated);
+  }
 }
 
 export { refreshUid2Token, applyUid2Refresh, UID2_REFRESH_ENDPOINT };
