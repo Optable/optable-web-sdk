@@ -1,4 +1,4 @@
-import { flagEnabled, getFlags, resetFlags } from "./flags";
+import { flagEnabled, getFlags, persistFlagsFromURL, resetFlags } from "./flags";
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -147,6 +147,38 @@ describe("flagEnabled", () => {
     window.location = { search: "" } as Location;
     resetFlags();
     expect(flagEnabled("optableDebug")).toBe(false);
+  });
+});
+
+describe("persistFlagsFromURL", () => {
+  it("persists the given keys, with a bare key meaning '1'", () => {
+    window.location = { search: "?optableResolveCustom&optableIncludeCustom=abc" } as Location;
+    persistFlagsFromURL(["optableResolveCustom", "optableIncludeCustom"]);
+    expect(sessionStorage.getItem("optableResolveCustom")).toBe("1");
+    expect(sessionStorage.getItem("optableIncludeCustom")).toBe("abc");
+  });
+
+  it("returns the values read from the URL", () => {
+    window.location = { search: "?optableResolveCustom=abc" } as Location;
+    expect(persistFlagsFromURL(["optableResolveCustom", "optableOther"])).toEqual({
+      optableResolveCustom: "abc",
+    });
+  });
+
+  it("leaves keys absent from the URL untouched", () => {
+    sessionStorage.setItem("optableResolveCustom", "kept");
+    window.location = { search: "" } as Location;
+    persistFlagsFromURL(["optableResolveCustom", "optableOther"]);
+    expect(sessionStorage.getItem("optableResolveCustom")).toBe("kept");
+    expect(sessionStorage.getItem("optableOther")).toBeNull();
+  });
+
+  it("does not throw when sessionStorage writes fail", () => {
+    window.location = { search: "?optableResolveCustom" } as Location;
+    (sessionStorage.setItem as jest.Mock).mockImplementationOnce(() => {
+      throw new Error("blocked");
+    });
+    expect(() => persistFlagsFromURL(["optableResolveCustom"])).not.toThrow();
   });
 });
 
