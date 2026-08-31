@@ -14,13 +14,10 @@ const baseConfig = {
 
 const storageKey = generateOISKeys(baseConfig).write[0];
 
-// Every endpoint where the node derives an OIS id, and therefore returns
-// the header and accepts a replayed one.
-const HEADER_PATHS = ["/identify", "/uid2/token", "/sync", "/profile", "/v2/targeting"];
+// Endpoints where the node derives an id, in both directions.
+const HEADER_PATHS = ["/identify", "/uid2/token", "/profile", "/v2/targeting"];
 
-// /config runs during SDK init and /witness records an event without deriving an
-// id, so neither returns the header. Sending it there would buy a CORS preflight
-// for nothing.
+// Endpoints that derive no id, so the header is neither sent nor read.
 const NON_HEADER_PATHS = ["/config", "/witness", "/targeting", "/v1/resolve", "/v2/tokenize"];
 
 function withHeader(id?: string): Headers {
@@ -54,8 +51,6 @@ describe("readOISHeader", () => {
     expect(stored()).toBe("ois-id-1");
   });
 
-  // The read side is filtered by the same path set as the send side. A node that
-  // sets the header somewhere it derives no id is not a reason to store one.
   it.each(NON_HEADER_PATHS)("ignores a header returned on %s", (path) => {
     readOISHeader(baseConfig, path, withHeader("unexpected"));
 
@@ -70,9 +65,7 @@ describe("readOISHeader", () => {
     expect(stored()).toBe("keep-me");
   });
 
-  // The node hands back the id derived for the current request, not the one the
-  // client replayed, so drifting signals roll the stored value forward.
-  // There is no policy to apply and nothing to reconcile.
+  // The node returns the id derived for the current request, not the one replayed.
   it("overwrites an existing id", () => {
     readOISHeader(baseConfig, "/identify", withHeader("ois-id-1"));
     readOISHeader(baseConfig, "/identify", withHeader("ois-id-2"));
@@ -80,9 +73,6 @@ describe("readOISHeader", () => {
     expect(stored()).toBe("ois-id-2");
   });
 
-  // The node omits the header on endpoints that derive no id, and on requests it
-  // declines to derive for (non-residential IP, or ID derivation switched off).
-  // None of those mean "forget the id you have".
   it.each([
     ["absent", undefined],
     ["empty", ""],
@@ -171,8 +161,7 @@ describe("buildRequest", () => {
     expect(request.headers.get(oisHeaderName)).toBeNull();
   });
 
-  // The id travels on a header in both directions; there is no query-param
-  // counterpart, and adding one would break the exact-URL assertions elsewhere.
+  // Guards against reintroducing the abandoned ois=1 param design.
   it("never adds an ois query param", () => {
     window.localStorage.setItem(storageKey, "send-me");
 
@@ -194,12 +183,8 @@ describe("buildRequest", () => {
   });
 });
 
-// The round trip is the actual contract: an id returned on one response is
-// replayed on the next request.
-//
-// Note this cannot catch the real-world CORS dependency — jsdom does not enforce
-// Access-Control-Expose-Headers, so the header is readable here even though a
-// browser needs the node to expose it explicitly.
+// Cannot catch the real CORS dependency: jsdom does not enforce
+// Access-Control-Expose-Headers, which a browser needs the node to set.
 describe("round trip", () => {
   it("replays an id received on a response", () => {
     readOISHeader(baseConfig, "/identify", withHeader("round-trip-id"));

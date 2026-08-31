@@ -1,32 +1,21 @@
-// The SDK's half of the Optable Identity System.
-//
-// A node recognizes a browser two ways, and only the second needs anything from
-// here. The cookie identity in OPTABLE_OID rides along on its own and is HttpOnly,
-// so it could not be read even if it did. The derived identity is the one we
-// hold: the node derives it from the `sig` signals and returns it on
-// X-Optable-OID, and without a stored copy every visit looks like a new device.
-//
-// See the OIS section of README.md for the integrator-facing description.
+// The SDK's half of the Optable Identity System: stores the OIS id the node
+// derives and replays it on later requests, so a browser keeps one identity
+// where the HttpOnly OPTABLE_OID cookie is blocked.
 
 import type { ResolvedConfig } from "../config";
 import { LocalStorage } from "./storage";
 import { generateOISKeys } from "./storage-keys";
 
-// Carries the derived OIS id in both directions. Readable on the response only
-// because the node lists it in Access-Control-Expose-Headers.
+// Readable on the response only because the node lists it in
+// Access-Control-Expose-Headers.
 const oisHeaderName = "X-Optable-OID";
 
-// Not exported, matching the targeting change event in ./events/cache-refresh.ts:
-// consumers listen for the literal name.
 const oisChangeEventName = "optable-ois:change";
 
-// The endpoints where the node derives an OIS id, and therefore the only
-// ones that carry the header in either direction. A custom header makes a
-// request non-simple, so sending it anywhere else buys a CORS preflight for
-// nothing — hence no /config, which also means the id does not arrive until the
-// first identify, targeting or profile call. /witness is absent too: it records
-// an event without deriving an id.
-const HEADER_PATHS = new Set(["/identify", "/uid2/token", "/sync", "/profile", "/v2/targeting"]);
+// The endpoints where the node derives an id. A custom header makes a request
+// non-simple, so sending it anywhere else buys a CORS preflight for nothing —
+// notably /config, which runs on every page load.
+const HEADER_PATHS = new Set(["/identify", "/uid2/token", "/profile", "/v2/targeting"]);
 
 function derivesOISID(pathname: string): boolean {
   return HEADER_PATHS.has(pathname);
@@ -41,20 +30,19 @@ function getOISID(config: ResolvedConfig): string | null {
   return new LocalStorage(config).getOIS();
 }
 
-// Stores the id from this response, replacing any previous one. The node always
-// returns the derivation for the current request, so there is no policy to apply
-// and drifting signals just roll the stored value forward.
-//
+function oisStorageKey(config: ResolvedConfig): string {
+  return generateOISKeys(config).write[0];
+}
+
 // An absent header is not an instruction to forget: the node omits it on
-// endpoints that derive no id, and on requests it declines to derive for (a
-// non-residential IP, or OIS ID derivation switched off for the node).
+// endpoints that derive no id, and on requests it declines to derive for.
 function readOISHeader(config: ResolvedConfig, pathname: string, headers: Headers): void {
   if (!derivesOISID(pathname)) {
     return;
   }
 
-  // Without device access consent LocalStorageProxy discards the write silently,
-  // so bail before firing a change event that reports nothing changed.
+  // LocalStorageProxy discards the write without consent, so bail before firing
+  // a change event that reports nothing changed.
   if (!config.consent.deviceAccess) {
     return;
   }
@@ -72,16 +60,16 @@ function readOISHeader(config: ResolvedConfig, pathname: string, headers: Header
   try {
     storage.setOIS(id);
   } catch {
-    // Storage is full or blocked (Safari private mode). A failed write must not
+    // Storage full or blocked (Safari private mode); a failed write must not
     // break the response.
     return;
   }
 
-  notifyChange(config);
+  notifyChange(config, { id, storageKey: oisStorageKey(config) });
 }
 
 function oisRequestID(config: ResolvedConfig, pathname: string): string | null {
-  if (!derivesOISID(pathname)) {
+  if (!derivesOISID(pathname) || !config.consent.deviceAccess) {
     return null;
   }
 
@@ -90,22 +78,17 @@ function oisRequestID(config: ResolvedConfig, pathname: string): string | null {
 
 function clearOISID(config: ResolvedConfig): void {
   new LocalStorage(config).clearOIS();
-  notifyChange(config);
+  notifyChange(config, { id: null, storageKey: oisStorageKey(config) });
 }
 
 function getOISState(config: ResolvedConfig): OISState {
-  return {
-    id: getOISID(config),
-    storageKey: generateOISKeys(config).write[0],
-  };
+  return { id: getOISID(config), storageKey: oisStorageKey(config) };
 }
 
-function notifyChange(config: ResolvedConfig): void {
-  // `instance` mirrors the targeting change event, so a page running several SDK
-  // instances can tell which node fired.
+function notifyChange(config: ResolvedConfig, state: OISState): void {
   window.dispatchEvent(
     new CustomEvent(oisChangeEventName, {
-      detail: { instance: config.node || config.host, ...getOISState(config) },
+      detail: { instance: config.node || config.host, ...state },
     })
   );
 }

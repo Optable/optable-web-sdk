@@ -71,10 +71,6 @@ type InitConfig = {
   forwardSignals?: boolean;
   // Participate in the Optable Identity System (OIS). Opt in; requires an
   // OIS-enabled node and device access consent.
-  //
-  // Persists the OIS id the node reports and replays it on the X-Optable-OID
-  // header, so a browser keeps one identity where the OPTABLE_OID cookie is
-  // blocked. The cookie still takes precedence server-side when it arrives.
   ois?: boolean;
   // Timeout hint for API calls (must include unit, e.g. '100ms', '2s', '1m')
   // When provided, the server will attempt to answer within the given time limit.

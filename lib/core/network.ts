@@ -72,11 +72,9 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     headers.set("X-Forwarded-For", config.mockedIP);
   }
 
-  // Replay the stored derived OIS id so the node recognizes this browser
-  // instead of deriving a new id for it. The cookie identity is not involved:
-  // the browser attaches OPTABLE_OID on its own and its value is not readable
-  // from here.
-  if (config.ois && config.consent.deviceAccess) {
+  // Replay the stored id so the node recognizes this browser instead of deriving
+  // a new one. The OPTABLE_OID cookie is separate and rides along on its own.
+  if (config.ois) {
     const oisID = oisRequestID(config, url.pathname);
     if (oisID) {
       headers.set(oisHeaderName, oisID);
@@ -111,8 +109,6 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     delete data.passport;
   }
 
-  // The derived OIS id arrives on a response header rather than in the body,
-  // so unlike the passport there is nothing to strip out of the payload.
   if (config.ois) {
     readOISHeader(config, new URL(request.url).pathname, response.headers);
   }

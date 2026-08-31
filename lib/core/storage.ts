@@ -18,23 +18,16 @@ class LocalStorage {
   private targetingKeys: StorageKeys;
   private siteKeys: StorageKeys;
   private pairKeys: StorageKeys;
+  private oisKeys: StorageKeys;
   private storage: LocalStorageProxy;
-
-  // Derived on demand rather than in the constructor: OIS is opt-in, and every
-  // key set costs a base64 encode that non-OIS callers would pay on each of the
-  // many LocalStorage instances the SDK builds.
-  private oisKeysCache?: StorageKeys;
 
   constructor(private config: ResolvedConfig) {
     this.passportKeys = generatePassportKeys(config);
     this.targetingKeys = generateTargetingKeys(config);
     this.siteKeys = generateSiteKeys(config);
     this.pairKeys = generatedPairKeys();
+    this.oisKeys = generateOISKeys(config);
     this.storage = new LocalStorageProxy(this.config.consent);
-  }
-
-  private get oisKeys(): StorageKeys {
-    return (this.oisKeysCache ??= generateOISKeys(this.config));
   }
 
   getPassport(): string | null {
