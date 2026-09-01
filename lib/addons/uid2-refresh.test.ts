@@ -192,9 +192,7 @@ describe("applyUid2Refresh", () => {
 
   it("updates each cache copy independently, preserving a merged public copy", () => {
     seedCache();
-    // A wrapper's merged public copy carries an EID the raw private copy does
-    // not have; the refresh must update the UID2 entry in both copies without
-    // one representation overwriting the other.
+    // The merged public copy carries an EID the private copy does not.
     const merged = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string);
     merged.ortb2.user.eids.push({ source: "carryover.com", uids: [{ id: "CARRIED" }] });
     localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
@@ -216,6 +214,7 @@ describe("applyUid2Refresh", () => {
     applyUid2Refresh(config, "uidapi.com", { status: "error", reason });
 
     expect(cachedEids().map((e) => e.source)).toEqual(["other.com"]);
+    expect(events).toHaveLength(1);
   });
 
   it.each(["HTTP 500", "client_error", "unauthorized", "malformed response body"])(

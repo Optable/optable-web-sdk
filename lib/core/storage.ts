@@ -69,12 +69,9 @@ class LocalStorage {
     this.setPairIDs(targeting);
   }
 
-  // Applies an in-place update to every stored copy of the targeting response
-  // independently. The private and public (optableCacheTargeting) copies can
-  // hold different representations — wrappers merge EIDs into the public key —
-  // so each copy is read, updated and written back on its own rather than one
-  // overwriting the others. Returns the last updated copy (the public one when
-  // both change), or null when no copy was updated.
+  // Updates every stored copy of the targeting response independently: the
+  // private and public copies can hold different representations, so each is
+  // read, updated and written back on its own. Returns the last updated copy.
   updateTargeting(update: (targeting: TargetingResponse) => boolean): TargetingResponse | null {
     let updated: TargetingResponse | null = null;
     const keys = [...new Set([...this.targetingKeys.read, ...this.targetingKeys.write])].filter(Boolean);
@@ -85,14 +82,17 @@ class LocalStorage {
         continue;
       }
 
+      let targeting: TargetingResponse;
       try {
-        const targeting: TargetingResponse = JSON.parse(raw);
-        if (update(targeting)) {
-          this.storage.setItem(key, JSON.stringify(targeting));
-          updated = targeting;
-        }
+        targeting = JSON.parse(raw);
       } catch {
         // Leave an unparseable copy untouched.
+        continue;
+      }
+
+      if (update(targeting)) {
+        this.storage.setItem(key, JSON.stringify(targeting));
+        updated = targeting;
       }
     }
 

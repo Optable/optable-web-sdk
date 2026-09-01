@@ -99,20 +99,15 @@ const EVICTION_REASONS = new Set(["invalid_token", "expired_token"]);
 
 /**
  * Applies a refresh outcome to the targeting cache: success rewrites the
- * matching EID's uids and _ref in place, opt-out and definitive rejections
- * remove the EID, and any other error leaves the cache untouched — the cached
- * token stays valid until identity_expires and the next page load retries.
- * Sends the targeting change event after each cache write so consumers
- * (e.g. a pubProvidedId merge) can re-read the cache.
+ * matching EID in place, optout and definitive rejections evict it, any other
+ * error leaves the cache untouched for retry on the next page load. Sends the
+ * targeting change event after each write.
  */
 function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2RefreshResult): void {
   if (result.status === "error" && !EVICTION_REASONS.has(result.reason)) {
     return;
   }
 
-  // The private and public copies of the cache can hold different
-  // representations (wrappers merge into the public one), so each copy is
-  // updated in place rather than read from one key and written over the other.
   const updated = new LocalStorage(config).updateTargeting((cached) => {
     const eids: RefreshableEID[] | undefined = cached?.ortb2?.user?.eids;
     // If cache does not exist don't try to set.
