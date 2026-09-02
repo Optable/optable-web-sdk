@@ -60,10 +60,11 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
   // Priority 1 — QA/debug override via URL param or sessionStorage flag.
   // ?optableControlGroup=1 forces the control variant; =0 forces treatment.
   // This lets QA verify both branches without clearing localStorage.
-  const controlGroupFlag = getFlags().optableControlGroup;
+  const flags = getFlags();
+  const controlGroupFlag = flags.optableControlGroup;
   if (controlGroupFlag === "1") {
     selected = filled.find((v) => v.id === controlId) ?? { id: controlId, trafficPercentage: 0 };
-  } else if (controlGroupFlag === "0") {
+  } else if (controlGroupFlag === "0" || flags.optableDebug) {
     selected = filled.find((v) => v.id === treatmentId) ?? { id: treatmentId, trafficPercentage: 0 };
   }
 
