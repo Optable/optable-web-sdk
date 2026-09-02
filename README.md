@@ -1285,6 +1285,21 @@ window.optable.cmd = new OptableCommands(window.optable.cmd || []);
 
 For the page-side stub and behaviour details, see the [command queue addon README](lib/addons/commands.md).
 
+## Static mappings
+
+The static mappings addon applies a wrapper's customer configuration defaults onto `window.optable`, so values a publisher sets on the page before the wrapper script loads always win. Plain-object config sections merge recursively; any other default only fills in a value the publisher left `null` or `undefined`.
+
+```typescript
+import { setStaticMappings } from "@optable/web-sdk/lib/dist/addons/staticMappings";
+
+setStaticMappings({
+  defaultSite: "customer-sdk",
+  analytics: { tenant: "customer", sample: 0.1 },
+});
+```
+
+For the merge rules and a full wrapper example, see the [static mappings addon README](lib/addons/staticMappings.md).
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
