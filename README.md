@@ -534,6 +534,16 @@ You can also rename and allow-list the GAM keys by passing a `taxonomyKeys` map 
 loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));
 ```
 
+When GAM is the only consumer, `setContextualTargetingInGAM(sdk, taxonomyKeys?, options?, url?)` wraps the fetch-convert-push sequence into one call: it fetches the segments (reusing a classification already in flight or fetched for the same URL, such as by `initContextual`), converts them with `ctxTargetingKeyValues()` (forwarding `taxonomyKeys` and `options`), and queues a `googletag.pubads().setTargeting()` call per key — creating the `googletag` command-queue stub if the page has none yet. Pass `url` to classify a route other than the current location, as in an SPA:
+
+```javascript
+import { setContextualTargetingInGAM } from "@optable/web-sdk/lib/dist/core/gam-contextual-targeting";
+
+await setContextualTargetingInGAM(sdk, { iab_ct_3_1: "ctx_iab" });
+```
+
+Nothing is queued when the page yields no key-values, and a failed segments fetch rejects — decide caller-side whether to fall back to an untargeted load.
+
 ## Using a script tag
 
 For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack-generated browser bundle targeting the browsers list described by `pnpm dlx browserslist "> 0.25%, not dead"` can be loaded on a website via a `script` tag.
