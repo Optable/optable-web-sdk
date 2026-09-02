@@ -4,10 +4,13 @@ import { getFlags } from "../core/flags";
 
 const DEFAULT_STORAGE_KEY = "OPTABLE_SPLIT_TEST";
 
-export interface ABTestVariant {
-  id: string;
+// A variant is an ABTestConfig whose trafficPercentage may be omitted and
+// inferred. The edge-facing fields (skipMatchers, skipResolvers,
+// matcher_override) are carried through untouched, so a caller can attach them
+// to one arm and hand the selected variant straight to InitConfig.abTests.
+export type ABTestVariant = Omit<ABTestConfig, "trafficPercentage"> & {
   trafficPercentage?: number;
-}
+};
 
 export interface SetupABConfig {
   variants: ABTestVariant[];
@@ -36,7 +39,7 @@ function fillTrafficPercentages(variants: ABTestVariant[]): ABTestConfig[] {
   const unassigned = variants.filter((v) => v.trafficPercentage === undefined);
   const each = unassigned.length > 0 ? (100 - allocated) / unassigned.length : 0;
   return variants.map((v) => ({
-    id: v.id,
+    ...v,
     trafficPercentage: v.trafficPercentage ?? each,
   }));
 }
@@ -57,36 +60,48 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
 
   let selected: ABTestConfig | null = null;
 
-  // Priority 1 — QA/debug override via URL param or sessionStorage flag.
+  // Priority 1 — QA/debug override naming a variant directly.
+  // ?optableSplitTest=<id> forces that arm. optableControlGroup only reaches the
+  // two arms named by controlId and treatmentId, so this is the only way to hold
+  // a third arm in a multi-variant test. Unknown ids fall through to the normal
+  // resolution rather than inventing a variant.
+  const splitTestFlag = getFlags().optableSplitTest;
+  if (splitTestFlag) {
+    selected = filled.find((v) => v.id === splitTestFlag) ?? null;
+  }
+
+  // Priority 2 — QA/debug override via URL param or sessionStorage flag.
   // ?optableControlGroup=1 forces the control variant; =0 forces treatment.
   // This lets QA verify both branches without clearing localStorage.
   const controlGroupFlag = getFlags().optableControlGroup;
-  if (controlGroupFlag === "1") {
+  if (!selected && controlGroupFlag === "1") {
     selected = filled.find((v) => v.id === controlId) ?? { id: controlId, trafficPercentage: 0 };
-  } else if (controlGroupFlag === "0") {
+  } else if (!selected && controlGroupFlag === "0") {
     selected = filled.find((v) => v.id === treatmentId) ?? { id: treatmentId, trafficPercentage: 0 };
   }
 
-  // Priority 2 — sticky assignment from a previous visit.
+  // Priority 3 — sticky assignment from a previous visit.
   // Once a user is assigned a variant it must not change across page loads or
   // sessions, otherwise the same user could appear in both groups. We validate
   // the cached id against the current variant list so a stale cache from an
   // old experiment config is silently discarded.
+  //
+  // Only the id is taken from storage. Everything else comes from the current
+  // variant config, so editing an arm's skipMatchers (or its weight) applies to
+  // users who were already assigned to it instead of only to new ones.
   if (!selected) {
     try {
       const cached = localStorage.getItem(storageKey);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed?.id && filled.some((v) => v.id === parsed.id)) {
-          selected = parsed as ABTestConfig;
-        }
+        selected = filled.find((v) => v.id === parsed?.id) ?? null;
       }
     } catch {
       // localStorage unavailable or invalid JSON
     }
   }
 
-  // Priority 3 — first visit: randomly assign based on traffic weights.
+  // Priority 4 — first visit: randomly assign based on traffic weights.
   // determineABTest returns null when the random bucket falls outside all
   // defined ranges (i.e. weights sum to less than 100). filled[0] is the
   // fallback so selected is always non-null after this point.
@@ -101,7 +116,13 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     // localStorage unavailable
   }
 
-  const isControl = selected.id !== treatmentId;
+  // Control is the arm named by controlId, not "anything that is not treatment".
+  // With two variants the two readings agree. With three or more they do not: a
+  // middle arm that still resolves EIDs — say one carrying skipMatchers — would
+  // be classified as a holdout and have its cache cleared below, which both
+  // corrupts the measurement and strands the user on an empty cache for the rest
+  // of the session.
+  const isControl = selected.id === controlId;
   const assignment = selected.id;
 
   // Control group: clear cached targeting data so RTD, PPID and TargetingFromCache

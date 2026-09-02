@@ -5,6 +5,7 @@ const FLAG_KEYS = [
   "optableResolve3P",
   "optableEnableAnalytics",
   "optableControlGroup",
+  "optableSplitTest",
   "optableForceTargeting",
   "optableForceGlobalRouting",
   "optableForceSkipMerge",

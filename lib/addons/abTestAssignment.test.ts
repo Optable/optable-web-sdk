@@ -99,6 +99,102 @@ describe("setupAB - custom variant ids", () => {
   });
 });
 
+describe("setupAB - three arms", () => {
+  const threeArms = [
+    { id: "production" },
+    { id: "skip1p", trafficPercentage: 45, skipMatchers: ["1p"] },
+    { id: "test", trafficPercentage: 5 },
+  ];
+
+  it("treats a middle arm as treatment, not control", () => {
+    jest.spyOn(Math, "random").mockReturnValue(0.6); // bucket 60 → skip1p
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("skip1p");
+    expect(result.isControl).toBe(false);
+  });
+
+  it("keeps the targeting cache for a middle arm", () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "valid");
+    localStorage.setItem("OPTABLE_TARGETING_abc123", "valid");
+    jest.spyOn(Math, "random").mockReturnValue(0.6);
+    setupAB({ variants: threeArms });
+    expect(localStorage.getItem("OPTABLE_RESOLVED")).toBe("valid");
+    expect(localStorage.getItem("OPTABLE_TARGETING_abc123")).toBe("valid");
+  });
+
+  it("still treats controlId as control and clears its cache", () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "stale");
+    jest.spyOn(Math, "random").mockReturnValue(0.97); // bucket 97 → test
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("test");
+    expect(result.isControl).toBe(true);
+    expect(localStorage.getItem("OPTABLE_RESOLVED")).toBeNull();
+  });
+
+  it("carries skipMatchers through to the selected variant", () => {
+    jest.spyOn(Math, "random").mockReturnValue(0.6);
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.skipMatchers).toEqual(["1p"]);
+  });
+
+  it("does not attach skipMatchers to an arm that has none", () => {
+    jest.spyOn(Math, "random").mockReturnValue(0.0);
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("production");
+    expect(result.variant.skipMatchers).toBeUndefined();
+  });
+
+  it("re-reads variant config from the current list, not the stored copy", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: "skip1p", trafficPercentage: 45 }));
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("skip1p");
+    expect(result.variant.skipMatchers).toEqual(["1p"]);
+  });
+});
+
+describe("setupAB - optableSplitTest override", () => {
+  const threeArms = [
+    { id: "production" },
+    { id: "skip1p", trafficPercentage: 45, skipMatchers: ["1p"] },
+    { id: "test", trafficPercentage: 5 },
+  ];
+
+  it("forces an arm that optableControlGroup cannot name", () => {
+    sessionStorage.setItem("optableSplitTest", "skip1p");
+    resetFlags();
+    jest.spyOn(Math, "random").mockReturnValue(0.0); // would otherwise be production
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("skip1p");
+    expect(result.variant.skipMatchers).toEqual(["1p"]);
+    expect(result.isControl).toBe(false);
+  });
+
+  it("beats a sticky assignment", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: "production", trafficPercentage: 50 }));
+    sessionStorage.setItem("optableSplitTest", "test");
+    resetFlags();
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("test");
+    expect(result.isControl).toBe(true);
+  });
+
+  it("beats optableControlGroup", () => {
+    sessionStorage.setItem("optableSplitTest", "skip1p");
+    sessionStorage.setItem("optableControlGroup", "1");
+    resetFlags();
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("skip1p");
+  });
+
+  it("ignores an id that is not in the variants list", () => {
+    sessionStorage.setItem("optableSplitTest", "nonexistent");
+    resetFlags();
+    jest.spyOn(Math, "random").mockReturnValue(0.0);
+    const result = setupAB({ variants: threeArms });
+    expect(result.variant.id).toBe("production");
+  });
+});
+
 describe("setupAB - control group cache clearing", () => {
   it("clears OPTABLE_RESOLVED and OPTABLE_TARGETING_* when assigned to control", () => {
     localStorage.setItem("OPTABLE_RESOLVED", "stale");

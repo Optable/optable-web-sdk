@@ -59,6 +59,7 @@ if (controlGroup === "1") {
 | `optableDebug`              | `debugLog`, RTD module | Verbose logging.                                                                      |
 | `optableDisableConsent`     | `getConsent`           | Bypass the CMP and treat all permissions as granted.                                  |
 | `optableControlGroup`       | `setupAB`              | `1` forces the control variant, `0` forces treatment. Two-state — read the raw value. |
+| `optableSplitTest`          | `setupAB`              | Forces the variant with this id. Reaches arms `optableControlGroup` cannot name.      |
 | `optableForceTargeting`     | wrapper code           | Re-run targeting even when a session guard says it already ran.                       |
 | `optableForceTokenize`      | wrapper code           | Re-run tokenize even when a session guard says it already ran.                        |
 | `optableForceGlobalRouting` | `buildRTD`             | Route every EID to `global` instead of per-bidder.                                    |
