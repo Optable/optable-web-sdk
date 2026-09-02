@@ -1285,6 +1285,20 @@ window.optable.cmd = new OptableCommands(window.optable.cmd || []);
 
 For the page-side stub and behaviour details, see the [command queue addon README](lib/addons/commands.md).
 
+## EID cache merge
+
+The EID cache merge module maintains a rolling EID cache across targeting and tokenize calls. New EIDs replace cached ones with the same source, sources absent from the new response are carried over, and UID2 EIDs past their refresh deadline are returned for the caller to refresh.
+
+```typescript
+import { mergeCache } from "@optable/web-sdk/lib/dist/core/eid-cache";
+
+const cached = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") || "null");
+const { merged, staleUid2s } = mergeCache(await sdk.targeting(), cached);
+localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
+```
+
+For the merge rules and UID2 ref handling, see the [EID cache README](lib/core/eid-cache.md).
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
