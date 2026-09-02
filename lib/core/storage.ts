@@ -69,6 +69,36 @@ class LocalStorage {
     this.setPairIDs(targeting);
   }
 
+  // Updates every stored copy of the targeting response independently: the
+  // private and public copies can hold different representations, so each is
+  // read, updated and written back on its own. Returns the last updated copy.
+  updateTargeting(update: (targeting: TargetingResponse) => boolean): TargetingResponse | null {
+    let updated: TargetingResponse | null = null;
+    const keys = [...new Set([...this.targetingKeys.read, ...this.targetingKeys.write])].filter(Boolean);
+
+    for (const key of keys) {
+      const raw = this.storage.getItem(key);
+      if (!raw) {
+        continue;
+      }
+
+      let targeting: TargetingResponse;
+      try {
+        targeting = JSON.parse(raw);
+      } catch {
+        // Leave an unparseable copy untouched.
+        continue;
+      }
+
+      if (update(targeting)) {
+        this.storage.setItem(key, JSON.stringify(targeting));
+        updated = targeting;
+      }
+    }
+
+    return updated;
+  }
+
   getSite(): SiteResponse | null {
     const raw = this.readStorageKeys(this.siteKeys);
     return raw ? JSON.parse(raw) : null;
