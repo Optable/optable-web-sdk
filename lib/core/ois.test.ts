@@ -14,8 +14,8 @@ const baseConfig = {
 
 const storageKey = generateOISKeys(baseConfig).write[0];
 
-const HEADER_PATHS = ["/identify", "/uid2/token", "/profile", "/v2/targeting"];
-const NON_HEADER_PATHS = ["/config", "/witness", "/targeting", "/v1/resolve", "/v2/tokenize"];
+const HEADER_PATHS = ["/identify", "/uid2/token", "/profile"];
+const NON_HEADER_PATHS = ["/config", "/witness", "/targeting", "/v2/targeting", "/v1/resolve", "/v2/tokenize"];
 
 function withHeader(id?: string): Headers {
   const headers = new Headers();
@@ -186,7 +186,7 @@ describe("round trip", () => {
   it("replays an id received on a response", () => {
     readOISHeader(baseConfig, "/identify", withHeader("round-trip-id"));
 
-    const request = buildRequest("/v2/targeting", baseConfig, { method: "GET" });
+    const request = buildRequest("/profile", baseConfig, { method: "POST" });
 
     expect(request.headers.get(oisHeaderName)).toBe("round-trip-id");
   });

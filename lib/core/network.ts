@@ -92,7 +92,7 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
   const request = buildRequest(path, config, init);
   const response = await globalThis.fetch(request);
 
-  // Ahead of the error throw below: a non-2xx still carries a derived id.
+  // Ahead of the error throw below: a non-2xx can still carry a derived id.
   if (config.ois) {
     readOISHeader(config, new URL(request.url).pathname, response.headers);
   }

@@ -1134,7 +1134,7 @@ An OIS-enabled node recognizes a browser two ways, and only one of them involves
 
 ### The cookie identity needs no SDK code
 
-The DCN sets an `OPTABLE_OID` cookie and the browser attaches it to every call on its own, so `identify()`, `profile()` and `targeting()` are already attributed to it with nothing enabled client-side.
+The DCN sets an `OPTABLE_OID` cookie and the browser attaches it to every call on its own, so `identify()` and `profile()` are already attributed to it with nothing enabled client-side.
 
 That cookie is `HttpOnly` and scoped to `optable.co`, which has two consequences worth knowing. Its value is never readable from JavaScript — not via `document.cookie`, and not from the response, because `Set-Cookie` is a forbidden response header name. And because it is a third-party cookie for a publisher page, it is dropped wherever cross-site cookies are blocked (Safari/ITP, Firefox ETP, Chrome's third-party cookie restrictions) — a different problem from the first-party eTLD+1 case described under [Domains and Cookies](#domains-and-cookies), and one a publisher cannot configure away. When that happens the DCN cannot recognize the browser from the cookie, and the derived identity below is what carries it instead. The SDK cannot bridge that gap: if the browser is willing to send the cookie it is already doing so, and if it is not, there is nothing to forward.
 
@@ -1187,13 +1187,13 @@ The SDK dispatches an `optable-ois:change` event on `window` whenever the stored
 window.addEventListener("optable-ois:change", (e) => console.log(e.detail));
 ```
 
-`oisId()` returns `null` until a response has returned an ID. Unlike `passport()`, that does **not** happen during initialization: `/config` derives no identity, so the first ID arrives on the first `identify()`, `targeting()` or `profile()` call.
+`oisId()` returns `null` until a response has returned an ID. Unlike `passport()`, that does **not** happen during initialization: `/config` derives no identity, so the first ID arrives on the first `identify()` or `profile()` call.
 
 ### How it travels
 
 The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>` as an opaque string, and sent back on `X-Optable-OID`.
 
-Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token`, `/profile` and `/v2/targeting`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
+Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token` and `/profile`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
 
 There is no write policy to reason about. The DCN returns the identity it derived for the _current_ request rather than the one the client replayed, so as those signals drift (a new IP subnet, a browser upgrade, a resized window) the stored value simply rolls forward. The SDK stores whatever the last response returned.
 

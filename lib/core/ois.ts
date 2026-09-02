@@ -2,14 +2,11 @@ import type { ResolvedConfig } from "../config";
 import { LocalStorage } from "./storage";
 import { generateOISKeys } from "./storage-keys";
 
-// Readable on the response only because the node lists it in Access-Control-Expose-Headers.
 const oisHeaderName = "X-Optable-OID";
 
 const oisChangeEventName = "optable-ois:change";
 
-// A custom header makes a request non-simple, so sending it where the node derives
-// no id buys a CORS preflight for nothing — notably /config, on every page load.
-const HEADER_PATHS = new Set(["/identify", "/uid2/token", "/profile", "/v2/targeting"]);
+const HEADER_PATHS = new Set(["/identify", "/uid2/token", "/profile"]);
 
 function derivesOISID(pathname: string): boolean {
   return HEADER_PATHS.has(pathname);
@@ -46,7 +43,7 @@ function readOISHeader(config: ResolvedConfig, pathname: string, headers: Header
   try {
     storage.setOIS(id);
   } catch {
-    // Storage full or blocked (Safari private mode).
+    // Storage full or blocked.
     return;
   }
 

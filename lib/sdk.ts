@@ -139,14 +139,13 @@ class OptableSDK {
     return value;
   }
 
-  // Not the cookie identity: OPTABLE_OID is HttpOnly and unreadable from JS.
   oisId(): string | null {
     const value = getOISID(this.dcn);
     if (value === null && this.dcn.ois) {
       this.warnOnce(
         "oisId",
         "oisId() returned null. The derived OIS id is cached once the DCN returns it on the X-Optable-OID " +
-          "response header, which happens on the first identify(), targeting() or profile() call — not during " +
+          "response header, which happens on the first identify() or profile() call — not during " +
           "initialization. A node with OIS ID derivation disabled, or a non-residential IP, never returns one."
       );
     }

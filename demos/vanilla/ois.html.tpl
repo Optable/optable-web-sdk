@@ -45,20 +45,25 @@
       }
       table.ois td,
       table.ois th {
-        padding: 4px 12px 4px 0;
-        font-size: 0.85rem;
+        padding: 8px 16px 8px 0;
+        font-size: 0.95rem;
+        line-height: 1.5;
         vertical-align: top;
       }
       .note {
-        font-size: 0.8rem;
-        color: #666;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        color: #555;
+        max-width: 46rem;
       }
       .warn {
-        font-size: 0.8rem;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        max-width: 46rem;
         background: #fff6e0;
         border: 1px solid #f0dca8;
         border-radius: 4px;
-        padding: 0.6rem 1rem;
+        padding: 0.8rem 1.2rem;
       }
     </style>
   </head>
@@ -76,9 +81,7 @@
           <h4>Example: Optable Identity System (OIS) using cookies</h4>
           <p>
             An OIS-enabled DCN recognizes a browser two ways, and only one of them involves the SDK. This page shows
-            both. See the
-            <a href="https://github.com/Optable/optable-web-sdk#optable-identity-system-ois">OIS section of the README</a>
-            for the full description.
+            both.
           </p>
         </div>
       </div>
@@ -87,8 +90,8 @@
         <div class="twelve column">
           <h5>1. Cookie identity &mdash; nothing to do</h5>
           <p class="note">
-            The browser attaches <code>OPTABLE_OID</code> on its own, so <code>identify</code>, <code>profile</code> and
-            <code>targeting</code> are already attributed to it. It is <code>HttpOnly</code>, so there is deliberately
+            The browser attaches <code>OPTABLE_OID</code> on its own, so <code>identify</code> and
+            <code>profile</code> are already attributed to it. It is <code>HttpOnly</code>, so there is deliberately
             nothing to display here. Block third-party cookies and the DCN falls back to the identity below.
           </p>
         </div>
@@ -98,10 +101,9 @@
         <div class="twelve column">
           <h5>2. Derived identity &mdash; stored and replayed by the SDK</h5>
           <p class="note">
-            Derived from the device signals below and returned on the <code>X-Optable-OID</code> response header. With
+            Derived by the DCN and returned on the <code>X-Optable-OID</code> response header. With
             <code>ois: true</code> the SDK stores it and replays it on that header. It arrives on the first
-            <code>identify</code>, <code>targeting</code> or <code>profile</code> call &mdash; not during
-            initialization.
+            <code>identify</code> or <code>profile</code> call &mdash; not during initialization.
           </p>
           <table class="ois" id="state"></table>
           <p class="warn">
@@ -116,21 +118,9 @@
         <div class="twelve column">
           <fieldset>
             <button id="identify-button" class="button-primary">Run identify call</button>
-            <button id="targeting-button">Run targeting call</button>
             <button id="clear-button">Clear stored ID</button>
             <button id="reload-button">Reload page</button>
           </fieldset>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="twelve column">
-          <h5>Forwarded device signals (<code>sig</code>)</h5>
-          <p class="note">
-            What <code>forwardSignals: true</code> sends, and what the identity above is derived from. A signal this
-            browser does not expose is omitted rather than sent empty.
-          </p>
-          <table class="ois" id="signals"></table>
         </div>
       </div>
 
@@ -169,44 +159,17 @@
             state.id ? "<code>" + state.id + "</code>" : "<em>none yet</em>",
             state.id ? "Replayed on X-Optable-OID on the next call." : "Run a call below."
           ) + row("Storage key", "<code>" + state.storageKey + "</code>");
-
-        renderSignals();
       }
 
-      function renderSignals() {
-        const target = document.getElementById("signals");
-        if (!lastSig) {
-          target.innerHTML = row("sig", "<em>no call made yet</em>");
-          return;
-        }
-
-        let html = row("Encoded", "<code style='word-break:break-all'>" + lastSig + "</code>");
-        try {
-          // base64url -> base64 before decoding.
-          const decoded = atob(lastSig.replace(/-/g, "+").replace(/_/g, "/"));
-          new URLSearchParams(decoded).forEach(function (value, key) {
-            html += row(key, "<code>" + value + "</code>");
-          });
-        } catch (e) {
-          html += row("decode", "<em>failed</em>");
-        }
-        target.innerHTML = html;
-      }
-
-      // The SDK does not expose the sig blob or the outgoing header, and the
-      // received header is only visible on the Response, so wrap fetch to show
-      // what actually went over the wire rather than re-deriving it here.
-      let lastSig = "";
+      // The outgoing header is not exposed by the SDK and the received one is
+      // only visible on the Response, so wrap fetch to show what actually went
+      // over the wire.
       const nativeFetch = window.fetch;
       window.fetch = function (input) {
         let path = "";
         try {
           const url = new URL(input instanceof Request ? input.url : String(input));
           path = url.pathname;
-          const sig = url.searchParams.get("sig");
-          if (sig) {
-            lastSig = sig;
-          }
           const sent = input instanceof Request ? input.headers.get("X-Optable-OID") : null;
           log(path + "  ->  X-Optable-OID: " + (sent || "(none stored yet)"));
         } catch (e) {
@@ -238,13 +201,6 @@
             .identify(optable.SDK.eid("ois-demo@example.com"))
             .then(() => log("identify ok"))
             .catch((err) => log("identify error: " + err.message));
-        });
-
-        document.getElementById("targeting-button").addEventListener("click", () => {
-          optable.instance
-            .targeting()
-            .then(() => log("targeting ok"))
-            .catch((err) => log("targeting error: " + err.message));
         });
 
         document.getElementById("clear-button").addEventListener("click", () => {
