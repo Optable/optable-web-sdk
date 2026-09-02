@@ -1,3 +1,4 @@
+import type { ContextualTargetingKeyValuesOptions } from "../edge/contextual_segments";
 import type { WitnessProperties } from "../edge/witness";
 import OptableSDK from "../sdk";
 
@@ -5,6 +6,10 @@ declare module "../sdk" {
   export interface OptableSDK {
     installGPTEventListeners: () => void;
     installGPTSecureSignals: () => void;
+    setContextualTargetingInGAM: (
+      taxonomyKeys?: Record<string, string>,
+      options?: ContextualTargetingKeyValuesOptions
+    ) => Promise<void>;
   }
 }
 
@@ -77,6 +82,27 @@ OptableSDK.prototype.installGPTEventListeners = function (eventSpec?: GptEventSp
       }
     } catch (e) {
       // fail silently to avoid breaking host page
+    }
+  });
+};
+
+/*
+ * setContextualTargetingInGAM() fetches the page's contextual segments and
+ * pushes the resulting key-values to GAM via googletag.pubads().setTargeting.
+ * taxonomyKeys and options are forwarded to ctxTargetingKeyValues().
+ */
+OptableSDK.prototype.setContextualTargetingInGAM = async function (
+  taxonomyKeys?: Record<string, string>,
+  options?: ContextualTargetingKeyValuesOptions
+): Promise<void> {
+  await this.ctxSegments();
+  const kvs = this.ctxTargetingKeyValues(taxonomyKeys, options);
+  if (!Object.keys(kvs).length) return;
+
+  window.googletag = window.googletag || { cmd: [] };
+  window.googletag.cmd.push(() => {
+    for (const [key, values] of Object.entries(kvs)) {
+      window.googletag.pubads().setTargeting(key, values);
     }
   });
 };
