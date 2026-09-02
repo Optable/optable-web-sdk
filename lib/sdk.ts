@@ -43,8 +43,6 @@ class OptableSDK {
   private contextSent: boolean = false;
   private contextConfig: PageContextConfig | null = null;
   private contextualResponse: ContextualSegmentsResponse | null = null;
-  // Warn once per accessor per instance, so a page polling one that is
-  // legitimately null before initialization does not flood the console.
   private warned = new Set<string>();
 
   constructor(dcn: InitConfig) {
@@ -141,7 +139,6 @@ class OptableSDK {
     return value;
   }
 
-  // The stored OIS id, or null until the node returns one. Requires `ois`.
   // Not the cookie identity: OPTABLE_OID is HttpOnly and unreadable from JS.
   oisId(): string | null {
     const value = getOISID(this.dcn);
@@ -160,7 +157,6 @@ class OptableSDK {
     return getOISState(this.dcn);
   }
 
-  // Forgets the stored id; the node issues a new one on the next call.
   oisClear(): void {
     clearOISID(this.dcn);
   }

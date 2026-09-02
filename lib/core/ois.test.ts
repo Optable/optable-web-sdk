@@ -14,10 +14,7 @@ const baseConfig = {
 
 const storageKey = generateOISKeys(baseConfig).write[0];
 
-// Endpoints where the node derives an id, in both directions.
 const HEADER_PATHS = ["/identify", "/uid2/token", "/profile", "/v2/targeting"];
-
-// Endpoints that derive no id, so the header is neither sent nor read.
 const NON_HEADER_PATHS = ["/config", "/witness", "/targeting", "/v1/resolve", "/v2/tokenize"];
 
 function withHeader(id?: string): Headers {

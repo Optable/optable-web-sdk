@@ -1,20 +1,14 @@
-// The SDK's half of the Optable Identity System: stores the OIS id the node
-// derives and replays it on later requests, so a browser keeps one identity
-// where the HttpOnly OPTABLE_OID cookie is blocked.
-
 import type { ResolvedConfig } from "../config";
 import { LocalStorage } from "./storage";
 import { generateOISKeys } from "./storage-keys";
 
-// Readable on the response only because the node lists it in
-// Access-Control-Expose-Headers.
+// Readable on the response only because the node lists it in Access-Control-Expose-Headers.
 const oisHeaderName = "X-Optable-OID";
 
 const oisChangeEventName = "optable-ois:change";
 
-// The endpoints where the node derives an id. A custom header makes a request
-// non-simple, so sending it anywhere else buys a CORS preflight for nothing —
-// notably /config, which runs on every page load.
+// A custom header makes a request non-simple, so sending it where the node derives
+// no id buys a CORS preflight for nothing — notably /config, on every page load.
 const HEADER_PATHS = new Set(["/identify", "/uid2/token", "/profile", "/v2/targeting"]);
 
 function derivesOISID(pathname: string): boolean {
@@ -34,16 +28,8 @@ function oisStorageKey(config: ResolvedConfig): string {
   return generateOISKeys(config).write[0];
 }
 
-// An absent header is not an instruction to forget: the node omits it on
-// endpoints that derive no id, and on requests it declines to derive for.
 function readOISHeader(config: ResolvedConfig, pathname: string, headers: Headers): void {
-  if (!derivesOISID(pathname)) {
-    return;
-  }
-
-  // LocalStorageProxy discards the write without consent, so bail before firing
-  // a change event that reports nothing changed.
-  if (!config.consent.deviceAccess) {
+  if (!derivesOISID(pathname) || !config.consent.deviceAccess) {
     return;
   }
 
@@ -60,8 +46,7 @@ function readOISHeader(config: ResolvedConfig, pathname: string, headers: Header
   try {
     storage.setOIS(id);
   } catch {
-    // Storage full or blocked (Safari private mode); a failed write must not
-    // break the response.
+    // Storage full or blocked (Safari private mode).
     return;
   }
 
@@ -77,7 +62,12 @@ function oisRequestID(config: ResolvedConfig, pathname: string): string | null {
 }
 
 function clearOISID(config: ResolvedConfig): void {
-  new LocalStorage(config).clearOIS();
+  const storage = new LocalStorage(config);
+  if (storage.getOIS() === null) {
+    return;
+  }
+
+  storage.clearOIS();
   notifyChange(config, { id: null, storageKey: oisStorageKey(config) });
 }
 

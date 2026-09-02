@@ -72,12 +72,14 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     headers.set("X-Forwarded-For", config.mockedIP);
   }
 
-  // Replay the stored id so the node recognizes this browser instead of deriving
-  // a new one. The OPTABLE_OID cookie is separate and rides along on its own.
   if (config.ois) {
     const oisID = oisRequestID(config, url.pathname);
     if (oisID) {
-      headers.set(oisHeaderName, oisID);
+      try {
+        headers.set(oisHeaderName, oisID);
+      } catch {
+        // A stored value carrying characters a header cannot hold must not brick every call.
+      }
     }
   }
 
@@ -89,6 +91,11 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
 async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
   const request = buildRequest(path, config, init);
   const response = await globalThis.fetch(request);
+
+  // Ahead of the error throw below: a non-2xx still carries a derived id.
+  if (config.ois) {
+    readOISHeader(config, new URL(request.url).pathname, response.headers);
+  }
 
   const contentType = response.headers.get("Content-Type");
   const data = contentType?.startsWith("application/json") ? await response.json() : await response.text();
@@ -107,10 +114,6 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     // the `passport` attribute here, it may end up sent as targeting data to ad servers.
     // Not the end of the world, but something we want to avoid due to passport size.
     delete data.passport;
-  }
-
-  if (config.ois) {
-    readOISHeader(config, new URL(request.url).pathname, response.headers);
   }
 
   return data;
