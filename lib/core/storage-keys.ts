@@ -41,6 +41,14 @@ function generatedPairKeys(): StorageKeys {
   return { write: [pairStorageKey], read: [pairStorageKey] };
 }
 
+// Generate the keys for the OIS id storage
+// The keys are generated based on the host and node configs
+function generateOISKeys(config: ResolvedConfig): StorageKeys {
+  const key = `OPTABLE_OIS_${getWriteKeyBase64FromConfig(config)}`;
+
+  return { write: [key], read: [key] };
+}
+
 // Generate the keys for the passport storage
 // The keys are generated based on the host and node configs
 // We need to keep backward compatibility with the legacy host cache
@@ -68,4 +76,4 @@ function generatePassportKeys(config: ResolvedConfig): StorageKeys {
 }
 
 export type { StorageKeys };
-export { generateSiteKeys, generatedPairKeys, generatePassportKeys, generateTargetingKeys };
+export { generateSiteKeys, generatedPairKeys, generatePassportKeys, generateTargetingKeys, generateOISKeys };

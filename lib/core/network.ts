@@ -2,6 +2,7 @@ import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
 import { deviceSignals } from "./signals";
+import { oisHeaderName, oisRequestID, readOISHeader } from "./ois";
 
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
   const { host, cookies, insecure } = config;
@@ -64,10 +65,22 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
 
   const requestInit: RequestInit = { ...init };
   requestInit.credentials = config.consent.deviceAccess ? "include" : "omit";
+  const headers = new Headers(requestInit.headers);
+  requestInit.headers = headers;
 
   if (config.mockedIP) {
-    requestInit.headers = new Headers(requestInit.headers);
-    requestInit.headers.set("X-Forwarded-For", config.mockedIP);
+    headers.set("X-Forwarded-For", config.mockedIP);
+  }
+
+  if (config.ois) {
+    const oisID = oisRequestID(config, url.pathname);
+    if (oisID) {
+      try {
+        headers.set(oisHeaderName, oisID);
+      } catch {
+        // A stored value carrying characters a header cannot hold must not brick every call.
+      }
+    }
   }
 
   const request = new Request(url.toString(), requestInit);
@@ -76,7 +89,13 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
 }
 
 async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
-  const response = await globalThis.fetch(buildRequest(path, config, init));
+  const request = buildRequest(path, config, init);
+  const response = await globalThis.fetch(request);
+
+  // Ahead of the error throw below: a non-2xx can still carry a derived id.
+  if (config.ois) {
+    readOISHeader(config, new URL(request.url).pathname, response.headers);
+  }
 
   const contentType = response.headers.get("Content-Type");
   const data = contentType?.startsWith("application/json") ? await response.json() : await response.text();
