@@ -1,3 +1,5 @@
+import { debugLog } from "../core/log";
+
 // UID2 refresh token response body. Also the shape carried on a cached EID's
 // _ref, resolved from the targeting response refs map.
 type Uid2RefData = {
@@ -86,5 +88,76 @@ async function refreshUid2Token(
   return { status: "success", body: parsed.body };
 }
 
-export { refreshUid2Token, UID2_REFRESH_ENDPOINT };
-export type { Uid2RefData, Uid2RefreshResult };
+// An EID from the rolling cache carrying UID2 refresh material on _ref, as
+// stamped by the eid-cache module's resolveRefs.
+type StaleUid2Eid = {
+  source: string;
+  uids?: Array<{ id?: string; atype?: number }>;
+  _ref?: Uid2RefData;
+};
+
+type RefreshStaleOptions = {
+  // localStorage key of the rolling EID cache. Defaults to OPTABLE_RESOLVED.
+  cacheKey?: string;
+  // Forwarded to refreshUid2Token.
+  endpoint?: string;
+  // Called after each cache write, so callers can re-propagate the cache
+  // (for example re-merge prebid's pubProvidedId in ppid delivery).
+  onCacheUpdated?: () => void;
+};
+
+const DEFAULT_CACHE_KEY = "OPTABLE_RESOLVED";
+
+/*
+ * Refreshes stale UID2 EIDs (typically the staleUid2s returned by the
+ * eid-cache module's mergeCache) and rewrites the cached EID in place. A
+ * refresh the operator rejects — expired, opted out — removes the EID from
+ * the cache; a network or decryption failure leaves the cache untouched so a
+ * later page load can retry.
+ *
+ * EIDs are refreshed sequentially: each iteration re-reads and rewrites the
+ * cache, so concurrent writes cannot clobber each other.
+ */
+async function refreshStaleUid2s(staleEids: StaleUid2Eid[], options: RefreshStaleOptions = {}): Promise<void> {
+  const cacheKey = options.cacheKey ?? DEFAULT_CACHE_KEY;
+
+  for (const eid of staleEids) {
+    try {
+      const ref = eid._ref;
+      if (!ref?.refresh_token || !ref?.refresh_response_key) continue;
+
+      const result = await refreshUid2Token(ref.refresh_token, ref.refresh_response_key, options.endpoint);
+
+      const resolved = JSON.parse(localStorage.getItem(cacheKey) || "null");
+      const cachedEids: StaleUid2Eid[] | undefined = resolved?.ortb2?.user?.eids;
+      const idx = cachedEids?.findIndex((e) => e.source === eid.source) ?? -1;
+      if (!cachedEids || idx === -1) continue;
+
+      if (result.status === "success") {
+        const body = result.body;
+        cachedEids[idx].uids = [{ atype: 3, id: body.advertising_token }];
+        cachedEids[idx]._ref = {
+          advertising_token: body.advertising_token,
+          refresh_token: body.refresh_token,
+          refresh_response_key: body.refresh_response_key,
+          refresh_from: body.refresh_from,
+          refresh_expires: body.refresh_expires,
+          identity_expires: body.identity_expires,
+        };
+        debugLog("log", "UID2: token refreshed");
+      } else {
+        cachedEids.splice(idx, 1);
+        const reason = result.status === "optout" ? "optout" : result.reason;
+        debugLog("log", `UID2: refresh failed (${reason}), removing stale token`);
+      }
+
+      localStorage.setItem(cacheKey, JSON.stringify(resolved));
+      options.onCacheUpdated?.();
+    } catch (err) {
+      debugLog("error", "UID2: refresh error", err);
+    }
+  }
+}
+
+export { refreshUid2Token, refreshStaleUid2s, UID2_REFRESH_ENDPOINT };
+export type { Uid2RefData, Uid2RefreshResult, StaleUid2Eid, RefreshStaleOptions };
