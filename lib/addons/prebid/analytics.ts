@@ -262,15 +262,15 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * Process a Prebid `auctionEnd` event: build an internal representation of
-   * requests, merge in received bids and schedule a delayed Witness API call
-   * (to allow `bidWon` to be received) or mark as missed.
+   * Process a Prebid `auctionEnd` event: record the raw event and schedule a
+   * delayed Witness API call, giving `bidWon` events a window to arrive. The
+   * payload is built from the raw event by `toWitness` when that timer fires.
    * @param event - The raw Prebid auctionEnd event object.
    * @param missed - True when the event was previously emitted (missed replay).
    * @returns void
    */
   async trackAuctionEnd(event: any, missed: boolean = false) {
-    const { auctionId, timeout, bidderRequests = [], bidsReceived = [], noBids = [] } = event;
+    const { auctionId, bidderRequests = [] } = event;
     const timeoutBids = this.pendingTimeoutBids.get(auctionId) || [];
     const sampled = !!this.config.analytics && this.shouldSample();
 
@@ -278,137 +278,6 @@ class OptablePrebidAnalytics {
 
     (window as any).optable = (window as any).optable || {};
     (window as any).optable.pageAuctionsCount = (Number((window as any).optable.pageAuctionsCount) || 0) + 1;
-
-    // Build auction object with bidder requests and EID flags
-    const auction = {
-      auctionId,
-      timeout,
-      bidderRequests: bidderRequests.map((br: any) => {
-        const { bidderCode, bidderRequestId, bids = [] } = br;
-        const domain = br.ortb2.site?.domain ?? "unknown";
-        const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
-        // Deduplicate EIDs by source
-        const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
-
-        // Optable EIDs
-        const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
-        const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
-        const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
-
-        return {
-          bidderCode,
-          bidderRequestId,
-          domain,
-          hasOEids: optableEIDS.length > 0,
-          optableMatchers,
-          optableSources,
-          status: STATUS.REQUESTED,
-          bids: bids.map(
-            (b: {
-              bidId: string;
-              adUnitCode: string;
-              adUnitId: string;
-              transactionId: string;
-              src: string;
-              floorData?: { floorMin: number };
-              ortb2Imp?: { ext?: { optable?: { splitTestAssignment?: string } } };
-            }) => ({
-              bidId: b.bidId,
-              bidderRequestId,
-              adUnitCode: b.adUnitCode,
-              adUnitId: b.adUnitId,
-              transactionId: b.transactionId,
-              src: b.src,
-              floorMin: b.floorData?.floorMin,
-              splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
-              status: STATUS.REQUESTED,
-            })
-          ),
-        };
-      }),
-    };
-
-    // Build lookup tables for 1:many relationship
-    const requestIndex: { [key: string]: any } = {};
-    const bidIndex: { [key: string]: any } = {};
-    const bidToRequest: { [key: string]: any } = {};
-
-    auction.bidderRequests.forEach((br: { bidderRequestId: string; bids: Array<{ bidId: string }> }) => {
-      requestIndex[br.bidderRequestId] = br;
-
-      br.bids.forEach((bid) => {
-        bidIndex[bid.bidId] = bid;
-        bidToRequest[bid.bidId] = br;
-      });
-    });
-
-    // Merge in bidsReceived → update individual bids as RECEIVED
-    bidsReceived.forEach((b: any) => {
-      const bidId = b.requestId;
-      const br = bidToRequest[bidId];
-      if (!br) {
-        this.log(`No bidderRequest found for bidId=${bidId}`);
-        return;
-      }
-
-      // Find the specific bid to update
-      let bidObj = bidIndex[bidId];
-      if (bidObj) {
-        // Update existing bid
-        Object.assign(bidObj, {
-          status: STATUS.RECEIVED,
-          cpm: b.cpm,
-          size: `${b.width}x${b.height}`,
-          currency: b.currency,
-          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
-        });
-      } else {
-        // Create new bid object for this response
-        bidObj = {
-          bidId,
-          bidderRequestId: br.bidderRequestId,
-          adUnitCode: b.adUnitCode,
-          adUnitId: b.adUnitId,
-          transactionId: b.transactionId,
-          src: b.src,
-          cpm: b.cpm,
-          size: `${b.width}x${b.height}`,
-          currency: b.currency,
-          status: STATUS.RECEIVED,
-          splitTestAssignment: b.ortb2Imp?.ext?.optable?.splitTestAssignment,
-        };
-        br.bids.push(bidObj);
-        bidIndex[bidId] = bidObj;
-        bidToRequest[bidId] = br;
-      }
-
-      // Update bidder request status to RECEIVED if any bid was received
-      if (br.status === STATUS.REQUESTED) {
-        br.status = STATUS.RECEIVED;
-      }
-    });
-
-    // Handle noBids → mark the entire request as NO_BID
-    noBids.forEach((nb: { bidderRequestId: string }) => {
-      const br = requestIndex[nb.bidderRequestId];
-      if (!br) return;
-      br.status = STATUS.NO_BID;
-      // Mark all bids in this request as NO_BID
-      br.bids.forEach((bid: { status: string }) => {
-        bid.status = STATUS.NO_BID;
-      });
-    });
-
-    // Handle timeoutBids → mark the entire request as TIMEOUT
-    timeoutBids.forEach((tb: { bidderRequestId: string }) => {
-      const br = requestIndex[tb.bidderRequestId];
-      if (!br) return;
-      br.status = STATUS.TIMEOUT;
-      // Mark all bids in this request as TIMEOUT
-      br.bids.forEach((bid: { status: string }) => {
-        bid.status = STATUS.TIMEOUT;
-      });
-    });
 
     const createdAt = new Date();
     const auctionEndTimeoutId = setTimeout(async () => {
