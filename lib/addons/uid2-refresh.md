@@ -34,4 +34,13 @@ applyUid2Refresh(config, "uidapi.com", result);
 
 Applies a refresh outcome to the SDK's targeting cache. On `success`, the EID matching `source` gets its `uids` replaced with `[{ atype: 3, id: advertising_token }]` and its `_ref` rewritten from the response body. On `optout`, `invalid_token` or `expired_token`, the EID is removed. Any other error leaves the cache untouched — the cached token stays valid until `identity_expires`, and the next page load retries. Each write is followed by the `optable-targeting:change` event so consumers mirroring the cache (e.g. a pubProvidedId merge) can re-read it. A cache without a matching EID is left untouched.
 
-The stale-token refresh loop ships separately.
+## refreshStaleUid2s
+
+```js
+import { refreshStaleUid2s } from "@optable/web-sdk/lib/dist/addons/uid2-refresh";
+
+const { merged, staleUid2s } = mergeCache(response, cached);
+await refreshStaleUid2s(config, staleUid2s);
+```
+
+The ready-made loop over `mergeCache`'s `staleUid2s`: refreshes each EID's token against the operator and applies the outcome to the cache. EIDs without usable `_ref` data are skipped, failures are logged via the `optableDebug`-gated `debugLog`, and nothing throws into the host page.

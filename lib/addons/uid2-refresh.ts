@@ -1,10 +1,11 @@
 import type { EID } from "iab-openrtb/v26";
 import { AgentType } from "iab-adcom";
 import type { ResolvedConfig } from "../config";
-import { isUid2RefData } from "../core/eid-cache";
-import type { Uid2RefData } from "../core/eid-cache";
+import { getRefData, isUid2RefData } from "../core/eid-cache";
+import type { CachedEid, Uid2RefData } from "../core/eid-cache";
 import { LocalStorage } from "../core/storage";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
+import { debugLog } from "../core/log";
 
 type Uid2RefreshResult =
   | { status: "success"; body: Uid2RefData }
@@ -119,5 +120,39 @@ function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2Re
   }
 }
 
-export { refreshUid2Token, applyUid2Refresh, UID2_REFRESH_ENDPOINT };
+/**
+ * Refreshes each stale UID2 EID (as returned by mergeCache) against the
+ * operator and applies the outcome to the targeting cache. Never throws into
+ * the host page.
+ */
+async function refreshStaleUid2s(config: ResolvedConfig, staleEids: CachedEid[]): Promise<void> {
+  if (staleEids.length) {
+    debugLog("info", `UID2: refreshing ${staleEids.length} stale token(s)`);
+  }
+
+  // Sequential: each apply is a read-modify-write of the same cache copies.
+  for (const eid of staleEids) {
+    try {
+      const ref = getRefData(eid);
+      if (!ref) {
+        continue;
+      }
+
+      const result = await refreshUid2Token(ref.refresh_token, ref.refresh_response_key);
+      if (result.status === "success") {
+        debugLog("info", "UID2: token refreshed");
+      } else if (result.status === "optout") {
+        debugLog("info", "UID2: opted out, removing token");
+      } else {
+        debugLog("warn", `UID2: refresh failed (${result.reason})`, ...(result.message ? [result.message] : []));
+      }
+
+      applyUid2Refresh(config, eid.source, result);
+    } catch (e) {
+      debugLog("error", "UID2: refresh error", e);
+    }
+  }
+}
+
+export { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, UID2_REFRESH_ENDPOINT };
 export type { Uid2RefData, Uid2RefreshResult, RefreshableEID };

@@ -24,7 +24,7 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 
 ## UID2 refresh material
 
-Targeting responses carry UID2 refresh tokens in a `refs` map, referenced from `uids[0].ext.optable.ref`. `mergeCache` validates and resolves those onto each merged EID as `_ref`, and returns UID2 EIDs past their `refresh_from` as `staleUid2s`. Refresh each with the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshUid2Token(ref.refresh_token, ref.refresh_response_key)`; a ready-made stale-refresh loop ships in a follow-up.
+Targeting responses carry UID2 refresh tokens in a `refs` map, referenced from `uids[0].ext.optable.ref`. `mergeCache` validates and resolves those onto each merged EID as `_ref`, and returns UID2 EIDs past their `refresh_from` as `staleUid2s`. Pass them to the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshStaleUid2s(config, staleUid2s)` to refresh each in place.
 
 `_ref` is cache-only metadata: the RTD module strips it before EIDs reach bid requests.
 

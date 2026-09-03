@@ -2,7 +2,8 @@ import { webcrypto } from "node:crypto";
 import { TextDecoder } from "node:util";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/server";
-import { refreshUid2Token, applyUid2Refresh, UID2_REFRESH_ENDPOINT, Uid2RefData } from "./uid2-refresh";
+import { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, UID2_REFRESH_ENDPOINT } from "./uid2-refresh";
+import type { Uid2RefData } from "../core/eid-cache";
 import { DCN_DEFAULTS } from "../config";
 import type { ResolvedConfig } from "../config";
 import { LocalStorage } from "../core/storage";
@@ -240,6 +241,108 @@ describe("applyUid2Refresh", () => {
 
   it("does nothing when the cache is empty", () => {
     expect(() => applyUid2Refresh(config, "uidapi.com", { status: "optout" })).not.toThrow();
+    expect(events).toHaveLength(0);
+  });
+});
+
+describe("refreshStaleUid2s", () => {
+  const config = {
+    host: "uid2-loop-host.com",
+    site: "site",
+    consent: DCN_DEFAULTS.consent,
+    optableCacheTargeting: "OPTABLE_RESOLVED",
+  } as ResolvedConfig;
+
+  const STALE_REF: Uid2RefData = {
+    advertising_token: "OLD_TOKEN",
+    refresh_token: "REFRESH_TOKEN",
+    refresh_response_key: KEY_B64,
+    refresh_from: 1,
+    refresh_expires: 2734462312780,
+    identity_expires: 1734459312780,
+  };
+
+  const staleEid = () => ({ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }], _ref: STALE_REF });
+
+  function seedCache(): void {
+    const targeting = {
+      ortb2: { user: { data: [], eids: [staleEid(), { source: "other.com", uids: [{ id: "KEEP" }] }] } },
+    } as unknown as TargetingResponse;
+    new LocalStorage(config).setTargeting(targeting);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function cachedEids(): any[] {
+    return (new LocalStorage(config).getTargeting()?.ortb2?.user?.eids as any[]) ?? [];
+  }
+
+  const events: Event[] = [];
+  const listener = (e: Event) => events.push(e);
+
+  beforeEach(() => {
+    localStorage.clear();
+    events.length = 0;
+    window.addEventListener("optable-targeting:change", listener);
+  });
+
+  afterEach(() => {
+    window.removeEventListener("optable-targeting:change", listener);
+  });
+
+  it("refreshes a stale token end to end and updates the cache", async () => {
+    seedCache();
+    respondWith(await encryptResponse({ status: "success", body: BODY }));
+
+    await refreshStaleUid2s(config, [staleEid()]);
+
+    const eids = cachedEids();
+    expect(eids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    expect(eids[0]._ref).toEqual(BODY);
+    expect(eids[1].source).toBe("other.com");
+    expect(events).toHaveLength(1);
+  });
+
+  it("removes the token on an opt-out", async () => {
+    seedCache();
+    respondWith(await encryptResponse({ status: "optout" }));
+
+    await refreshStaleUid2s(config, [staleEid()]);
+
+    expect(cachedEids().map((e) => e.source)).toEqual(["other.com"]);
+    expect(events).toHaveLength(1);
+  });
+
+  it("skips EIDs without usable ref data", async () => {
+    seedCache();
+
+    await refreshStaleUid2s(config, [{ source: "uidapi.com" }]);
+
+    expect(cachedEids().map((e) => e.source)).toEqual(["uidapi.com", "other.com"]);
+    expect(events).toHaveLength(0);
+  });
+
+  it("does not throw on a network failure and leaves the cache untouched", async () => {
+    seedCache();
+    server.use(http.post(UID2_REFRESH_ENDPOINT, () => HttpResponse.error()));
+
+    await expect(refreshStaleUid2s(config, [staleEid()])).resolves.toBeUndefined();
+
+    expect(cachedEids().map((e) => e.source)).toEqual(["uidapi.com", "other.com"]);
+    expect(events).toHaveLength(0);
+  });
+
+  it("does not throw on an undecryptable response and leaves the cache untouched", async () => {
+    seedCache();
+    respondWith(Buffer.from(webcrypto.getRandomValues(new Uint8Array(64))).toString("base64"));
+
+    await expect(refreshStaleUid2s(config, [staleEid()])).resolves.toBeUndefined();
+
+    expect(cachedEids().map((e) => e.source)).toEqual(["uidapi.com", "other.com"]);
+    expect(events).toHaveLength(0);
+  });
+
+  it("is a no-op for an empty list", async () => {
+    await expect(refreshStaleUid2s(config, [])).resolves.toBeUndefined();
     expect(events).toHaveLength(0);
   });
 });
