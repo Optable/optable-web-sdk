@@ -118,24 +118,20 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 
 ### `OptablePrebidAnalytics` instance
 
-| Member                  | Type                 | Description                                                                                                     |
-| ----------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `isInitialized`         | `boolean`            | `true` once the constructor has run.                                                                            |
-| `hookIntoPrebid`        | `(pbjs?) => boolean` | Attaches event hooks. Defers via `pbjs.que` when `onEvent` is not ready. Returns `false` when Prebid is absent. |
-| `clearData`             | `() => void`         | Clears stored auction/missed-event state (useful in tests).                                                     |
-| `effectiveSamplingRate` | `() => number`       | The rate reported as `optableSampling`. `1` under a debug override, otherwise `samplingRate`.                   |
+| Member           | Type                 | Description                                                                                                     |
+| ---------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `isInitialized`  | `boolean`            | `true` once the constructor has run.                                                                            |
+| `hookIntoPrebid` | `(pbjs?) => boolean` | Attaches event hooks. Defers via `pbjs.que` when `onEvent` is not ready. Returns `false` when Prebid is absent. |
+| `clearData`      | `() => void`         | Clears stored auction/missed-event state (useful in tests).                                                     |
 
 ## Debug override
 
-The `optableDebugOverrides` flag (`?optableDebugOverrides` on the URL, or
-`sessionStorage.setItem("optableDebugOverrides", "1")`) bypasses sampling entirely, so
-every auction is sent regardless of `samplingRate`. Use `optableDebugOverrides=0` to
-turn it off. `optableDebug` is unrelated — it only controls console logging.
+The [`optableDebugOverrides` flag](../../core/flags.md) bypasses sampling entirely, so
+every auction is sent regardless of `samplingRate`. `optableDebug` is unrelated — it
+only controls console logging.
 
-Overridden sessions report `optableSampling: 1` and `optableDebugOverrides: "1"` in the
-payload, so the processor neither extrapolates them nor mixes them into production
-aggregates. Without that, a debug session at `samplingRate: 0.1` would be scaled up
-tenfold downstream.
+Overridden auctions report `optableSampling: 1` and `optableDebugOverrides: "1"`, so the
+processor neither extrapolates them nor mixes them into production aggregates.
 
 ## Payload
 

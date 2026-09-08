@@ -103,24 +103,19 @@ function TargetingClearCache(config: ResolvedConfig) {
  * Returns whether the request was identified as a bot.
  */
 export function SkipTargetingForBots(): boolean {
-  if (flagEnabled("optableDebugOverrides")) {
-    // The key outlives the flag. An earlier bot-detected load in this session
-    // already set it, so returning early is not enough — RTD would keep
-    // short-circuiting for the rest of the session.
-    try {
-      sessionStorage.removeItem(TARGETING_DONE_KEY);
-    } catch {
-      // sessionStorage unavailable
-    }
-    return false;
-  }
   try {
+    if (flagEnabled("optableDebugOverrides")) {
+      // An earlier bot-detected load in this session already set the key, and it
+      // outlives the flag.
+      sessionStorage.removeItem(TARGETING_DONE_KEY);
+      return false;
+    }
     if (typeof isBot === "function" && isBot()) {
       sessionStorage.setItem(TARGETING_DONE_KEY, "1");
       return true;
     }
   } catch {
-    // isBot is unavailable or threw; fall through and treat as a real user.
+    // isBot or sessionStorage is unavailable; fall through and treat as a real user.
   }
   return false;
 }

@@ -173,17 +173,24 @@ describe("OptablePrebidAnalytics", () => {
     });
   });
 
-  describe("effectiveSamplingRate", () => {
-    it("should report the configured rate when no debug override is set", () => {
+  describe("sampling reported in the payload", () => {
+    const auctionEndEvent = { auctionId: "auction-sampling" };
+
+    it("should report the configured rate and no override by default", async () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
-      expect(analytics.effectiveSamplingRate()).toBe(0.1);
+      const result = await analytics.toWitness(auctionEndEvent, []);
+      expect(result.optableSampling).toBe(0.1);
+      expect(result.optableDebugOverrides).toBe("0");
     });
 
-    it("should report 1 when optableDebugOverrides forces every event through", () => {
+    it("should report a rate of 1 and tag the event when optableDebugOverrides is set", async () => {
       sessionStorage.setItem("optableDebugOverrides", "1");
       resetFlags();
       analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
-      expect(analytics.effectiveSamplingRate()).toBe(1);
+      const result = await analytics.toWitness(auctionEndEvent, []);
+      // Reporting 0.1 here would have the processor extrapolate a debug session tenfold.
+      expect(result.optableSampling).toBe(1);
+      expect(result.optableDebugOverrides).toBe("1");
     });
   });
 

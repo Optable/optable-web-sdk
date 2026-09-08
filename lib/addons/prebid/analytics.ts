@@ -133,17 +133,6 @@ class OptablePrebidAnalytics {
   }
 
   /**
-   * The sampling rate to report to the processor, which divides by it to
-   * estimate totals. The debug override sends every auction, so reporting the
-   * configured rate would have a debug session extrapolated as if it were one.
-   * @returns the effective rate the reported events were sampled at.
-   */
-  effectiveSamplingRate(): number {
-    if (flagEnabled("optableDebugOverrides")) return 1;
-    return this.config.samplingRate || 1;
-  }
-
-  /**
    * Determine whether the current event/session should be sampled according to
    * the configured sampling rate, seed or function.
    * @returns true if the event should be sampled and analytics calls may proceed.
@@ -597,6 +586,8 @@ class OptablePrebidAnalytics {
       }
     });
 
+    const debugOverride = flagEnabled("optableDebugOverrides");
+
     const witnessData: WitnessProperties = {
       bidderRequests: requests.map((br: any) => {
         br.optableMatchers.forEach((m: unknown) => oMatchersSet.add(m));
@@ -607,10 +598,13 @@ class OptablePrebidAnalytics {
       auctionId,
       adUnitCode,
       totalRequests: bidderRequests.length,
-      optableSampling: this.effectiveSamplingRate(),
+      // The override sends every auction, so reporting the configured rate would
+      // have the processor extrapolate a debug session as if it were a sample.
+      // Read once so the rate and the tag cannot disagree for one event.
+      optableSampling: debugOverride ? 1 : this.config.samplingRate || 1,
       // Lets the processor exclude debug traffic from aggregates. Sent as a
       // '1'/'0' string for the same reason as optableTargetingDone below.
-      optableDebugOverrides: flagEnabled("optableDebugOverrides") ? "1" : "0",
+      optableDebugOverrides: debugOverride ? "1" : "0",
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
       // A raw count (e.g. 2) coerces to "2" which matches neither branch → status='unknown'.

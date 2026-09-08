@@ -59,7 +59,8 @@ The payload tenant is read from the SDK instance's `node`.
   logging only, never what the SDK collects or sends.
 - **Debug overrides**: set `sessionStorage.optableDebugOverrides` to bypass sampling,
   force the treatment A/B variant and skip bot detection. Overridden auctions are
-  tagged in the payload so they stay out of production aggregates.
+  tagged in the payload so they stay out of production aggregates. See
+  [flags](../../core/flags.md).
 - **Custom fields**: set `window.optable.customAnalytics` to an async function
   returning an object; its keys are merged into every auction payload.
 

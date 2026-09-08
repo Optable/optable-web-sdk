@@ -37,6 +37,8 @@ if (!skipped) {
 
 It returns whether the request was identified as a bot, and is a no-op for real visitors. Prefer it over a bare `isBot()` early-return when other code on the page can also trigger targeting.
 
+When the [`optableDebugOverrides` flag](../core/flags.md) is set it returns `false` without calling `isBot()`, and clears any `OPTABLE_TARGETING_DONE` left by an earlier bot-detected load in the session — otherwise targeting would stay short-circuited for the rest of the session. Only this helper clears the key, so a page using a bare `isBot()` early-return does not get that repair.
+
 ## What is matched
 
 The user agent is tested case-insensitively against a single pattern built from these substrings:

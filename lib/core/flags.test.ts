@@ -183,7 +183,7 @@ describe("persistFlagsFromURL", () => {
 });
 
 describe("getFlags - newly recognized keys", () => {
-  it.each(["optableForceTokenize", "optableResolveId5", "optableResolveID5ID"] as const)(
+  it.each(["optableDebugOverrides", "optableForceTokenize", "optableResolveId5", "optableResolveID5ID"] as const)(
     "reads %s from the URL",
     (key) => {
       window.location = { search: `?${key}=abc` } as Location;

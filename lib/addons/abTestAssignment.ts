@@ -69,8 +69,6 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     selected = filled.find((v) => v.id === treatmentId) ?? { id: treatmentId, trafficPercentage: 0 };
   }
 
-  const forcedByFlag = selected !== null;
-
   // Priority 2 — sticky assignment from a previous visit.
   // Once a user is assigned a variant it must not change across page loads or
   // sessions, otherwise the same user could appear in both groups. We validate
@@ -90,19 +88,15 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     }
   }
 
-  // Priority 3 — first visit: randomly assign based on traffic weights.
+  // Priority 3 — first visit: randomly assign based on traffic weights, and
+  // persist so subsequent visits return the same variant. Only a variant
+  // assigned here is written: a sticky one is already stored, and persisting a
+  // flag-forced one would pin the browser to it long after the flag is gone.
   // determineABTest returns null when the random bucket falls outside all
   // defined ranges (i.e. weights sum to less than 100). filled[0] is the
   // fallback so selected is always non-null after this point.
   if (!selected) {
     selected = determineABTest(filled) ?? filled[0];
-  }
-
-  // Persist the assignment so subsequent visits return the same variant. A
-  // flag-forced variant is never persisted: localStorage outlives the flag, so
-  // writing it would pin the browser to that variant well after the flag is
-  // gone, and one shared debug URL would move real users between groups.
-  if (!forcedByFlag) {
     try {
       localStorage.setItem(storageKey, JSON.stringify(selected));
     } catch {
