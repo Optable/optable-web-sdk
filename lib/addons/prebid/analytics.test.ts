@@ -151,11 +151,39 @@ describe("OptablePrebidAnalytics", () => {
       mockRandom.mockRestore();
     });
 
-    it("should return true when optableDebug flag is set, even with samplingRate 0", () => {
-      sessionStorage.setItem("optableDebug", "1");
+    it("should return true when optableDebugOverrides flag is set, even with samplingRate 0", () => {
+      sessionStorage.setItem("optableDebugOverrides", "1");
       resetFlags();
       analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
       expect(analytics.shouldSample()).toBe(true);
+    });
+
+    it("should ignore optableDebugOverrides=0 and honour samplingRate 0", () => {
+      sessionStorage.setItem("optableDebugOverrides", "0");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(false);
+    });
+
+    it("should ignore optableDebug, which only controls logging", () => {
+      sessionStorage.setItem("optableDebug", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(false);
+    });
+  });
+
+  describe("effectiveSamplingRate", () => {
+    it("should report the configured rate when no debug override is set", () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
+      expect(analytics.effectiveSamplingRate()).toBe(0.1);
+    });
+
+    it("should report 1 when optableDebugOverrides forces every event through", () => {
+      sessionStorage.setItem("optableDebugOverrides", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
+      expect(analytics.effectiveSamplingRate()).toBe(1);
     });
   });
 

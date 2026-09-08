@@ -1,5 +1,10 @@
 const FLAG_KEYS = [
   "optableDebug",
+  // Debugging overrides that change what the SDK does rather than what it logs:
+  // forces the treatment variant, disables analytics sampling and bypasses bot
+  // detection. Separate from optableDebug, which publishers already set to turn
+  // on console logging and must keep meaning only that.
+  "optableDebugOverrides",
   "optableDisableConsent",
   "optableResolve1P",
   "optableResolve3P",

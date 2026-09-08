@@ -3,7 +3,7 @@
 import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
 import { buildRequest } from "../../core/network";
-import { getFlags } from "../../core/flags";
+import { flagEnabled } from "../../core/flags";
 
 import * as Bowser from "bowser";
 
@@ -133,12 +133,23 @@ class OptablePrebidAnalytics {
   }
 
   /**
+   * The sampling rate to report to the processor, which divides by it to
+   * estimate totals. The debug override sends every auction, so reporting the
+   * configured rate would have a debug session extrapolated as if it were one.
+   * @returns the effective rate the reported events were sampled at.
+   */
+  effectiveSamplingRate(): number {
+    if (flagEnabled("optableDebugOverrides")) return 1;
+    return this.config.samplingRate || 1;
+  }
+
+  /**
    * Determine whether the current event/session should be sampled according to
    * the configured sampling rate, seed or function.
    * @returns true if the event should be sampled and analytics calls may proceed.
    */
   shouldSample(): boolean {
-    if (getFlags().optableDebug) return true;
+    if (flagEnabled("optableDebugOverrides")) return true;
     if (this.config.samplingRate! <= 0) return false;
     if (this.config.samplingRate! >= 1) return true;
 
@@ -596,7 +607,10 @@ class OptablePrebidAnalytics {
       auctionId,
       adUnitCode,
       totalRequests: bidderRequests.length,
-      optableSampling: this.config.samplingRate || 1,
+      optableSampling: this.effectiveSamplingRate(),
+      // Lets the processor exclude debug traffic from aggregates. Sent as a
+      // '1'/'0' string for the same reason as optableTargetingDone below.
+      optableDebugOverrides: flagEnabled("optableDebugOverrides") ? "1" : "0",
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
       // A raw count (e.g. 2) coerces to "2" which matches neither branch → status='unknown'.

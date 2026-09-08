@@ -55,7 +55,11 @@ The payload tenant is read from the SDK instance's `node`.
 ## Usage
 
 - **Sampling**: `samplingRate` (0–1) controls the fraction of events/sessions sent.
-- **Debugging**: set `sessionStorage.optableDebug` to enable debug logging.
+- **Debugging**: set `sessionStorage.optableDebug` to enable debug logging. It changes
+  logging only, never what the SDK collects or sends.
+- **Debug overrides**: set `sessionStorage.optableDebugOverrides` to bypass sampling,
+  force the treatment A/B variant and skip bot detection. Overridden auctions are
+  tagged in the payload so they stay out of production aggregates.
 - **Custom fields**: set `window.optable.customAnalytics` to an async function
   returning an object; its keys are merged into every auction payload.
 

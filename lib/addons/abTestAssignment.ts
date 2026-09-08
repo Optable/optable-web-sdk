@@ -1,6 +1,6 @@
 import type { ABTestConfig } from "../config";
 import { determineABTest } from "../edge/abTest";
-import { getFlags } from "../core/flags";
+import { flagEnabled, getFlags } from "../core/flags";
 
 const DEFAULT_STORAGE_KEY = "OPTABLE_SPLIT_TEST";
 
@@ -59,14 +59,17 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
 
   // Priority 1 — QA/debug override via URL param or sessionStorage flag.
   // ?optableControlGroup=1 forces the control variant; =0 forces treatment.
-  // This lets QA verify both branches without clearing localStorage.
-  const flags = getFlags();
-  const controlGroupFlag = flags.optableControlGroup;
+  // ?optableDebugOverrides also forces treatment, so a debug session sees the
+  // Optable-enabled branch. This lets QA verify both branches without clearing
+  // localStorage.
+  const controlGroupFlag = getFlags().optableControlGroup;
   if (controlGroupFlag === "1") {
     selected = filled.find((v) => v.id === controlId) ?? { id: controlId, trafficPercentage: 0 };
-  } else if (controlGroupFlag === "0" || flags.optableDebug) {
+  } else if (controlGroupFlag === "0" || flagEnabled("optableDebugOverrides")) {
     selected = filled.find((v) => v.id === treatmentId) ?? { id: treatmentId, trafficPercentage: 0 };
   }
+
+  const forcedByFlag = selected !== null;
 
   // Priority 2 — sticky assignment from a previous visit.
   // Once a user is assigned a variant it must not change across page loads or
@@ -95,11 +98,16 @@ export function setupAB(config: SetupABConfig): ABTestSetupResult {
     selected = determineABTest(filled) ?? filled[0];
   }
 
-  // Persist the assignment so subsequent visits return the same variant.
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(selected));
-  } catch {
-    // localStorage unavailable
+  // Persist the assignment so subsequent visits return the same variant. A
+  // flag-forced variant is never persisted: localStorage outlives the flag, so
+  // writing it would pin the browser to that variant well after the flag is
+  // gone, and one shared debug URL would move real users between groups.
+  if (!forcedByFlag) {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(selected));
+    } catch {
+      // localStorage unavailable
+    }
   }
 
   const isControl = selected.id !== treatmentId;

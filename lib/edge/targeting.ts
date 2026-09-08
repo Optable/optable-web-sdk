@@ -3,7 +3,7 @@ import { determineABTest } from "./abTest";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 import { isBot } from "../addons/botDetection";
-import { getFlags } from "../core/flags";
+import { flagEnabled } from "../core/flags";
 import * as ortb2 from "iab-openrtb/v26";
 import * as adcom from "iab-adcom";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
@@ -103,7 +103,17 @@ function TargetingClearCache(config: ResolvedConfig) {
  * Returns whether the request was identified as a bot.
  */
 export function SkipTargetingForBots(): boolean {
-  if (getFlags().optableDebug) return false;
+  if (flagEnabled("optableDebugOverrides")) {
+    // The key outlives the flag. An earlier bot-detected load in this session
+    // already set it, so returning early is not enough — RTD would keep
+    // short-circuiting for the rest of the session.
+    try {
+      sessionStorage.removeItem(TARGETING_DONE_KEY);
+    } catch {
+      // sessionStorage unavailable
+    }
+    return false;
+  }
   try {
     if (typeof isBot === "function" && isBot()) {
       sessionStorage.setItem(TARGETING_DONE_KEY, "1");
