@@ -3,6 +3,7 @@ import { determineABTest } from "./abTest";
 import { fetch } from "../core/network";
 import { LocalStorage } from "../core/storage";
 import { isBot } from "../addons/botDetection";
+import { flagEnabled } from "../core/flags";
 import * as ortb2 from "iab-openrtb/v26";
 import * as adcom from "iab-adcom";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
@@ -103,12 +104,18 @@ function TargetingClearCache(config: ResolvedConfig) {
  */
 export function SkipTargetingForBots(): boolean {
   try {
+    if (flagEnabled("optableDebugOverrides")) {
+      // An earlier bot-detected load in this session already set the key, and it
+      // outlives the flag.
+      sessionStorage.removeItem(TARGETING_DONE_KEY);
+      return false;
+    }
     if (typeof isBot === "function" && isBot()) {
       sessionStorage.setItem(TARGETING_DONE_KEY, "1");
       return true;
     }
   } catch {
-    // isBot is unavailable or threw; fall through and treat as a real user.
+    // isBot or sessionStorage is unavailable; fall through and treat as a real user.
   }
   return false;
 }

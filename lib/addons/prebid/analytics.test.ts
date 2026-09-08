@@ -1,5 +1,6 @@
 import OptablePrebidAnalytics, { initPrebidAnalytics } from "./analytics";
 import type OptableSDK from "../../sdk";
+import { resetFlags } from "../../core/flags";
 
 // Mock the SDK_WRAPPER_VERSION global
 declare global {
@@ -31,6 +32,8 @@ describe("OptablePrebidAnalytics", () => {
       document.removeEventListener("visibilitychange", (analytics as any).handleVisibilityChange);
     }
     jest.clearAllMocks();
+    sessionStorage.clear();
+    resetFlags();
   });
 
   describe("Class instantiation", () => {
@@ -146,6 +149,48 @@ describe("OptablePrebidAnalytics", () => {
       expect(analytics.shouldSample()).toBe(false);
 
       mockRandom.mockRestore();
+    });
+
+    it("should return true when optableDebugOverrides flag is set, even with samplingRate 0", () => {
+      sessionStorage.setItem("optableDebugOverrides", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(true);
+    });
+
+    it("should ignore optableDebugOverrides=0 and honour samplingRate 0", () => {
+      sessionStorage.setItem("optableDebugOverrides", "0");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(false);
+    });
+
+    it("should ignore optableDebug, which only controls logging", () => {
+      sessionStorage.setItem("optableDebug", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(false);
+    });
+  });
+
+  describe("sampling reported in the payload", () => {
+    const auctionEndEvent = { auctionId: "auction-sampling" };
+
+    it("should report the configured rate and no override by default", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
+      const result = await analytics.toWitness(auctionEndEvent, []);
+      expect(result.optableSampling).toBe(0.1);
+      expect(result.optableDebugOverrides).toBe("0");
+    });
+
+    it("should report a rate of 1 and tag the event when optableDebugOverrides is set", async () => {
+      sessionStorage.setItem("optableDebugOverrides", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
+      const result = await analytics.toWitness(auctionEndEvent, []);
+      // Reporting 0.1 here would have the processor extrapolate a debug session tenfold.
+      expect(result.optableSampling).toBe(1);
+      expect(result.optableDebugOverrides).toBe("1");
     });
   });
 
