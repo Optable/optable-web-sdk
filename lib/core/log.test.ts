@@ -1,4 +1,4 @@
-import { consoleLog, debugLog } from "./log";
+import { consoleLog, debugLog, optableMessage } from "./log";
 import { resetFlags } from "./flags";
 
 beforeEach(() => {
@@ -41,6 +41,35 @@ describe("debugLog", () => {
     const spy = jest.spyOn(console, "log").mockImplementation(() => {});
     debugLog("verbose", "hello");
     expect(spy).toHaveBeenCalledWith("Optable: hello");
+    spy.mockRestore();
+  });
+});
+
+describe("optableMessage", () => {
+  it("is silent when optableDebug is not set", () => {
+    const spy = jest.spyOn(console, "log").mockImplementation(() => {});
+    optableMessage("hello");
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("logs with the wrapper prefix and passes arguments through", () => {
+    sessionStorage.setItem("optableDebug", "1");
+    resetFlags();
+
+    const spy = jest.spyOn(console, "log").mockImplementation(() => {});
+    optableMessage("hello", { detail: 1 });
+    expect(spy).toHaveBeenCalledWith("[OPTABLE WRAPPER]", "hello", { detail: 1 });
+    spy.mockRestore();
+  });
+
+  it("stays silent when optableDebug is explicitly disabled", () => {
+    sessionStorage.setItem("optableDebug", "0");
+    resetFlags();
+
+    const spy = jest.spyOn(console, "log").mockImplementation(() => {});
+    optableMessage("hello");
+    expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
 });

@@ -14,4 +14,11 @@ function debugLog(level: string, message: string, ...args: any[]): void {
   }
 }
 
-export { consoleLog, debugLog };
+// Debug logger for wrapper bundles, gated on the optableDebug flag.
+function optableMessage(...args: any[]): void {
+  if (flagEnabled("optableDebug")) {
+    console.log("[OPTABLE WRAPPER]", ...args); // eslint-disable-line no-console
+  }
+}
+
+export { consoleLog, debugLog, optableMessage };
