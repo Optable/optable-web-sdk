@@ -14,8 +14,7 @@ function debugLog(level: string, message: string, ...args: any[]): void {
   }
 }
 
-// Debug logger for wrapper bundles, gated on the optableDebug flag. The
-// "[OPTABLE WRAPPER]" prefix is what QA filters on.
+// Debug logger for wrapper bundles, gated on the optableDebug flag.
 function optableMessage(...args: any[]): void {
   if (flagEnabled("optableDebug")) {
     console.log("[OPTABLE WRAPPER]", ...args); // eslint-disable-line no-console
