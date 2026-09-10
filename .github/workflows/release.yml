@@ -48,11 +48,15 @@ jobs:
       #     - v.12.2.1 and patching v.12.2.2, we update v12
       - name: Determine versions to update
         id: sdk-versions
-        run: ./scripts/versions-to-update.sh @optable/web-sdk ${{ github.ref_name }} >> "$GITHUB_OUTPUT"
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: ./scripts/versions-to-update.sh @optable/web-sdk "$REF_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Show versions that will be updated
+        env:
+          SDK_VERSIONS: ${{ steps.sdk-versions.outputs.versions }}
         run: |
-          echo "SDK versions: ${{ steps.sdk-versions.outputs.versions }}"
+          echo "SDK versions: $SDK_VERSIONS"
 
   deploy-sdk-to-npm:
     needs: [build, define-gcs-versions-to-update]
@@ -78,7 +82,9 @@ jobs:
 
       # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
       - name: Patch version
-        run: ./scripts/patch-version.sh "${{ github.ref_name }}"
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: ./scripts/patch-version.sh "$REF_NAME"
 
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
@@ -165,9 +171,11 @@ jobs:
           service_account: ${{ env.service-account }}
 
       - name: Build web-sdk-demos Docker Image
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
           DOCKER_BUILDKIT=1 docker build \
-            -t us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }} \
+            -t "us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:$REF_NAME" \
             ./demos
 
       - name: Login to Google Artifact Registry
@@ -178,7 +186,9 @@ jobs:
           password: ${{ steps.auth.outputs.access_token }}
 
       - name: Publish web-sdk-demos to us-docker.pkg.dev
-        run: docker push us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:${{ github.ref_name }}
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: docker push "us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:$REF_NAME"
 
   slack-notification:
     needs: [tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-demo]
