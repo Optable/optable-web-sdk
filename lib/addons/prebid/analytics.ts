@@ -206,7 +206,11 @@ class OptablePrebidAnalytics {
       } else if (event.eventType === "auctionEnd") {
         this.missedAuctionIds.delete(event.args.auctionId);
         this.log(`auction ${event.args.auctionId} missed (completed before hook)`);
-        this.trackAuctionEnd(event.args, true);
+        try {
+          this.trackAuctionEnd(event.args, true);
+        } catch (error) {
+          this.log("Error processing missed auctionEnd:", error);
+        }
       } else if (event.eventType === "bidWon") {
         this.log("bid won missed");
         this.trackBidWon(event.args, true);
@@ -228,7 +232,12 @@ class OptablePrebidAnalytics {
       if (missed) {
         this.missedAuctionIds.delete(event.auctionId);
       }
-      this.trackAuctionEnd(event, missed);
+      // Contain our own failures: throwing here would propagate into Prebid's event dispatcher.
+      try {
+        this.trackAuctionEnd(event, missed);
+      } catch (error) {
+        this.log("Error processing auctionEnd:", error);
+      }
     });
     pbjs.onEvent("bidWon", (event: any) => {
       this.log("bidWon event received");
