@@ -269,7 +269,7 @@ class OptablePrebidAnalytics {
    * @param missed - True when the event was previously emitted (missed replay).
    * @returns void
    */
-  async trackAuctionEnd(event: any, missed: boolean = false) {
+  trackAuctionEnd(event: any, missed: boolean = false) {
     const { auctionId, bidderRequests = [] } = event;
     const timeoutBids = this.pendingTimeoutBids.get(auctionId) || [];
     const sampled = !!this.config.analytics && this.shouldSample();
