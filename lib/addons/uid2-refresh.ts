@@ -1,19 +1,10 @@
 import type { EID } from "iab-openrtb/v26";
 import { AgentType } from "iab-adcom";
 import type { ResolvedConfig } from "../config";
+import { isUid2RefData } from "../core/eid-cache";
+import type { Uid2RefData } from "../core/eid-cache";
 import { LocalStorage } from "../core/storage";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
-
-// UID2 refresh token response body. Also the shape carried on a cached EID's
-// _ref, resolved from the targeting response refs map.
-type Uid2RefData = {
-  advertising_token: string;
-  refresh_token: string;
-  refresh_response_key: string;
-  refresh_from: number;
-  refresh_expires: number;
-  identity_expires: number;
-};
 
 type Uid2RefreshResult =
   | { status: "success"; body: Uid2RefData }
@@ -23,19 +14,6 @@ type Uid2RefreshResult =
 type RefreshableEID = EID & { _ref?: Uid2RefData };
 
 const UID2_REFRESH_ENDPOINT = "https://prod.uidapi.com/v2/token/refresh";
-
-function isUid2RefData(body: unknown): body is Uid2RefData {
-  const b = body as Record<string, unknown> | null | undefined;
-  return (
-    !!b &&
-    typeof b.advertising_token === "string" &&
-    typeof b.refresh_token === "string" &&
-    typeof b.refresh_response_key === "string" &&
-    typeof b.refresh_from === "number" &&
-    typeof b.refresh_expires === "number" &&
-    typeof b.identity_expires === "number"
-  );
-}
 
 // Refresh responses are base64(12-byte nonce || AES-GCM ciphertext), keyed by
 // the refresh_response_key issued alongside the refresh token.
