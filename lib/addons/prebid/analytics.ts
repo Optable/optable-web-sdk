@@ -232,7 +232,6 @@ class OptablePrebidAnalytics {
       if (missed) {
         this.missedAuctionIds.delete(event.auctionId);
       }
-      // Contain our own failures: throwing here would propagate into Prebid's event dispatcher.
       try {
         this.trackAuctionEnd(event, missed);
       } catch (error) {
