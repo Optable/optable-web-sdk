@@ -69,6 +69,7 @@ interface RTDConfig {
   handleRtd: (reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any) => Promise<void | null>;
   instance: string;
   waitForTargeting: boolean;
+  isControlGroup: () => boolean;
 }
 
 interface RTDOptions {
@@ -83,6 +84,9 @@ interface RTDOptions {
   mergeStrategy?: MergeStrategy;
   instance?: string;
   waitForTargeting?: boolean;
+  // Split-test gate: while it returns true, handleRtd serves no EIDs. Wired
+  // to the wrapper's assignment (for example setupAB's result).
+  isControlGroup?: () => boolean;
 }
 
 // Merge strategies for EIDs
@@ -161,12 +165,15 @@ function targetingFromCache(config: RTDConfig = {} as RTDConfig): TargetingData 
 // Get targeting data from cache, if available
 async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   const cachedData = targetingFromCache(config);
+  const cacheHasEids = (cachedData?.ortb2?.user?.eids?.length ?? 0) > 0;
 
   // Get auction delay from pbjs config
   const delay = (window as any)?.pbjs?.getConfig?.()?.realTimeData?.auctionDelay;
 
-  // If waitForTargeting is disabled, cache is not empty, or no delay configured, return immediately
-  if (!config.waitForTargeting || cachedData || !delay) {
+  // Return immediately when waitForTargeting is off, the cache already has
+  // EIDs to serve, or no auction delay bounds a wait. A cache entry without
+  // EIDs does not short-circuit: targeting may still be in flight.
+  if (!config.waitForTargeting || cacheHasEids || !delay) {
     if (!cachedData) {
       config.log("info", "No cached targeting data found");
       return {};
@@ -383,7 +390,12 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     targetingFromCache,
     instance: options.instance ?? "instance",
     waitForTargeting: options.waitForTargeting ?? false,
+    isControlGroup: options.isControlGroup ?? (() => false),
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
+      if (this.isControlGroup()) {
+        this.log("info", "Control group - serving no EIDs");
+        return null;
+      }
       const targetingData = options.targetingData ?? (await readTargetingData(this));
       try {
         return handleRtd(this, reqBidsConfigObj, targetingData, optableExtraData, mergeFn);

@@ -61,4 +61,43 @@ describe("buildRTD - waitForTargeting", () => {
 
     expect(globalEids(req)).toHaveLength(0);
   });
+
+  it("waits when the cache exists but has no EIDs", async () => {
+    seedCache([]);
+    const req = bidsConfig();
+    const pending = buildRTD({ waitForTargeting: true }).handleRtd(req);
+
+    seedCache(EIDS);
+    window.dispatchEvent(new CustomEvent(targetingEventName));
+    await pending;
+
+    expect(globalEids(req)).toHaveLength(1);
+  });
+});
+
+describe("buildRTD - isControlGroup", () => {
+  it("serves no EIDs while the gate returns true", async () => {
+    seedCache(EIDS);
+    const req = bidsConfig();
+
+    const result = await buildRTD({ isControlGroup: () => true }).handleRtd(req);
+
+    expect(result).toBeNull();
+    expect(globalEids(req)).toHaveLength(0);
+  });
+
+  it("is re-evaluated per auction", async () => {
+    seedCache(EIDS);
+    let control = true;
+    const rtd = buildRTD({ isControlGroup: () => control });
+
+    const first = bidsConfig();
+    await rtd.handleRtd(first);
+    expect(globalEids(first)).toHaveLength(0);
+
+    control = false;
+    const second = bidsConfig();
+    await rtd.handleRtd(second);
+    expect(globalEids(second)).toHaveLength(1);
+  });
 });
