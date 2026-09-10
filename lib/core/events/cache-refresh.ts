@@ -20,4 +20,4 @@ function sendTargetingUpdateEvent(config: ResolvedConfig, response: TargetingRes
   );
 }
 
-export { sendTargetingUpdateEvent };
+export { sendTargetingUpdateEvent, targetingEventName };

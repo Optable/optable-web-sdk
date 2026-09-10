@@ -1,4 +1,5 @@
 // RTD (Real-Time Data) module for Prebid.js integration
+import { targetingEventName } from "../events/cache-refresh";
 import { flagEnabled } from "../flags";
 import { consoleLog } from "../log";
 
@@ -188,30 +189,19 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   config.log("info", `Waiting for targeting data (max ${delay}ms)`);
 
   const targetingData = await new Promise<TargetingData | null>((resolve) => {
-    let resolved = false;
-
     const eventHandler = () => {
-      if (!resolved) {
-        resolved = true;
-        config.log("info", "Received optableResolved event");
-        const data = targetingFromCache(config);
-        resolve(data);
-      }
+      clearTimeout(timeoutId);
+      config.log("info", "Received targeting update event");
+      resolve(targetingFromCache(config));
     };
 
     const timeoutId = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        config.log("warn", `Auction delay timeout (${delay}ms) - no targeting data available`);
-        window.removeEventListener("optableResolved", eventHandler);
-        resolve(null);
-      }
+      window.removeEventListener(targetingEventName, eventHandler);
+      config.log("warn", `Auction delay timeout (${delay}ms) - no targeting data available`);
+      resolve(null);
     }, delay);
 
-    window.addEventListener("optableResolved", eventHandler, { once: true });
-
-    // Clean up timeout if event fires first
-    window.addEventListener("optableResolved", () => clearTimeout(timeoutId), { once: true });
+    window.addEventListener(targetingEventName, eventHandler, { once: true });
   });
 
   if (!targetingData) {
