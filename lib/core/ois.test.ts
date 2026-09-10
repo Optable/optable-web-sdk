@@ -1,7 +1,9 @@
 import { clearOISID, getOISID, getOISState, oisHeaderName, oisRequestID, readOISHeader } from "./ois";
-import { buildRequest } from "./network";
+import { buildRequest, fetch as sdkFetch } from "./network";
 import { generateOISKeys } from "./storage-keys";
-import { TEST_HOST, TEST_SITE } from "../test/mocks";
+import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "../test/mocks";
+import { server } from "../test/server";
+import { http, HttpResponse } from "msw";
 import type { ResolvedConfig } from "../config";
 
 const baseConfig = {
@@ -182,10 +184,54 @@ describe("buildRequest", () => {
 
 // Cannot catch the real CORS dependency: jsdom does not enforce
 // Access-Control-Expose-Headers, which a browser needs the node to set.
-describe("round trip", () => {
-  it("replays an id received on a response", () => {
-    readOISHeader(baseConfig, "/identify", withHeader("round-trip-id"));
+describe("fetch", () => {
+  function replyWith(path: string, id?: string) {
+    server.use(
+      http.post(`${TEST_BASE_URL}${path}`, () =>
+        HttpResponse.json({}, { status: 200, headers: id === undefined ? {} : { [oisHeaderName]: id } })
+      )
+    );
+  }
 
+  it("stores an id returned on the response header", async () => {
+    replyWith("/identify", "from-fetch");
+
+    await sdkFetch("/identify", baseConfig, { method: "POST" });
+
+    expect(stored()).toBe("from-fetch");
+  });
+
+  it("leaves the stored id alone when the response carries no header", async () => {
+    window.localStorage.setItem(storageKey, "keep-me");
+    replyWith("/identify");
+
+    await sdkFetch("/identify", baseConfig, { method: "POST" });
+
+    expect(stored()).toBe("keep-me");
+  });
+
+  it("ignores a header returned on an endpoint that derives no id", async () => {
+    replyWith("/witness", "unexpected");
+
+    await sdkFetch("/witness", baseConfig, { method: "POST" });
+
+    expect(stored()).toBeNull();
+  });
+
+  it("does not read the header when not opted in", async () => {
+    replyWith("/identify", "from-fetch");
+
+    await sdkFetch("/identify", { ...baseConfig, ois: undefined } as unknown as ResolvedConfig, { method: "POST" });
+
+    expect(stored()).toBeNull();
+  });
+
+  // The round trip is the actual contract: an id read off one response is
+  // replayed on the next request.
+  it("replays an id received on a previous response", async () => {
+    replyWith("/identify", "round-trip-id");
+
+    await sdkFetch("/identify", baseConfig, { method: "POST" });
     const request = buildRequest("/profile", baseConfig, { method: "POST" });
 
     expect(request.headers.get(oisHeaderName)).toBe("round-trip-id");

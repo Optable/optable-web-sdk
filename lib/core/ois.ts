@@ -1,6 +1,5 @@
 import type { ResolvedConfig } from "../config";
 import { LocalStorage } from "./storage";
-import { generateOISKeys } from "./storage-keys";
 
 const oisHeaderName = "X-Optable-OID";
 
@@ -19,10 +18,6 @@ type OISState = {
 
 function getOISID(config: ResolvedConfig): string | null {
   return new LocalStorage(config).getOIS();
-}
-
-function oisStorageKey(config: ResolvedConfig): string {
-  return generateOISKeys(config).write[0];
 }
 
 function readOISHeader(config: ResolvedConfig, pathname: string, headers: Headers): void {
@@ -47,7 +42,7 @@ function readOISHeader(config: ResolvedConfig, pathname: string, headers: Header
     return;
   }
 
-  notifyChange(config, { id, storageKey: oisStorageKey(config) });
+  notifyChange(config, { id, storageKey: storage.oisKey() });
 }
 
 function oisRequestID(config: ResolvedConfig, pathname: string): string | null {
@@ -65,11 +60,12 @@ function clearOISID(config: ResolvedConfig): void {
   }
 
   storage.clearOIS();
-  notifyChange(config, { id: null, storageKey: oisStorageKey(config) });
+  notifyChange(config, { id: null, storageKey: storage.oisKey() });
 }
 
 function getOISState(config: ResolvedConfig): OISState {
-  return { id: getOISID(config), storageKey: oisStorageKey(config) };
+  const storage = new LocalStorage(config);
+  return { id: storage.getOIS(), storageKey: storage.oisKey() };
 }
 
 function notifyChange(config: ResolvedConfig, state: OISState): void {

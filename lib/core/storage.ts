@@ -70,6 +70,10 @@ class LocalStorage {
     this.clearStorageKeys(this.oisKeys);
   }
 
+  oisKey(): string {
+    return this.oisKeys.write[0];
+  }
+
   getTargeting(): TargetingResponse | null {
     const raw = this.readStorageKeys(this.targetingKeys);
     return raw ? JSON.parse(raw) : null;
