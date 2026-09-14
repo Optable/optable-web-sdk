@@ -849,6 +849,18 @@ The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-def
 
 Please refer to the list of approved Secure Signal [providers](https://support.google.com/admanager/answer/14750072). Please refer to the provider's integration documentation for the exact provider name and value to pass as a signal.
 
+To build the signals from cached EIDs instead of by hand, `secureSignalsFromEids(eids, filter?)` flattens each EID's uids into `{ provider, id }` pairs, optionally filtered by `sources`, `inserters` or `matchers` (an empty or missing list means no constraint on that field):
+
+```javascript
+import { secureSignalsFromEids } from "@optable/web-sdk/lib/dist/core/secure-signals";
+
+const eids = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") || "null")?.ortb2?.user?.eids ?? [];
+const signals = secureSignalsFromEids(eids, { sources: ["uidapi.com"] });
+if (signals.length) {
+  optable.instance.installGPTSecureSignals(...signals);
+}
+```
+
 You can verify the signal was correctly passed to GAM by searching for its value cached in `localStorage` under the key `_GESPSK-<provider_name>`.
 
 ## Integrating Prebid
