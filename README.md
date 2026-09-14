@@ -1066,6 +1066,18 @@ For bidder adapters that do not support SDA, but that do support targeting priva
 </script>
 ```
 
+### RTD module
+
+`buildRTD()` builds the config behind the Optable RTD provider, which merges cached EIDs into the auction's `ortb2Fragments` with per-source bidder routing and merge strategies. With `waitForTargeting: true` it waits — bounded by Prebid's `auctionDelay` — for the targeting response when the cache has no EIDs yet, and an `isControlGroup` callback gates serving for split tests:
+
+```typescript
+import { buildRTD } from "@optable/web-sdk/lib/dist/core/prebid/rtd";
+
+const rtd = buildRTD({ waitForTargeting: true, isControlGroup: () => isControlGroup });
+```
+
+For the auction flow and the full option list, see the [RTD module README](lib/core/prebid/rtd.md).
+
 ## Identifying visitors arriving from Email newsletters
 
 If you send Email newsletters that contain links to your website, then you may want to automatically _identify_ visitors that have clicked on any such links via their Email address.
