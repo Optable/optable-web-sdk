@@ -57,6 +57,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Rules](#rules)
   - [Return Value](#return-value)
   - [Input Type](#input-type)
+- [Host aliases](#host-aliases)
 - [Geo-routing](#geo-routing)
 - [Bot detection](#bot-detection)
 - [Demo Pages](#demo-pages)
@@ -138,7 +139,7 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
   The identifier (slug) of Javascript SDK source. This must match a configured site in the [Optable](https://optable.co/) DCN. Must have properly configure `Allowed HTTP Origins`.
 
 - **`host` (string)**
-  The hostname of the Optable DCN to which the SDK will connect. All API requests will be directed here.
+  The hostname of the Optable DCN to which the SDK will connect. All API requests will be directed here. If the host has moved, the SDK rewrites it to the new host; see [Host aliases](#host-aliases).
 
 ### Optional Keys
 
@@ -1303,6 +1304,18 @@ type NodeTargetingRule = {
   priority?: number;
 };
 ```
+
+## Host aliases
+
+When an Optable DCN moves to a new hostname, every page that still serves the old snippet keeps calling the old host. A host alias closes that gap: the SDK bundle carries a map of moved hosts, and rewrites the configured `host` to the host that now serves it. Pages pinned to the floating bundle URL (`https://cdn.optable.co/web-sdk/v0/sdk.js`) pick this up on their next load, with no snippet change.
+
+The rewrite applies to every instance, whether it is created from `instance_config` or from `new optable.SDK(...)`.
+
+Storage keys are derived from the host, so a plain host change would drop the visitor's cached passport and reset their visitor ID. To avoid this, the SDK records the pre-alias host and reads its passport keys as well as the new ones. The passport is read from the old key and written to the new one, so each visitor migrates on their first API call. Targeting and site caches are not carried over, but both refill on the next call.
+
+An explicitly configured `legacyHostCache` is kept and read as well. Its keys are read after the pre-alias host, which holds the more recent passport.
+
+Aliases are a stopgap, not a destination. Publisher snippets should still be updated to the new host, and the alias entry removed once the old host is retired. Aliases are not chained: if a host moves twice, point its entry at the final host.
 
 ## Geo-routing
 

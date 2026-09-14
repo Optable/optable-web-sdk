@@ -12,12 +12,16 @@ export function encodeBase64(str: string): string {
   return btoa(String.fromCharCode(...new Uint8Array(codeUnits.buffer)));
 }
 
-function getWriteKeyBase64FromConfig(config: ResolvedConfig): string {
-  if (config.node) {
-    return encodeBase64(`${config.host}/${config.node}`);
+function hostKeyBase64(host: string, node?: string): string {
+  if (node) {
+    return encodeBase64(`${host}/${node}`);
   }
 
-  return encodeBase64(`${config.host}`);
+  return encodeBase64(`${host}`);
+}
+
+function getWriteKeyBase64FromConfig(config: ResolvedConfig): string {
+  return hostKeyBase64(config.host, config.node);
 }
 
 // Generate the keys for the site storage
@@ -62,6 +66,14 @@ function generatePassportKeys(config: ResolvedConfig): StorageKeys {
 
   write.push(writeKey);
   read.push(writeKey);
+
+  // Read the pre-alias host so that the visitor keeps their passport when a
+  // host alias moves them. An alias changes the host only, so the old key holds
+  // the same node as the new one.
+  if (config.aliasedFromHost) {
+    read.push(`OPTABLE_PASSPORT_${hostKeyBase64(config.aliasedFromHost, config.node)}`);
+    read.push(`OPTABLE_PASS_${encodeBase64(`${config.aliasedFromHost}/${config.site}`)}`);
+  }
 
   // We keep `OPTABLE_PASS` keys for backward compatibility
   // Once all clients are updated, we can remove them on next tag

@@ -1,5 +1,6 @@
 import { encodeBase64URL } from "./core/base64";
 import { getConsent, inferRegulation } from "./core/regs/consent";
+import { resolveHostAlias } from "./core/host-alias";
 import type { CMPApiConfig, Consent } from "./core/regs/consent";
 import type { PageContextConfig } from "./core/context";
 import type { ContextualSegmentsResponse } from "./edge/contextual_segments";
@@ -105,6 +106,8 @@ type ResolvedConfig = {
   initPassport: boolean;
   readOnly: boolean;
   legacyHostCache?: string;
+  // Set by the SDK, not the caller, when a host alias replaced the given host.
+  aliasedFromHost?: string;
   experiments: Experiment[];
   mockedIP?: string;
   sessionID: string;
@@ -134,8 +137,11 @@ const DCN_DEFAULTS = {
 };
 
 function getConfig(init: InitConfig): ResolvedConfig {
+  const aliasedHost = resolveHostAlias(init.host);
+
   const config: ResolvedConfig = {
-    host: init.host,
+    host: aliasedHost ?? init.host,
+    aliasedFromHost: aliasedHost ? init.host : undefined,
     site: init.site,
     optableCacheTargeting: init.optableCacheTargeting ?? "optable-cache:targeting",
     cookies: init.cookies ?? DCN_DEFAULTS.cookies,

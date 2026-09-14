@@ -50,6 +50,35 @@ describe("getConfig", () => {
     });
   });
 
+  describe("host aliases", () => {
+    it("rewrites an aliased host and records the host it came from", () => {
+      const config = getConfig({ host: "acast.cloud.optable.co", site: "site", sessionID: "" });
+
+      expect(config.host).toBe("acast.cloud.us.optable.co");
+      expect(config.aliasedFromHost).toBe("acast.cloud.optable.co");
+    });
+
+    it("leaves a host with no alias untouched", () => {
+      const config = getConfig({ host: "dcn.customer.com", site: "site", sessionID: "" });
+
+      expect(config.host).toBe("dcn.customer.com");
+      expect(config.aliasedFromHost).toBeUndefined();
+    });
+
+    it("keeps an explicit legacyHostCache when an alias applies", () => {
+      const config = getConfig({
+        host: "acast.cloud.optable.co",
+        site: "site",
+        sessionID: "",
+        legacyHostCache: "sandbox.optable.co",
+      });
+
+      expect(config.host).toBe("acast.cloud.us.optable.co");
+      expect(config.aliasedFromHost).toBe("acast.cloud.optable.co");
+      expect(config.legacyHostCache).toBe("sandbox.optable.co");
+    });
+  });
+
   it("infers regulation and gathers consent when using cmpapi", () => {
     const spy = jest.spyOn(Intl, "DateTimeFormat").mockImplementation(
       () =>
