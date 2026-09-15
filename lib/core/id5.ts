@@ -36,9 +36,14 @@ declare global {
   }
 }
 
-export function getCachedId5UserId(): string | null {
+// The cache entry is partner-scoped: after a partner-id change, the previous
+// partner's id is not served.
+export function getCachedId5UserId(partnerId?: number | string): string | null {
   try {
     const cached = JSON.parse(localStorage.getItem(ID5_CACHE_KEY) || "null");
+    if (partnerId !== undefined && cached?.partnerId !== partnerId) {
+      return null;
+    }
     if (typeof cached?.userId === "string" && cached.userId && Date.now() - cached.resolvedAt < ID5_TTL_MS) {
       return cached.userId;
     }
@@ -48,18 +53,22 @@ export function getCachedId5UserId(): string | null {
   return null;
 }
 
-function cacheId5UserId(userId: string): void {
+function cacheId5UserId(partnerId: number | string, userId: string): void {
   try {
-    localStorage.setItem(ID5_CACHE_KEY, JSON.stringify({ userId, resolvedAt: Date.now() }));
+    localStorage.setItem(ID5_CACHE_KEY, JSON.stringify({ partnerId, userId, resolvedAt: Date.now() }));
   } catch {
     // Storage unavailable; the id still resolves for this page.
   }
 }
 
+let pending: { partnerId: number | string; promise: Promise<string | null> } | null = null;
+
 export function resolveId5(partnerId: number | string, options: Id5Options = {}): Promise<string | null> {
   // QA: inject a specific value, or a placeholder, without loading the API.
+  // A bare flag ("1") and "0" (the flag-disable convention, also ID5's
+  // invalid placeholder) do not count as injected values.
   const qaId5 = getFlags().optableResolveID5ID;
-  if (qaId5 && qaId5 !== "1") {
+  if (qaId5 && qaId5 !== "1" && qaId5 !== "0") {
     debugLog("log", "ID5: using QA id");
     return Promise.resolve(qaId5);
   }
@@ -68,7 +77,7 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     return Promise.resolve("ID5-QA");
   }
 
-  const cached = getCachedId5UserId();
+  const cached = getCachedId5UserId(partnerId);
   if (cached) {
     debugLog("log", "ID5: using cached value");
     return Promise.resolve(cached);
@@ -79,7 +88,12 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     return Promise.resolve(null);
   }
 
-  return new Promise((resolve) => {
+  // Concurrent callers share one script load and one resolution.
+  if (pending?.partnerId === partnerId) {
+    return pending.promise;
+  }
+
+  const promise = new Promise<string | null>((resolve) => {
     let settled = false;
     const settle = (value: string | null) => {
       if (settled) return;
@@ -95,40 +109,46 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     const script = document.createElement("script");
     script.src = ID5_API_URL;
     script.onload = () => {
-      debugLog("log", "ID5 library init");
-      if (!window.ID5) {
+      // An ID5.init throw must settle rather than stall until the timeout.
+      try {
+        debugLog("log", "ID5 library init");
+        if (!window.ID5) {
+          settle(null);
+          return;
+        }
+        if (flagEnabled("optableDebug")) {
+          window.ID5.debug = true;
+        }
+
+        const instance = window.ID5.init({
+          partnerId,
+          debugBypassConsent: flagEnabled("optableDisableConsent"),
+          abTesting: { enabled: false, controlGroupPct: 0 },
+        });
+        instance.onUpdate(() => {
+          if (instance.config?.providedOptions?.partnerId !== partnerId) {
+            debugLog(
+              "warn",
+              `ID5: partner id mismatch: ${instance.config?.providedOptions?.partnerId} instead of ${partnerId}`
+            );
+            settle(null);
+            return;
+          }
+
+          const id5Id = instance.getUserId();
+          if (!id5Id || id5Id === "0") {
+            debugLog("log", "ID5: invalid value");
+            settle(null);
+            return;
+          }
+          debugLog("log", `ID5: resolved ${id5Id}`);
+          cacheId5UserId(partnerId, id5Id);
+          settle(id5Id);
+        });
+      } catch (err) {
+        debugLog("warn", "ID5: init failed", err);
         settle(null);
-        return;
       }
-      if (flagEnabled("optableDebug")) {
-        window.ID5.debug = true;
-      }
-
-      const instance = window.ID5.init({
-        partnerId,
-        debugBypassConsent: flagEnabled("optableDisableConsent"),
-        abTesting: { enabled: false, controlGroupPct: 0 },
-      });
-      instance.onUpdate(() => {
-        if (instance.config?.providedOptions?.partnerId !== partnerId) {
-          debugLog(
-            "warn",
-            `ID5: partner id mismatch: ${instance.config?.providedOptions?.partnerId} instead of ${partnerId}`
-          );
-          settle(null);
-          return;
-        }
-
-        const id5Id = instance.getUserId();
-        if (!id5Id || id5Id === "0") {
-          debugLog("log", "ID5: invalid value");
-          settle(null);
-          return;
-        }
-        debugLog("log", `ID5: resolved ${id5Id}`);
-        cacheId5UserId(id5Id);
-        settle(id5Id);
-      });
     };
     script.onerror = () => {
       debugLog("warn", "ID5: API load failed");
@@ -136,6 +156,14 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     };
     document.head.appendChild(script);
   });
+
+  pending = { partnerId, promise };
+  promise.finally(() => {
+    if (pending?.promise === promise) {
+      pending = null;
+    }
+  });
+  return promise;
 }
 
 export { ID5_CACHE_KEY, ID5_API_URL };
