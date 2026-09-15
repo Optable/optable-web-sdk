@@ -1,8 +1,12 @@
 // Merges a fresh targeting or tokenize response into a wrapper's rolling EID
 // cache. Merge rules are documented in eid-cache.md; inputs are never mutated.
+//
+// UID2 refresh material lives in the cache's refs sidecar, keyed by EID
+// source — never on the EIDs themselves. Cached EIDs are wire EIDs: every
+// consumer can hand them to bidding as-is, with nothing to strip.
 
-// UID2 refresh material: the refresh response body, also carried in the
-// targeting response refs map and on a cached EID's _ref.
+// UID2 refresh material: the refresh response body, referenced from the
+// targeting response refs map and carried in the cache's refs sidecar.
 type Uid2RefData = {
   advertising_token: string;
   refresh_token: string;
@@ -19,15 +23,16 @@ type CachedEid = {
     atype?: number;
     ext?: { optable?: { ref?: string | number } };
   }>;
-  // UID2 refresh material resolved from the response refs map. Cache-only:
-  // the RTD module strips it before EIDs reach bid requests.
-  _ref?: Uid2RefData;
 };
 
 type ResolvedCache = {
   ortb2?: { user?: { data?: unknown[]; eids?: CachedEid[] } };
+  // Refresh material sidecar. On a wire targeting response the map is keyed
+  // by opaque ref keys; in the merged cache it is keyed by EID source.
   refs?: Record<string, unknown>;
 };
+
+type StaleUid2 = { source: string; ref: Uid2RefData };
 
 const UID2_SOURCE = "uidapi.com";
 const DEFAULT_MAX_UIDS_PER_EID = 2;
@@ -55,25 +60,28 @@ function refFor(eid: CachedEid, refs?: Record<string, unknown>): Uid2RefData | u
   return isUid2RefData(ref) ? ref : undefined;
 }
 
-// Stamps validated ref data (UID2 refresh tokens) from the response refs map
-// onto each EID as _ref, in place.
-export function resolveRefs(eids: CachedEid[], refs?: Record<string, unknown>): void {
+// Builds the cache's source-keyed refs sidecar from a response's EIDs and its
+// opaque-keyed refs map.
+export function resolveRefs(eids: CachedEid[], refs?: Record<string, unknown>): Record<string, Uid2RefData> {
+  const bySource: Record<string, Uid2RefData> = {};
   eids.forEach((eid) => {
     const ref = refFor(eid, refs);
     if (ref) {
-      eid._ref = ref;
+      bySource[eid.source] = ref;
     }
   });
+  return bySource;
 }
 
-// The EID's ref data when it is usable for a refresh, else null.
-export function getRefData(eid: CachedEid): Uid2RefData | null {
-  return eid._ref?.refresh_token && eid._ref?.refresh_response_key ? eid._ref : null;
+// The source's ref data when the cache holds one usable for a refresh, else null.
+export function getRefData(cache: ResolvedCache | null | undefined, source: string): Uid2RefData | null {
+  const ref = cache?.refs?.[source];
+  return isUid2RefData(ref) && ref.refresh_token && ref.refresh_response_key ? ref : null;
 }
 
 // UID2 tokens carry a refresh_from timestamp; past it they need refreshing.
-export function isUid2Stale(eid: CachedEid): boolean {
-  const ref = getRefData(eid);
+export function isUid2Stale(cache: ResolvedCache | null | undefined, source: string = UID2_SOURCE): boolean {
+  const ref = getRefData(cache, source);
   if (!ref) return false;
   return Date.now() > (ref.refresh_from || 0);
 }
@@ -82,42 +90,52 @@ export function mergeCache(
   newObj: ResolvedCache | null | undefined,
   oldObj: ResolvedCache | null | undefined,
   options?: { maxUidsPerEid?: number }
-): { merged: ResolvedCache; staleUid2s: CachedEid[] } {
+): { merged: ResolvedCache; staleUid2s: StaleUid2[] } {
   const oldEids = oldObj?.ortb2?.user?.eids || [];
   const newEids = newObj?.ortb2?.user?.eids || [];
   const maxUids = options?.maxUidsPerEid ?? DEFAULT_MAX_UIDS_PER_EID;
 
-  const copyOf = (eid: CachedEid): CachedEid => ({ ...eid, uids: (eid.uids || []).slice(0, maxUids) });
+  // Copies are wire-clean: capped uids, and the ref pointer into the response
+  // refs map is dropped since the sidecar replaces it.
+  const copyOf = (eid: CachedEid): CachedEid => ({
+    ...eid,
+    uids: (eid.uids || []).slice(0, maxUids).map(stripRefPointer),
+  });
 
   const newSources = new Set(newEids.map((e) => e.source));
   const eidMap = new Map<string, CachedEid>();
-  const staleUid2s: CachedEid[] = [];
+  const refs: Record<string, Uid2RefData> = {};
 
-  // Carry over old EIDs whose source is not in the new response, keeping
-  // their existing _ref.
+  // Carry over old EIDs whose source is not in the new response, along with
+  // their refs entry.
   oldEids.forEach((eid) => {
     if (!eid.uids?.length) return;
     if (!newSources.has(eid.source)) {
       eidMap.set(eid.source, copyOf(eid));
+      const ref = getRefData(oldObj, eid.source);
+      if (ref) {
+        refs[eid.source] = ref;
+      }
     }
   });
 
-  // New EIDs overwrite old ones with the same source.
+  // New EIDs overwrite old ones with the same source. The refs entry is
+  // resolved from the same EID that is kept, so an EID and its refresh
+  // material always stay paired.
   newEids.forEach((eid) => {
     if (!eid.uids?.length) return;
-    const copy = copyOf(eid);
+    eidMap.set(eid.source, copyOf(eid));
     const ref = refFor(eid, newObj?.refs);
     if (ref) {
-      copy._ref = ref;
+      refs[eid.source] = ref;
+    } else {
+      delete refs[eid.source];
     }
-    eidMap.set(eid.source, copy);
   });
 
   const mergedEids: CachedEid[] = [];
+  const staleUid2s: StaleUid2[] = [];
   eidMap.forEach((eid) => {
-    if (eid.source === UID2_SOURCE && isUid2Stale(eid)) {
-      staleUid2s.push(eid);
-    }
     mergedEids.push(eid);
   });
 
@@ -128,9 +146,37 @@ export function mergeCache(
         eids: mergedEids,
       },
     },
+    refs,
   };
+
+  eidMap.forEach((eid) => {
+    if (eid.source === UID2_SOURCE && isUid2Stale(merged, eid.source)) {
+      staleUid2s.push({ source: eid.source, ref: refs[eid.source] });
+    }
+  });
 
   return { merged, staleUid2s };
 }
 
-export type { CachedEid, ResolvedCache, Uid2RefData };
+type CachedUid = NonNullable<CachedEid["uids"]>[number];
+
+function stripRefPointer(uid: CachedUid): CachedUid {
+  const optable = uid.ext?.optable;
+  if (!optable || optable.ref === undefined) return uid;
+
+  const { ref: _dropped, ...restOptable } = optable;
+  const copy: CachedUid = { ...uid };
+  if (Object.keys(restOptable).length) {
+    copy.ext = { ...uid.ext, optable: restOptable };
+  } else {
+    const { optable: _optable, ...restExt } = uid.ext!;
+    if (Object.keys(restExt).length) {
+      copy.ext = restExt;
+    } else {
+      delete copy.ext;
+    }
+  }
+  return copy;
+}
+
+export type { CachedEid, ResolvedCache, StaleUid2, Uid2RefData };

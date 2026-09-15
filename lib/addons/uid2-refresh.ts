@@ -1,4 +1,3 @@
-import type { EID } from "iab-openrtb/v26";
 import { AgentType } from "iab-adcom";
 import type { ResolvedConfig } from "../config";
 import { isUid2RefData } from "../core/eid-cache";
@@ -10,8 +9,6 @@ type Uid2RefreshResult =
   | { status: "success"; body: Uid2RefData }
   | { status: "optout" }
   | { status: "error"; reason: string; message?: string };
-
-type RefreshableEID = EID & { _ref?: Uid2RefData };
 
 const UID2_REFRESH_ENDPOINT = "https://prod.uidapi.com/v2/token/refresh";
 
@@ -77,9 +74,9 @@ const EVICTION_REASONS = new Set(["invalid_token", "expired_token"]);
 
 /**
  * Applies a refresh outcome to the targeting cache: success rewrites the
- * matching EID in place, optout and definitive rejections evict it, any other
- * error leaves the cache untouched for retry on the next page load. Sends the
- * targeting change event after each write.
+ * matching EID and its refs sidecar entry, optout and definitive rejections
+ * evict both, any other error leaves the cache untouched for retry on the
+ * next page load. Sends the targeting change event after each write.
  */
 function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2RefreshResult): void {
   if (result.status === "error" && !EVICTION_REASONS.has(result.reason)) {
@@ -87,7 +84,7 @@ function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2Re
   }
 
   const updated = new LocalStorage(config).updateTargeting((cached) => {
-    const eids: RefreshableEID[] | undefined = cached?.ortb2?.user?.eids;
+    const eids = cached?.ortb2?.user?.eids;
     // If cache does not exist don't try to set.
     if (!eids) {
       return false;
@@ -100,16 +97,20 @@ function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2Re
 
     if (result.status === "success") {
       eids[idx].uids = [{ atype: AgentType.PERSON_BASED, id: result.body.advertising_token }];
-      eids[idx]._ref = {
-        advertising_token: result.body.advertising_token,
-        refresh_token: result.body.refresh_token,
-        refresh_response_key: result.body.refresh_response_key,
-        refresh_from: result.body.refresh_from,
-        refresh_expires: result.body.refresh_expires,
-        identity_expires: result.body.identity_expires,
-      };
+      cached.refs = { ...cached.refs, [source]: result.body };
     } else {
+      // The private wire-shaped copy keys refs by opaque ref key, not source;
+      // drop the evicted EID's pointer target too so no refresh material for
+      // an opted-out user lingers in storage.
+      const refKey = (eids[idx].uids?.[0] as { ext?: { optable?: { ref?: string | number } } } | undefined)?.ext
+        ?.optable?.ref;
       eids.splice(idx, 1);
+      if (cached.refs) {
+        delete cached.refs[source];
+        if (refKey !== undefined) {
+          delete cached.refs[refKey];
+        }
+      }
     }
     return true;
   });
@@ -120,4 +121,4 @@ function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2Re
 }
 
 export { refreshUid2Token, applyUid2Refresh, UID2_REFRESH_ENDPOINT };
-export type { Uid2RefData, Uid2RefreshResult, RefreshableEID };
+export type { Uid2RefData, Uid2RefreshResult };

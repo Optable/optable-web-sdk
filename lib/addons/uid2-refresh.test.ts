@@ -141,11 +141,12 @@ describe("applyUid2Refresh", () => {
         user: {
           data: [],
           eids: [
-            { source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }], _ref: OLD_REF },
+            { source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] },
             { source: "other.com", uids: [{ id: "KEEP" }] },
           ],
         },
       },
+      refs: { "uidapi.com": OLD_REF },
     } as unknown as TargetingResponse;
     new LocalStorage(config).setTargeting(targeting);
   }
@@ -168,14 +169,14 @@ describe("applyUid2Refresh", () => {
     window.removeEventListener("optable-targeting:change", listener);
   });
 
-  it("rewrites the EID's uids and _ref on success and sends the change event", () => {
+  it("rewrites the EID's uids and refs entry on success and sends the change event", () => {
     seedCache();
     applyUid2Refresh(config, "uidapi.com", { status: "success", body: BODY });
 
     const eids = cachedEids();
     expect(eids).toHaveLength(2);
     expect(eids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
-    expect(eids[0]._ref).toEqual(BODY);
+    expect(new LocalStorage(config).getTargeting()?.refs).toEqual({ "uidapi.com": BODY });
     expect(eids[1].source).toBe("other.com");
     expect(events).toHaveLength(1);
   });
@@ -206,7 +207,7 @@ describe("applyUid2Refresh", () => {
     const publicEids = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string).ortb2.user.eids;
     expect(publicEids.map((e: { source: string }) => e.source)).toEqual(["uidapi.com", "other.com", "carryover.com"]);
     expect(publicEids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
-    expect(publicEids[0]._ref).toEqual(BODY);
+    expect(JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string).refs).toEqual({ "uidapi.com": BODY });
   });
 
   it.each(["invalid_token", "expired_token"])("removes the EID on a definitive %s rejection", (reason) => {
@@ -229,6 +230,23 @@ describe("applyUid2Refresh", () => {
       expect(events).toHaveLength(0);
     }
   );
+
+  it("drops the opaque-keyed refs entry of an evicted EID from a wire-shaped copy", () => {
+    const targeting = {
+      ortb2: {
+        user: {
+          data: [],
+          eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN", ext: { optable: { ref: "0" } } }] }],
+        },
+      },
+      refs: { "0": OLD_REF },
+    } as unknown as TargetingResponse;
+    new LocalStorage(config).setTargeting(targeting);
+
+    applyUid2Refresh(config, "uidapi.com", { status: "optout" });
+
+    expect(new LocalStorage(config).getTargeting()?.refs).toEqual({});
+  });
 
   it("does nothing when the source is not in the cache", () => {
     seedCache();

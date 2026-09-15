@@ -16,45 +16,55 @@ const eid = (source: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+// An EID pointing at the response refs map, the way the wire carries it.
+const refEid = (source: string, refKey: string) => ({
+  source,
+  uids: [{ id: `${source}-id`, ext: { optable: { ref: refKey } } }],
+});
+
 const cache = (eids: unknown[], over: Record<string, unknown> = {}) => ({
   ortb2: { user: { data: [], eids } },
   ...over,
 });
 
 describe("resolveRefs", () => {
-  it("stamps ref data onto EIDs that reference the refs map", () => {
-    const uid2 = { source: "uidapi.com", uids: [{ id: "x", ext: { optable: { ref: "0" } } }] };
-    const other = eid("liveramp.com");
+  it("builds a source-keyed refs map from EIDs referencing the response refs", () => {
     const refs = { "0": ref() };
-    resolveRefs([uid2, other] as any, refs as any);
-    expect((uid2 as any)._ref).toBe(refs["0"]);
-    expect((other as any)._ref).toBeUndefined();
+    const bySource = resolveRefs([refEid("uidapi.com", "0"), eid("liveramp.com")] as any, refs as any);
+    expect(bySource).toEqual({ "uidapi.com": refs["0"] });
   });
 
-  it("is a no-op without a refs map", () => {
-    const e = eid("uidapi.com");
-    expect(() => resolveRefs([e] as any)).not.toThrow();
-    expect((e as any)._ref).toBeUndefined();
+  it("returns an empty map without a refs map", () => {
+    expect(resolveRefs([eid("uidapi.com")] as any)).toEqual({});
+  });
+
+  it("ignores malformed and inherited-key refs", () => {
+    const bySource = resolveRefs(
+      [refEid("uidapi.com", "0"), refEid("id5-sync.com", "constructor")] as any,
+      { "0": { refresh_token: "rt" } } as any
+    );
+    expect(bySource).toEqual({});
   });
 });
 
 describe("getRefData", () => {
-  it("returns the ref only when it can drive a refresh", () => {
-    expect(getRefData(eid("uidapi.com", { _ref: ref() }) as any)).not.toBeNull();
-    expect(getRefData(eid("uidapi.com", { _ref: ref({ refresh_token: "" }) }) as any)).toBeNull();
-    expect(getRefData(eid("uidapi.com") as any)).toBeNull();
+  it("returns the source's ref only when it can drive a refresh", () => {
+    expect(getRefData({ refs: { "uidapi.com": ref() } }, "uidapi.com")).not.toBeNull();
+    expect(getRefData({ refs: { "uidapi.com": ref({ refresh_token: "" }) } }, "uidapi.com")).toBeNull();
+    expect(getRefData({ refs: {} }, "uidapi.com")).toBeNull();
+    expect(getRefData(null, "uidapi.com")).toBeNull();
   });
 });
 
 describe("isUid2Stale", () => {
   it("is true past refresh_from and false before", () => {
-    expect(isUid2Stale(eid("uidapi.com", { _ref: ref({ refresh_from: Date.now() - 1 }) }) as any)).toBe(true);
-    expect(isUid2Stale(eid("uidapi.com", { _ref: ref() }) as any)).toBe(false);
-    expect(isUid2Stale(eid("uidapi.com") as any)).toBe(false);
+    expect(isUid2Stale({ refs: { "uidapi.com": ref({ refresh_from: Date.now() - 1 }) } })).toBe(true);
+    expect(isUid2Stale({ refs: { "uidapi.com": ref() } })).toBe(false);
+    expect(isUid2Stale({ refs: {} })).toBe(false);
   });
 
   it("treats a ref without refresh_from as stale", () => {
-    expect(isUid2Stale(eid("uidapi.com", { _ref: ref({ refresh_from: undefined }) }) as any)).toBe(true);
+    expect(isUid2Stale({ refs: { "uidapi.com": ref({ refresh_from: 0 }) } })).toBe(true);
   });
 });
 
@@ -79,26 +89,82 @@ describe("mergeCache", () => {
   it("truncates uids to the default of 2 and honors maxUidsPerEid", () => {
     const three = eid("a", { uids: [{ id: "1" }, { id: "2" }, { id: "3" }] });
     expect(mergeCache(cache([three]) as any, null).merged.ortb2?.user?.eids?.[0]?.uids).toHaveLength(2);
-    const again = eid("a", { uids: [{ id: "1" }, { id: "2" }, { id: "3" }] });
     expect(
-      mergeCache(cache([again]) as any, null, { maxUidsPerEid: 1 }).merged.ortb2?.user?.eids?.[0]?.uids
+      mergeCache(cache([three]) as any, null, { maxUidsPerEid: 1 }).merged.ortb2?.user?.eids?.[0]?.uids
     ).toHaveLength(1);
   });
 
-  it("resolves refs from the new response and collects stale UID2 EIDs", () => {
-    const uid2 = { source: "uidapi.com", uids: [{ id: "x", ext: { optable: { ref: "0" } } }] };
-    const newCache = cache([uid2], { refs: { "0": ref({ refresh_from: Date.now() - 1 }) } });
-    const { merged, staleUid2s } = mergeCache(newCache as any, null);
-    expect(staleUid2s).toHaveLength(1);
-    expect(staleUid2s[0].source).toBe("uidapi.com");
-    expect(merged.ortb2?.user?.eids).toHaveLength(1);
+  it("keeps merged EIDs wire-clean: refs live in the sidecar, not on EIDs", () => {
+    const wireRef = ref();
+    const newCache = cache([refEid("uidapi.com", "0")], { refs: { "0": wireRef } });
+    const { merged } = mergeCache(newCache as any, null);
+
+    const uid2 = merged.ortb2?.user?.eids?.[0] as any;
+    expect(uid2._ref).toBeUndefined();
+    expect(uid2.uids[0].ext).toBeUndefined();
+    expect(getRefData(merged, "uidapi.com")).toEqual(wireRef);
   });
 
-  it("does not flag fresh UID2 EIDs or stale non-UID2 sources", () => {
-    const freshUid2 = eid("uidapi.com", { _ref: ref() });
-    const staleOther = eid("liveramp.com", { _ref: ref({ refresh_from: Date.now() - 1 }) });
-    const { staleUid2s } = mergeCache(cache([freshUid2, staleOther]) as any, null);
+  it("does not mutate the caller's response", () => {
+    const wire = refEid("uidapi.com", "0");
+    const newCache = cache([wire], { refs: { "0": ref() } });
+
+    mergeCache(newCache as any, null);
+
+    expect(wire.uids[0].ext.optable.ref).toBe("0");
+    expect("_ref" in wire).toBe(false);
+  });
+
+  it("collects a stale UID2 from the sidecar after a JSON round-trip", () => {
+    const staleRef = ref({ refresh_from: Date.now() - 1 });
+    const oldCache = JSON.parse(JSON.stringify(cache([eid("uidapi.com")], { refs: { "uidapi.com": staleRef } })));
+
+    const { merged, staleUid2s } = mergeCache(cache([eid("liveramp.com")]) as any, oldCache);
+
+    expect(staleUid2s).toEqual([{ source: "uidapi.com", ref: staleRef }]);
+    expect(getRefData(merged, "uidapi.com")).toEqual(staleRef);
+  });
+
+  it("does not flag fresh UID2 refs or stale non-UID2 sources", () => {
+    const oldCache = cache([eid("uidapi.com"), eid("liveramp.com")], {
+      refs: { "uidapi.com": ref(), "liveramp.com": ref({ refresh_from: Date.now() - 1 }) },
+    });
+    const { staleUid2s } = mergeCache(null, oldCache as any);
     expect(staleUid2s).toEqual([]);
+  });
+
+  it("a new EID for a source replaces its refs entry, and eviction drops it", () => {
+    const oldCache = cache([eid("uidapi.com"), eid("id5-sync.com")], {
+      refs: { "uidapi.com": ref({ advertising_token: "old" }), "id5-sync.com": ref() },
+    });
+    const fresh = ref({ advertising_token: "fresh" });
+    // uidapi.com re-resolved with a new ref; id5-sync.com revoked by empty uids.
+    const newCache = cache([refEid("uidapi.com", "0"), { source: "id5-sync.com", uids: [] }], {
+      refs: { "0": fresh },
+    });
+
+    const { merged } = mergeCache(newCache as any, oldCache as any);
+
+    expect(getRefData(merged, "uidapi.com")).toEqual(fresh);
+    expect(getRefData(merged, "id5-sync.com")).toBeNull();
+    expect(merged.ortb2?.user?.eids?.map((e) => e.source)).toEqual(["uidapi.com"]);
+  });
+
+  it("a new EID without a ref clears the source's stale refs entry", () => {
+    const oldCache = cache([eid("uidapi.com")], { refs: { "uidapi.com": ref() } });
+    const { merged } = mergeCache(cache([eid("uidapi.com")]) as any, oldCache as any);
+    expect(getRefData(merged, "uidapi.com")).toBeNull();
+  });
+
+  it("pairs the refs entry with the EID actually kept when a response duplicates a source", () => {
+    const withRef = refEid("uidapi.com", "0");
+    const withoutRef = eid("uidapi.com", { uids: [{ id: "kept" }] });
+    const newCache = cache([withRef, withoutRef], { refs: { "0": ref() } });
+
+    const { merged } = mergeCache(newCache as any, null);
+
+    expect(merged.ortb2?.user?.eids?.[0]?.uids?.[0]?.id).toBe("kept");
+    expect(getRefData(merged, "uidapi.com")).toBeNull();
   });
 
   it("prefers new user data and falls back to old", () => {
@@ -114,53 +180,5 @@ describe("mergeCache", () => {
     const { merged, staleUid2s } = mergeCache(null, undefined);
     expect(merged.ortb2?.user?.eids).toEqual([]);
     expect(staleUid2s).toEqual([]);
-  });
-
-  it("does not mutate the caller's response", () => {
-    const uid2 = {
-      source: "uidapi.com",
-      uids: [{ id: "1", ext: { optable: { ref: "0" } } }, { id: "2" }, { id: "3" }],
-    };
-    const newCache = cache([uid2], { refs: { "0": ref() } });
-
-    const { merged } = mergeCache(newCache as any, null);
-
-    expect(uid2.uids).toHaveLength(3);
-    expect("_ref" in uid2).toBe(false);
-    const mergedEid = merged.ortb2?.user?.eids?.[0];
-    expect(mergedEid?.uids).toHaveLength(2);
-    expect(mergedEid?._ref).toBeDefined();
-  });
-
-  it("collects a stale UID2 carried over from the old cache after a JSON round-trip", () => {
-    const oldCache = JSON.parse(
-      JSON.stringify(cache([eid("uidapi.com", { _ref: ref({ refresh_from: Date.now() - 1 }) })]))
-    );
-
-    const { merged, staleUid2s } = mergeCache(cache([eid("liveramp.com")]) as any, oldCache);
-
-    expect(staleUid2s).toHaveLength(1);
-    expect(staleUid2s[0]._ref?.refresh_token).toBe("rt");
-    expect(merged.ortb2?.user?.eids?.map((e) => e.source).sort()).toEqual(["liveramp.com", "uidapi.com"]);
-  });
-
-  it("a new EID without uids evicts the cached EID for that source", () => {
-    const oldCache = cache([eid("uidapi.com"), eid("liveramp.com")]);
-    const newCache = cache([{ source: "uidapi.com", uids: [] }]);
-
-    const { merged } = mergeCache(newCache as any, oldCache as any);
-
-    expect(merged.ortb2?.user?.eids?.map((e) => e.source)).toEqual(["liveramp.com"]);
-  });
-
-  it("ignores malformed and inherited-key refs", () => {
-    const badShape = { source: "uidapi.com", uids: [{ id: "x", ext: { optable: { ref: "0" } } }] };
-    const inherited = { source: "id5-sync.com", uids: [{ id: "y", ext: { optable: { ref: "constructor" } } }] };
-    const newCache = cache([badShape, inherited], { refs: { "0": { refresh_token: "rt" } } });
-
-    const { merged, staleUid2s } = mergeCache(newCache as any, null);
-
-    expect(staleUid2s).toEqual([]);
-    merged.ortb2?.user?.eids?.forEach((e) => expect(e._ref).toBeUndefined());
   });
 });

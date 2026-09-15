@@ -20,19 +20,23 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 - Cached EIDs from sources absent in the new response are carried over.
 - Each EID keeps at most `maxUidsPerEid` UIDs (default 2).
 - `ortb2.user.data` comes from the new response, falling back to the cached one.
-- The inputs are never mutated. The merged cache is built from copies, so a targeting response that is also fed to bidding never picks up `_ref` refresh material or truncated `uids`.
+- The inputs are never mutated. The merged cache is built from copies.
+- Cached EIDs are wire EIDs: refresh material never sits on them, so every consumer — RTD, `pubProvidedId`, anything else — can hand them to bidding as-is, with nothing to strip.
 
 ## UID2 refresh material
 
-Targeting responses carry UID2 refresh tokens in a `refs` map, referenced from `uids[0].ext.optable.ref`. `mergeCache` validates and resolves those onto each merged EID as `_ref`, and returns UID2 EIDs past their `refresh_from` as `staleUid2s`. Refresh each with the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshUid2Token(ref.refresh_token, ref.refresh_response_key)`; a ready-made stale-refresh loop ships in a follow-up.
+Targeting responses carry UID2 refresh tokens in an opaque-keyed `refs` map, referenced from `uids[0].ext.optable.ref`. `mergeCache` validates those and stores them in the merged cache's `refs` sidecar keyed by EID `source`, dropping the `ext.optable.ref` pointer from the cached EIDs. Sources past their `refresh_from` are returned as `staleUid2s` (`{ source, ref }` pairs); refresh each with the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshUid2Token(ref.refresh_token, ref.refresh_response_key)` and apply the outcome with `applyUid2Refresh`.
 
-`_ref` is cache-only metadata: the RTD module strips it before EIDs reach bid requests.
+A source's refs entry follows its EID: replaced when the source is re-resolved, dropped when it is evicted or the new response carries no ref for it.
+
+Caches written by earlier bundle versions carried refresh material as `_ref` on the EID; there is no read-side fallback for that shape. Such a cache simply cannot refresh its UID2 until the next targeting response repopulates the sidecar.
 
 ## API
 
-| Export        | Signature                                              | Description                                                   |
-| ------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `mergeCache`  | `(newObj, oldObj, options?) => { merged, staleUid2s }` | Merge a fresh response into the cached one.                   |
-| `resolveRefs` | `(eids, refs?) => void`                                | Stamp validated `refs` entries onto EIDs as `_ref`, in place. |
-| `getRefData`  | `(eid) => Uid2RefData \| null`                         | The EID's `_ref` when it can drive a refresh.                 |
-| `isUid2Stale` | `(eid) => boolean`                                     | True when the EID's ref is past `refresh_from`.               |
+| Export          | Signature                                              | Description                                                          |
+| --------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
+| `mergeCache`    | `(newObj, oldObj, options?) => { merged, staleUid2s }` | Merge a fresh response into the cached one.                          |
+| `resolveRefs`   | `(eids, refs?) => Record<string, Uid2RefData>`         | Build a source-keyed refs map from a response's opaque-keyed one.    |
+| `getRefData`    | `(cache, source) => Uid2RefData \| null`               | The source's refs entry when it can drive a refresh.                 |
+| `isUid2Stale`   | `(cache, source?) => boolean`                          | True when the source's ref is past `refresh_from`. Defaults to UID2. |
+| `isUid2RefData` | `(value) => value is Uid2RefData`                      | Shape guard for refresh material.                                    |
