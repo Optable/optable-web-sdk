@@ -1389,7 +1389,9 @@ import { isBot } from "@optable/web-sdk/lib/dist/addons/botDetection";
 const id5Id = await resolveId5(id5PartnerId, { isBot });
 ```
 
-The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value.
+The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value. Concurrent calls share one script load and resolution.
+
+Consent-gating the call is the caller's responsibility: ID5's own CMP integration covers TCF pages, but the resolved id is cached in `localStorage`, so don't call `resolveId5` when device access is not permitted.
 
 ## Demo Pages
 
