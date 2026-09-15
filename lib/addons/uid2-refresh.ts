@@ -4,6 +4,7 @@ import { isUid2RefData } from "../core/eid-cache";
 import type { Uid2RefData } from "../core/eid-cache";
 import { LocalStorage } from "../core/storage";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
+import { trackUid2Refresh } from "../core/uid2-refresh-lock";
 
 type Uid2RefreshResult =
   | { status: "success"; body: Uid2RefData }
@@ -17,10 +18,21 @@ const UID2_REFRESH_ENDPOINT = "https://prod.uidapi.com/v2/token/refresh";
 //
 // A response that cannot be decoded or decrypted throws; error policy stays
 // with the caller.
-async function refreshUid2Token(
+//
+// Registered on the UID2 refresh lock, so targeting calls hold off while a
+// refresh is in flight and cannot pair a fresh EID with a stale outcome.
+function refreshUid2Token(
   refreshToken: string,
   refreshResponseKey: string,
   endpoint: string = UID2_REFRESH_ENDPOINT
+): Promise<Uid2RefreshResult> {
+  return trackUid2Refresh(() => doRefreshUid2Token(refreshToken, refreshResponseKey, endpoint));
+}
+
+async function doRefreshUid2Token(
+  refreshToken: string,
+  refreshResponseKey: string,
+  endpoint: string
 ): Promise<Uid2RefreshResult> {
   const response = await fetch(endpoint, {
     method: "POST",

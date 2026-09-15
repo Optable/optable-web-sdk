@@ -6,6 +6,7 @@ import { isBot } from "../addons/botDetection";
 import * as ortb2 from "iab-openrtb/v26";
 import * as adcom from "iab-adcom";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
+import { uid2RefreshIdle } from "../core/uid2-refresh-lock";
 
 type Identifier = {
   id: string;
@@ -45,6 +46,11 @@ type TargetingResponse = {
 const TARGETING_DONE_KEY = "OPTABLE_TARGETING_DONE";
 
 async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
+  // Hold off while a UID2 refresh is rewriting the cache, so this response
+  // cannot interleave with the refresh outcome. Bounded: a hung refresh must
+  // not block targeting for the rest of the page.
+  await uid2RefreshIdle(2000);
+
   const searchParams = new URLSearchParams();
   req.ids.forEach((id) => searchParams.append("id", id));
   req.hids.forEach((id) => searchParams.append("hid", id));
