@@ -1378,6 +1378,19 @@ window.optable.cmd = new OptableCommands(window.optable.cmd || []);
 
 For the page-side stub and behaviour details, see the [command queue addon README](lib/addons/commands.md).
 
+## ID5 resolution
+
+`resolveId5(partnerId, options?)` resolves an [ID5](https://id5.io/) user id, loading the ID5 API on demand: QA flags first, then a local 7-day cache (its own `OPTABLE_ID5` key), then a live resolution with ID5's own A/B holdout disabled. Live resolution is bounded (10s default, `timeoutMs` option) and resolves `null` on timeout, load failure, partner-id mismatch or the ID5 `"0"` placeholder. Pass the bot detection addon's `isBot` to skip live resolution for crawlers:
+
+```javascript
+import { resolveId5 } from "@optable/web-sdk/lib/dist/core/id5";
+import { isBot } from "@optable/web-sdk/lib/dist/addons/botDetection";
+
+const id5Id = await resolveId5(id5PartnerId, { isBot });
+```
+
+The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value.
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
