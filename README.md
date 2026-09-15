@@ -1102,6 +1102,18 @@ For example:
 </script>
 ```
 
+## Identify and tokenize (hashed email)
+
+`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), always calls `identify`, and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It runs once per session (`OPTABLE_TOKENIZE_DONE`), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
+
+```javascript
+import { identifyAndTokenize } from "@optable/web-sdk/lib/dist/core/identify-tokenize";
+
+window.optable.identifyAndTokenize = (id) => identifyAndTokenize(sdk, id, { isControlGroup: () => isControlGroup });
+```
+
+The returned `{ merged, staleUid2s }` (null when skipped) lets the caller chain UID2 refreshes on the merged cache.
+
 ## Passport and Visitor ID
 
 The Optable DCN issues a _passport_ (a signed JWT) that is cached in browser `localStorage`. The passport encodes a unique _visitor ID_ that the DCN uses to anonymously identify the browser. Both values can be read synchronously from the SDK:
