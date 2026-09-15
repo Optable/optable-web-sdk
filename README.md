@@ -849,7 +849,7 @@ The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-def
 
 Please refer to the list of approved Secure Signal [providers](https://support.google.com/admanager/answer/14750072). Please refer to the provider's integration documentation for the exact provider name and value to pass as a signal.
 
-To build the signals from cached EIDs instead of by hand, `secureSignalsFromEids(eids, filter?)` flattens each EID's uids into `{ provider, id }` pairs, optionally filtered by `sources`, `inserters` or `matchers` (an empty or missing list means no constraint on that field):
+To build the signals from cached EIDs instead of by hand, `secureSignalsFromEids(eids, filter?)` builds one `{ provider, id }` pair per EID source — GPT keys secure signals by provider, so the first non-empty uid per source wins — optionally filtered by `sources`, `inserters` or `matchers` (an empty or missing list means no constraint on that field):
 
 ```javascript
 import { secureSignalsFromEids } from "@optable/web-sdk/lib/dist/core/secure-signals";
