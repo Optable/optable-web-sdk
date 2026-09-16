@@ -100,6 +100,14 @@ describe("replaceCache", () => {
     expect(replaceCache({ ortb2: { user: { eids: [eid("a")] } } } as any).refs).toEqual({});
     expect(replaceCache({} as any).refs).toEqual({});
   });
+
+  it("is idempotent: a cache-format value keeps its refs", () => {
+    const wireRef = ref();
+    const once = replaceCache(cache([refEid("uidapi.com", "0")], { refs: { "0": wireRef } }) as any);
+
+    expect(replaceCache(once)).toEqual(once);
+    expect(replaceCache(replaceCache(once)).refs).toEqual({ "uidapi.com": wireRef });
+  });
 });
 
 describe("mergeCache", () => {
@@ -130,8 +138,8 @@ describe("mergeCache", () => {
 
   it("keeps merged EIDs wire-clean: refs live in the sidecar, not on EIDs", () => {
     const wireRef = ref();
-    const newCache = cache([refEid("uidapi.com", "0")], { refs: { "0": wireRef } });
-    const { merged } = mergeCache(newCache as any, null);
+    const newCache = replaceCache(cache([refEid("uidapi.com", "0")], { refs: { "0": wireRef } }) as any);
+    const { merged } = mergeCache(newCache, null);
 
     const uid2 = merged.ortb2?.user?.eids?.[0] as any;
     expect(uid2._ref).toBeUndefined();
@@ -143,7 +151,7 @@ describe("mergeCache", () => {
     const wire = refEid("uidapi.com", "0");
     const newCache = cache([wire], { refs: { "0": ref() } });
 
-    mergeCache(newCache as any, null);
+    mergeCache(replaceCache(newCache as any), null);
 
     expect(wire.uids[0].ext.optable.ref).toBe("0");
     expect("_ref" in wire).toBe(false);
@@ -157,6 +165,19 @@ describe("mergeCache", () => {
 
     expect(staleUid2s).toEqual([{ source: "uidapi.com", ref: staleRef }]);
     expect(getRefData(merged, "uidapi.com")).toEqual(staleRef);
+  });
+
+  it("keeps refs when the new response is the cache read back", () => {
+    // What a wrapper hands in after sdk.targeting() overwrote the cache key:
+    // already cache format, so there are no pointers left to resolve.
+    const wireRef = ref({ refresh_from: Date.now() - 1 });
+    const readBack = replaceCache(cache([refEid("uidapi.com", "0")], { refs: { "0": wireRef } }) as any);
+
+    const first = mergeCache(readBack, null).merged;
+    const { merged, staleUid2s } = mergeCache(cache([eid("liveramp.com")]) as any, first);
+
+    expect(getRefData(merged, "uidapi.com")).toEqual(wireRef);
+    expect(staleUid2s).toEqual([{ source: "uidapi.com", ref: wireRef }]);
   });
 
   it("does not flag fresh UID2 refs or stale non-UID2 sources", () => {
@@ -173,11 +194,11 @@ describe("mergeCache", () => {
     });
     const fresh = ref({ advertising_token: "fresh" });
     // uidapi.com re-resolved with a new ref; id5-sync.com revoked by empty uids.
-    const newCache = cache([refEid("uidapi.com", "0"), { source: "id5-sync.com", uids: [] }], {
-      refs: { "0": fresh },
-    });
+    const newCache = replaceCache(
+      cache([refEid("uidapi.com", "0"), { source: "id5-sync.com", uids: [] }], { refs: { "0": fresh } }) as any
+    );
 
-    const { merged } = mergeCache(newCache as any, oldCache as any);
+    const { merged } = mergeCache(newCache, oldCache as any);
 
     expect(getRefData(merged, "uidapi.com")).toEqual(fresh);
     expect(getRefData(merged, "id5-sync.com")).toBeNull();
@@ -193,9 +214,9 @@ describe("mergeCache", () => {
   it("pairs the refs entry with the EID actually kept when a response duplicates a source", () => {
     const withRef = refEid("uidapi.com", "0");
     const withoutRef = eid("uidapi.com", { uids: [{ id: "kept" }] });
-    const newCache = cache([withRef, withoutRef], { refs: { "0": ref() } });
+    const newCache = replaceCache(cache([withRef, withoutRef], { refs: { "0": ref() } }) as any);
 
-    const { merged } = mergeCache(newCache as any, null);
+    const { merged } = mergeCache(newCache, null);
 
     expect(merged.ortb2?.user?.eids?.[0]?.uids?.[0]?.id).toBe("kept");
     expect(getRefData(merged, "uidapi.com")).toBeNull();

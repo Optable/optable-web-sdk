@@ -62,12 +62,17 @@ function refFor(eid: CachedEid, refs?: Record<string, unknown>): Uid2RefData | u
 
 // Builds the cache's source-keyed refs sidecar from a response's EIDs and its
 // opaque-keyed refs map.
+//
+// One entry per source, where the opaque keying could hold several: the last
+// EID for a source wins, matching which one mergeCache keeps.
 export function resolveRefs(eids: CachedEid[], refs?: Record<string, unknown>): Record<string, Uid2RefData> {
   const bySource: Record<string, Uid2RefData> = {};
   eids.forEach((eid) => {
     const ref = refFor(eid, refs);
     if (ref) {
       bySource[eid.source] = ref;
+    } else {
+      delete bySource[eid.source];
     }
   });
   return bySource;
@@ -88,10 +93,15 @@ export function isUid2Stale(cache: ResolvedCache | null | undefined, source: str
 
 // Normalizes a wire response into the cache format: source-keyed refs,
 // ref pointers stripped, every other field kept. Never mutates its input.
+//
+// Idempotent, so it is safe on anything: a value with no pointers left is
+// already in cache format and its refs pass through, rather than being
+// resolved against pointers that are no longer there.
 export function replaceCache<T extends ResolvedCache>(response: T): T {
   const user = response.ortb2?.user;
   const eids = user?.eids ?? [];
-  const copy = { ...response, refs: resolveRefs(eids, response.refs) };
+  const wireShaped = eids.some((eid) => eid.uids?.[0]?.ext?.optable?.ref !== undefined);
+  const copy = { ...response, refs: wireShaped ? resolveRefs(eids, response.refs) : { ...response.refs } };
   if (user?.eids) {
     copy.ortb2 = {
       ...response.ortb2,
@@ -101,6 +111,13 @@ export function replaceCache<T extends ResolvedCache>(response: T): T {
   return copy;
 }
 
+/**
+ * Merges a fresh response into the cached one. Both arguments are in cache
+ * format — source-keyed refs, no ext.optable.ref pointers — and so is the
+ * result. The cache read back from storage already is, since setTargeting
+ * writes through replaceCache; a wire response goes through replaceCache
+ * first.
+ */
 export function mergeCache(
   newObj: ResolvedCache | null | undefined,
   oldObj: ResolvedCache | null | undefined,
@@ -134,13 +151,12 @@ export function mergeCache(
     }
   });
 
-  // New EIDs overwrite old ones with the same source. The refs entry is
-  // resolved from the same EID that is kept, so an EID and its refresh
-  // material always stay paired.
+  // New EIDs overwrite old ones with the same source, and so does their refs
+  // entry: a source re-resolved without one has its stale entry dropped.
   newEids.forEach((eid) => {
     if (!eid.uids?.length) return;
     eidMap.set(eid.source, copyOf(eid));
-    const ref = refFor(eid, newObj?.refs);
+    const ref = getRefData(newObj, eid.source);
     if (ref) {
       refs[eid.source] = ref;
     } else {

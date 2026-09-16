@@ -5,14 +5,22 @@ Merge helpers for wrappers that keep a rolling EID cache (typically the `OPTABLE
 ## Usage
 
 ```js
-import { mergeCache } from "@optable/web-sdk/lib/dist/core/eid-cache";
+import { mergeCache, replaceCache } from "@optable/web-sdk/lib/dist/core/eid-cache";
 
 const cached = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") || "null");
 const response = await sdk.targeting();
 
-const { merged, staleUid2s } = mergeCache(response, cached, { maxUidsPerEid: 2 });
+const { merged, staleUid2s } = mergeCache(replaceCache(response), cached, { maxUidsPerEid: 2 });
 localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 ```
+
+## Wire format and cache format
+
+A targeting response off the wire keys `refs` opaquely and points at it from `uids[0].ext.optable.ref`. The cache keys `refs` by EID `source` and carries no pointers. `replaceCache` converts one to the other.
+
+Nothing outside the cache changes: `sdk.targeting()` still resolves to the wire response, and so does the `optable-targeting:change` payload. Conversion happens where the cache is written — `setTargeting` writes through `replaceCache`, and `mergeCache` takes and returns cache format.
+
+So anything read back out of storage is ready to merge as-is, and anything coming off the wire goes through `replaceCache` on the way in. `replaceCache` is idempotent, so calling it on a value that is already cache format is a no-op rather than a way to lose refs.
 
 ## Merge rules
 
@@ -25,7 +33,7 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 
 ## UID2 refresh material
 
-Targeting responses carry UID2 refresh tokens in an opaque-keyed `refs` map, referenced from `uids[0].ext.optable.ref`. `mergeCache` validates those and stores them in the merged cache's `refs` sidecar keyed by EID `source`, dropping the `ext.optable.ref` pointer from the cached EIDs. Sources past their `refresh_from` are returned as `staleUid2s` (`{ source, ref }` pairs); refresh each with the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshUid2Token(ref.refresh_token, ref.refresh_response_key)` and apply the outcome with `applyUid2Refresh`.
+`replaceCache` validates the refresh material a response points at and keys it by EID `source`, dropping the `ext.optable.ref` pointers. `mergeCache` then carries those entries across merges and returns sources past their `refresh_from` as `staleUid2s` (`{ source, ref }` pairs); refresh each with the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshUid2Token(ref.refresh_token, ref.refresh_response_key)` and apply the outcome with `applyUid2Refresh`.
 
 A source's refs entry follows its EID: replaced when the source is re-resolved, dropped when it is evicted or the new response carries no ref for it.
 
@@ -35,7 +43,8 @@ Caches written by earlier bundle versions carried refresh material as `_ref` on 
 
 | Export          | Signature                                              | Description                                                          |
 | --------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
-| `mergeCache`    | `(newObj, oldObj, options?) => { merged, staleUid2s }` | Merge a fresh response into the cached one.                          |
+| `mergeCache`    | `(newObj, oldObj, options?) => { merged, staleUid2s }` | Merge a fresh response into the cached one. Both in cache format.    |
+| `replaceCache`  | `(response) => response`                               | Convert a wire response to cache format. Idempotent.                 |
 | `resolveRefs`   | `(eids, refs?) => Record<string, Uid2RefData>`         | Build a source-keyed refs map from a response's opaque-keyed one.    |
 | `getRefData`    | `(cache, source) => Uid2RefData \| null`               | The source's refs entry when it can drive a refresh.                 |
 | `isUid2Stale`   | `(cache, source?) => boolean`                          | True when the source's ref is past `refresh_from`. Defaults to UID2. |
