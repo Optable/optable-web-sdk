@@ -25,7 +25,7 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 
 ## UID2 refresh material
 
-Targeting responses carry UID2 refresh tokens in an opaque-keyed `refs` map, referenced from `uids[0].ext.optable.ref`. `mergeCache` validates those and stores them in the merged cache's `refs` sidecar keyed by EID `source`, dropping the `ext.optable.ref` pointer from the cached EIDs. Sources past their `refresh_from` are returned as `staleUid2s` (`{ source, ref }` pairs); refresh each with the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshUid2Token(ref.refresh_token, ref.refresh_response_key)` and apply the outcome with `applyUid2Refresh`.
+Targeting responses carry UID2 refresh tokens in an opaque-keyed `refs` map, referenced from `uids[0].ext.optable.ref`. `mergeCache` validates those and stores them in the merged cache's `refs` sidecar keyed by EID `source`, dropping the `ext.optable.ref` pointer from the cached EIDs. Sources past their `refresh_from` are returned as `staleUid2s` (`{ source, ref }` pairs); pass them to the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshStaleUid2s(config, staleUid2s)` to refresh each and apply the outcome to the cache.
 
 A source's refs entry follows its EID: replaced when the source is re-resolved, dropped when it is evicted or the new response carries no ref for it.
 
