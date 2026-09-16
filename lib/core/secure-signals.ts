@@ -1,3 +1,5 @@
+import type { EID, UID } from "iab-openrtb/v26";
+
 // Converts cached EIDs into GPT secure-signal pairs for
 // installGPTSecureSignals, optionally filtered by source, inserter or
 // matcher. An empty or missing filter list means no constraint on that field.
@@ -6,12 +8,9 @@
 // a provider twice drops all but one id. The first EID and first non-empty
 // uid win.
 
-type SecureSignalEid = {
-  source: string;
-  inserter?: string;
-  matcher?: string;
-  uids?: Array<{ id?: string }>;
-};
+// Cached EIDs are parsed from storage, so ORTB's required fields may be
+// absent at runtime. Derived from EID so new or renamed ORTB fields flow through.
+type SecureSignalEid = Partial<Omit<EID, "uids">> & Pick<EID, "source"> & { uids?: Array<Partial<UID>> };
 
 type SecureSignalsFilter = {
   sources?: string[];
