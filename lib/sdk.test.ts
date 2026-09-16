@@ -739,7 +739,7 @@ describe("behavior testing of", () => {
     );
 
     const latestResultFromCache = sdk.targetingFromCache();
-    expect(latestResultFromCache).toEqual(targetingWithParam);
+    expect(latestResultFromCache).toEqual({ ...targetingWithParam, refs: {} });
 
     sdk.targetingClearCache();
     expect(sdk.targetingFromCache()).toBeNull();
