@@ -86,6 +86,21 @@ export function isUid2Stale(cache: ResolvedCache | null | undefined, source: str
   return Date.now() > (ref.refresh_from || 0);
 }
 
+// Normalizes a wire response into the cache format: source-keyed refs,
+// ref pointers stripped, every other field kept. Never mutates its input.
+export function replaceCache<T extends ResolvedCache>(response: T): T {
+  const user = response.ortb2?.user;
+  const eids = user?.eids ?? [];
+  const copy = { ...response, refs: resolveRefs(eids, response.refs) };
+  if (user?.eids) {
+    copy.ortb2 = {
+      ...response.ortb2,
+      user: { ...user, eids: eids.map((eid) => ({ ...eid, uids: (eid.uids ?? []).map(stripRefPointer) })) },
+    };
+  }
+  return copy;
+}
+
 export function mergeCache(
   newObj: ResolvedCache | null | undefined,
   oldObj: ResolvedCache | null | undefined,

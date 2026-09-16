@@ -141,12 +141,12 @@ describe("applyUid2Refresh", () => {
         user: {
           data: [],
           eids: [
-            { source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] },
+            { source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN", ext: { optable: { ref: "0" } } }] },
             { source: "other.com", uids: [{ id: "KEEP" }] },
           ],
         },
       },
-      refs: { "uidapi.com": OLD_REF },
+      refs: { "0": OLD_REF },
     } as unknown as TargetingResponse;
     new LocalStorage(config).setTargeting(targeting);
   }
@@ -230,23 +230,6 @@ describe("applyUid2Refresh", () => {
       expect(events).toHaveLength(0);
     }
   );
-
-  it("drops the opaque-keyed refs entry of an evicted EID from a wire-shaped copy", () => {
-    const targeting = {
-      ortb2: {
-        user: {
-          data: [],
-          eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN", ext: { optable: { ref: "0" } } }] }],
-        },
-      },
-      refs: { "0": OLD_REF },
-    } as unknown as TargetingResponse;
-    new LocalStorage(config).setTargeting(targeting);
-
-    applyUid2Refresh(config, "uidapi.com", { status: "optout" });
-
-    expect(new LocalStorage(config).getTargeting()?.refs).toEqual({});
-  });
 
   it("does nothing when the source is not in the cache", () => {
     seedCache();

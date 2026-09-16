@@ -1,4 +1,5 @@
 import { SiteResponse } from "../edge/site";
+import { replaceCache } from "./eid-cache";
 import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
@@ -65,7 +66,8 @@ class LocalStorage {
       return;
     }
 
-    this.writeToStorageKeys(this.targetingKeys, JSON.stringify(targeting));
+    // Stored copies always hold the cache format: source-keyed refs, no pointers.
+    this.writeToStorageKeys(this.targetingKeys, JSON.stringify(replaceCache(targeting)));
     this.setPairIDs(targeting);
   }
 

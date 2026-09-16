@@ -99,17 +99,9 @@ function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2Re
       eids[idx].uids = [{ atype: AgentType.PERSON_BASED, id: result.body.advertising_token }];
       cached.refs = { ...cached.refs, [source]: result.body };
     } else {
-      // The private wire-shaped copy keys refs by opaque ref key, not source;
-      // drop the evicted EID's pointer target too so no refresh material for
-      // an opted-out user lingers in storage.
-      const refKey = (eids[idx].uids?.[0] as { ext?: { optable?: { ref?: string | number } } } | undefined)?.ext
-        ?.optable?.ref;
       eids.splice(idx, 1);
       if (cached.refs) {
         delete cached.refs[source];
-        if (refKey !== undefined) {
-          delete cached.refs[refKey];
-        }
       }
     }
     return true;
