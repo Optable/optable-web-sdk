@@ -1,0 +1,30 @@
+# Dispatches the e2e test harness pipeline, which runs in the private
+# Optable/optable-prototypes repo and reports back on this commit as the
+# `e2e/web-sdk-test-harness` commit status.
+name: E2E test harness
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-22.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Dispatch to optable-prototypes
+        env:
+          GH_TOKEN: ${{ secrets.PROTOTYPES_CI_TOKEN }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          PR: ${{ github.event.pull_request.number || '' }}
+        run: |
+          gh api repos/Optable/optable-prototypes/dispatches \
+            -f "event_type=web-sdk-e2e" \
+            -f "client_payload[sha]=${SHA}" \
+            -f "client_payload[ref]=${REF}" \
+            -f "client_payload[pr]=${PR}"
