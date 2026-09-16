@@ -1,4 +1,4 @@
-import { getRefData, isUid2Stale, mergeCache, resolveRefs } from "./eid-cache";
+import { getRefData, isUid2Stale, mergeCache, replaceCache, resolveRefs } from "./eid-cache";
 
 const ref = (over: Record<string, unknown> = {}) => ({
   advertising_token: "adv",
@@ -65,6 +65,40 @@ describe("isUid2Stale", () => {
 
   it("treats a ref without refresh_from as stale", () => {
     expect(isUid2Stale({ refs: { "uidapi.com": ref({ refresh_from: 0 }) } })).toBe(true);
+  });
+});
+
+describe("replaceCache", () => {
+  it("normalizes a wire response: source-keyed refs, pointers stripped, other fields kept", () => {
+    const wireRef = ref();
+    const response = {
+      audience: [{ provider: "optable" }],
+      ab_test_id: "ab-1",
+      ortb2: { user: { data: [{ seg: 1 }], eids: [refEid("uidapi.com", "0"), eid("liveramp.com")] } },
+      refs: { "0": wireRef },
+    };
+
+    const normalized = replaceCache(response as any);
+
+    expect(normalized.refs).toEqual({ "uidapi.com": wireRef });
+    expect((normalized as any).audience).toEqual([{ provider: "optable" }]);
+    expect((normalized as any).ab_test_id).toBe("ab-1");
+    expect(normalized.ortb2?.user?.data).toEqual([{ seg: 1 }]);
+    expect(normalized.ortb2?.user?.eids?.[0]?.uids?.[0]?.ext).toBeUndefined();
+    expect(normalized.ortb2?.user?.eids?.map((e) => e.source)).toEqual(["uidapi.com", "liveramp.com"]);
+  });
+
+  it("does not mutate the response and yields empty refs without pointers", () => {
+    const wire = refEid("uidapi.com", "0");
+    const response = { ortb2: { user: { eids: [wire] } }, refs: { "0": ref() } };
+
+    const normalized = replaceCache(response as any);
+
+    expect(wire.uids[0].ext.optable.ref).toBe("0");
+    expect(normalized).not.toBe(response);
+
+    expect(replaceCache({ ortb2: { user: { eids: [eid("a")] } } } as any).refs).toEqual({});
+    expect(replaceCache({} as any).refs).toEqual({});
   });
 });
 

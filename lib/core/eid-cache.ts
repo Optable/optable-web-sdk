@@ -86,6 +86,23 @@ export function isUid2Stale(cache: ResolvedCache | null | undefined, source: str
   return Date.now() > (ref.refresh_from || 0);
 }
 
+// Normalizes a wire targeting response into the cache format — wire-clean
+// EIDs (ref pointers stripped) with a source-keyed refs sidecar — preserving
+// every other response field. setTargeting writes through this, so a stored
+// cache is always in this format. The input is not mutated.
+export function replaceCache<T extends ResolvedCache>(response: T): T {
+  const user = response.ortb2?.user;
+  const eids = user?.eids ?? [];
+  const copy = { ...response, refs: resolveRefs(eids, response.refs) };
+  if (user?.eids) {
+    copy.ortb2 = {
+      ...response.ortb2,
+      user: { ...user, eids: eids.map((eid) => ({ ...eid, uids: (eid.uids ?? []).map(stripRefPointer) })) },
+    };
+  }
+  return copy;
+}
+
 export function mergeCache(
   newObj: ResolvedCache | null | undefined,
   oldObj: ResolvedCache | null | undefined,
