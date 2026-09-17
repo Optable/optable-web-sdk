@@ -1383,12 +1383,14 @@ For the page-side stub and behaviour details, see the [command queue addon READM
 The EID cache merge module maintains a rolling EID cache across targeting and tokenize calls. New EIDs replace cached ones with the same source, sources absent from the new response are carried over, and UID2 EIDs past their refresh deadline are returned for the caller to refresh.
 
 ```typescript
-import { mergeCache } from "@optable/web-sdk/lib/dist/core/eid-cache";
+import { mergeCache, replaceCache } from "@optable/web-sdk/lib/dist/core/eid-cache";
 
 const cached = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") || "null");
-const { merged, staleUid2s } = mergeCache(await sdk.targeting(), cached);
+const { merged, staleUid2s } = mergeCache(replaceCache(await sdk.targeting()), cached);
 localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 ```
+
+`mergeCache` takes and returns cache format: `refs` keyed by EID source, no `uids[].ext.optable.ref` pointers. The wire format is unchanged everywhere else, so a response goes through `replaceCache` on the way in, while a cache read back from storage is already in that format.
 
 For the merge rules and UID2 ref handling, see the [EID cache README](lib/core/eid-cache.md).
 
