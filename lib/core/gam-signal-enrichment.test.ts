@@ -27,4 +27,13 @@ describe("setGAMSignalEnrichment", () => {
     setGAMSignalEnrichment({ control: false, enriched: true });
     expect(w.googletag!.cmd).toHaveLength(1);
   });
+
+  it("a throwing setConfig does not break the command queue", () => {
+    w.googletag.setConfig.mockImplementation(() => {
+      throw new Error("unsupported");
+    });
+    setGAMSignalEnrichment({ control: false, enriched: true });
+
+    expect(() => drain()).not.toThrow();
+  });
 });

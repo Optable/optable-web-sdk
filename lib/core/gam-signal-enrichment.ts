@@ -21,9 +21,15 @@ export function setGAMSignalEnrichment(state: SignalEnrichmentState): void {
 
   window.googletag = window.googletag || { cmd: [] };
   window.googletag.cmd.push(() => {
-    // The installed @types/googletag predates setConfig's targeting key.
-    const config = { targeting: { optableSignalEnrichment: value } };
-    window.googletag.setConfig(config as Parameters<typeof window.googletag.setConfig>[0]);
+    // Fail silently: a reporting key-value must never break the host page,
+    // e.g. on a GPT version without setConfig.
+    try {
+      // The installed @types/googletag predates setConfig's targeting key.
+      const config = { targeting: { optableSignalEnrichment: value } };
+      window.googletag.setConfig(config as Parameters<typeof window.googletag.setConfig>[0]);
+    } catch {
+      // ignore
+    }
   });
 }
 
