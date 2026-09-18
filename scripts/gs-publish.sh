@@ -22,7 +22,10 @@ send_file() {
 
 get_version() {
   local remote_path="$1"
-  gcloud storage ls -L "$remote_path" 2>/dev/null | grep optable-sdk-version | cut -d ':' -f2 | tr -d '[:space:]'
+  # describe exits non-zero when the object does not exist, which is expected on
+  # the first publish of an expansion path.
+  gcloud storage objects describe "$remote_path" \
+    --format="value(custom_fields.optable-sdk-version)" 2>/dev/null || true
 }
 
 publish() {
