@@ -22,7 +22,7 @@ send_file() {
 
 get_version() {
   local remote_path="$1"
-  gcloud storage ls -L "$remote_path" 2>/dev/null | grep optable-sdk-version | cut -d ':' -f2
+  gcloud storage ls -L "$remote_path" 2>/dev/null | grep optable-sdk-version | cut -d ':' -f2 | tr -d '[:space:]'
 }
 
 publish() {
