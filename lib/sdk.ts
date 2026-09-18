@@ -43,6 +43,7 @@ class OptableSDK {
   private contextSent: boolean = false;
   private contextConfig: PageContextConfig | null = null;
   private contextualResponse: ContextualSegmentsResponse | null = null;
+  private contextualPromise: { url: string; promise: Promise<ContextualSegmentsResponse> } | null = null;
   private warned = new Set<string>();
 
   constructor(dcn: InitConfig) {
@@ -207,10 +208,26 @@ class OptableSDK {
     return Profile(this.dcn, traits, id, neighbors);
   }
 
+  // Memoized per URL, so the initContextual fetch and later callers (for
+  // example setContextualTargetingInGAM) share one classification request. A
+  // rejected fetch is not memoized, so callers can retry.
   async ctxSegments(url?: string): Promise<ContextualSegmentsResponse> {
-    const response = await ContextualSegments(this.dcn, url ?? window.location.href);
-    this.contextualResponse = response;
-    return response;
+    const target = url ?? window.location.href;
+    let entry = this.contextualPromise;
+    if (entry?.url !== target) {
+      const promise = ContextualSegments(this.dcn, target).then((response) => {
+        this.contextualResponse = response;
+        return response;
+      });
+      entry = { url: target, promise };
+      this.contextualPromise = entry;
+      promise.catch(() => {
+        if (this.contextualPromise?.promise === promise) {
+          this.contextualPromise = null;
+        }
+      });
+    }
+    return entry.promise;
   }
 
   ctxTargetingKeyValues(
