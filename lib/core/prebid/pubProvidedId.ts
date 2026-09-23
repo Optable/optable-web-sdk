@@ -24,6 +24,9 @@ type PubProvidedIdOptions = {
 };
 
 const DEFAULT_CACHE_KEY = "OPTABLE_RESOLVED";
+// Marks the prebid global whose ID vendors have had their one unfiltered
+// refresh. Per instance, and per page since the global is.
+const REFRESHED_ALL_KEY = "__optableRefreshedAllUserIds";
 
 function cachedEids(cacheKey: string): Eid[] {
   try {
@@ -34,8 +37,9 @@ function cachedEids(cacheKey: string): Eid[] {
   }
 }
 
-// Underscore-prefixed sidecar fields like _ref (UID2 refresh material) must
-// never reach bid requests; strip them from any cache that carries them.
+// Caches written by this SDK keep EIDs clean, refresh material lives in the
+// cache's refs sidecar. A cache written by an older wrapper still carries it on
+// the EID as _ref, and can be read before the first write normalizes it.
 function stripSidecars(eid: Eid): Eid {
   const clean: Record<string, unknown> = {};
   for (const key of Object.keys(eid)) {
@@ -89,7 +93,13 @@ export function mergeIntoPubProvidedId(options: PubProvidedIdOptions = {}): void
         });
 
         pbjs.setConfig?.({ userSync: { ...currentUserSync, userIds: updatedUserIds } });
-        if (options.refreshAll) {
+
+        // A wrapper merges on every cache write, so the filtered refresh runs
+        // each time to propagate the new EIDs. The unfiltered one runs once:
+        // it only exists to survive submodule initialization, and repeating it
+        // re-requests every ID vendor again.
+        if (options.refreshAll && !pbjs[REFRESHED_ALL_KEY]) {
+          pbjs[REFRESHED_ALL_KEY] = true;
           pbjs.refreshUserIds?.();
         } else {
           pbjs.refreshUserIds?.({ submoduleNames: ["pubProvidedId"] });

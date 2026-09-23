@@ -172,6 +172,24 @@ describe("mergeIntoPubProvidedId", () => {
     expect(pbjs.refreshUserIds).toHaveBeenCalledWith();
   });
 
+  it("refreshAll re-requests every vendor once, then falls back to the filtered refresh", () => {
+    seedCache(EIDS);
+    const pbjs = makePbjs({});
+    w.pbjs = pbjs;
+
+    // A wrapper merges again after tokenize and after a UID2 refresh.
+    mergeIntoPubProvidedId({ refreshAll: true });
+    mergeIntoPubProvidedId({ refreshAll: true });
+    mergeIntoPubProvidedId({ refreshAll: true });
+    drain(pbjs);
+
+    expect(pbjs.refreshUserIds.mock.calls).toEqual([
+      [],
+      [{ submoduleNames: ["pubProvidedId"] }],
+      [{ submoduleNames: ["pubProvidedId"] }],
+    ]);
+  });
+
   it("delivers nothing while isControlGroup returns true", () => {
     seedCache(EIDS);
     const pbjs = makePbjs({});

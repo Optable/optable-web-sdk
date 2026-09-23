@@ -36,7 +36,9 @@ Prebid versions without the fix for [prebid/Prebid.js#15562](https://github.com/
 
 `refreshAll: true` works around it by issuing an unfiltered `refreshUserIds()` instead, which starts a full refresh cycle the auction waits for — every vendor completes, and the merged EIDs are included.
 
+The unfiltered refresh runs on the first merge only. A wrapper merges again after tokenize and after a UID2 refresh, and repeating it would re-request every vendor each time; it exists to survive submodule initialization, which is over by then. Later merges use the filtered refresh.
+
 - Upside: no vendor is dropped from the first auction, and split-test uplift is no longer understated by treated users losing other vendors' IDs.
-- Downside: every configured ID vendor makes a fresh request on that pageview (relevant when a vendor applies per-request quotas), and the auction can start later since it waits for the slowest vendor.
+- Downside: every configured ID vendor makes one fresh request on that pageview (relevant when a vendor applies per-request quotas), and the auction can start later since it waits for the slowest vendor.
 
 Leave it off on Prebid versions that include the fix — the filtered refresh is then both correct and cheaper. Neither mode can rescue an auction that fired before the merge ran at all.
