@@ -1323,7 +1323,7 @@ The geo-routing addon maps a visitor's region code to the Optable edge host that
 ```typescript
 import { getGeoRouting } from "@optable/web-sdk/lib/dist/addons/geo-routing";
 
-const host = getGeoRouting(visitorRegion); // e.g. "na.edge.optable.co" for "US"
+const host = getGeoRouting(visitorRegion); // e.g. "us.edge.optable.co" for "US"
 
 if (host) {
   const sdk = new OptableSDK({

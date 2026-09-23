@@ -16,8 +16,8 @@ export const DEFAULT_GEO_MAP: GeoMap = {
   AU: "au.edge.optable.co",
   CA: "ca.edge.optable.co",
   EU: "eu.edge.optable.co",
-  NA: "na.edge.optable.co",
-  US: "na.edge.optable.co",
+  NA: "us.edge.optable.co",
+  US: "us.edge.optable.co",
 };
 
 /*

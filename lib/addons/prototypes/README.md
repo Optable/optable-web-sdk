@@ -23,7 +23,7 @@ This addon integrates Optable analytics with Prebid.js, allowing you to send auc
    // ...
    if (window.optable.runAnalytics && tenant) {
      window.optable[`${tenant}_analytics`] = new window.optable.SDK({
-       host: "na.edge.optable.co",
+       host: "us.edge.optable.co",
        node: "analytics",
        site: "analytics",
        readOnly: true,
