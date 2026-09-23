@@ -37,19 +37,6 @@ function cachedEids(cacheKey: string): Eid[] {
   }
 }
 
-// Caches written by this SDK keep EIDs clean, refresh material lives in the
-// cache's refs sidecar. A cache written by an older wrapper still carries it on
-// the EID as _ref, and can be read before the first write normalizes it.
-function stripSidecars(eid: Eid): Eid {
-  const clean: Record<string, unknown> = {};
-  for (const key of Object.keys(eid)) {
-    if (!key.startsWith("_")) {
-      clean[key] = (eid as Record<string, unknown>)[key];
-    }
-  }
-  return clean as Eid;
-}
-
 export function mergeIntoPubProvidedId(options: PubProvidedIdOptions = {}): void {
   if (options.isControlGroup?.()) {
     debugLog("log", "PPID: control group, delivering nothing");
@@ -57,7 +44,7 @@ export function mergeIntoPubProvidedId(options: PubProvidedIdOptions = {}): void
   }
 
   const instances = options.instances ?? ["pbjs"];
-  const ourEids = (options.eids ?? cachedEids(options.cacheKey ?? DEFAULT_CACHE_KEY)).map(stripSidecars);
+  const ourEids = options.eids ?? cachedEids(options.cacheKey ?? DEFAULT_CACHE_KEY);
 
   instances.forEach((instanceName) => {
     if (!ourEids.length) {

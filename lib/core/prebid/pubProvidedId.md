@@ -17,7 +17,6 @@ Call it after each write to the rolling EID cache (targeting, tokenize, UID2 ref
 - Work is queued on each instance's `que` array, so it also runs when prebid hasn't loaded yet — the queue is created on the named global if needed.
 - EIDs from other providers already in `pubProvidedId` are preserved; ours are replaced by `source`.
 - Duplicate `pubProvidedId` entries in an already polluted config are collapsed back to a single entry; other user-id submodules and the rest of the `userSync` config are untouched.
-- Underscore-prefixed EID sidecars (`_ref` UID2 refresh material, `_id5` metadata) are stripped before EIDs reach prebid. Caches written by this SDK keep EIDs clean already (refresh material lives in the cache's `refs` sidecar), so the stripping is defensive.
 - After merging, `refreshUserIds({ submoduleNames: ["pubProvidedId"] })` propagates the change — or a full `refreshUserIds()` with `refreshAll: true` (see below).
 - `isControlGroup` gates delivery: while it returns true, nothing is merged. It is checked on every call, so a wrapper that merges after targeting, after tokenize and after a UID2 refresh cannot leak identifiers to a control user by forgetting one of them. Same shape as `buildRTD`'s option, so both delivery modes take the same callback.
 

@@ -88,6 +88,14 @@ describe("replaceCache", () => {
     expect(normalized.ortb2?.user?.eids?.map((e) => e.source)).toEqual(["uidapi.com", "liveramp.com"]);
   });
 
+  it("drops a legacy _ref so no consumer has to strip it", () => {
+    const legacy = { ortb2: { user: { eids: [{ source: "uidapi.com", uids: [{ id: "x" }], _ref: ref() }] } } };
+
+    const normalized = replaceCache(legacy as any);
+
+    expect("_ref" in (normalized.ortb2!.user!.eids![0] as any)).toBe(false);
+  });
+
   it("does not mutate the response and yields empty refs without pointers", () => {
     const wire = refEid("uidapi.com", "0");
     const response = { ortb2: { user: { eids: [wire] } }, refs: { "0": ref() } };
@@ -229,6 +237,15 @@ describe("mergeCache", () => {
     expect(mergeCache({ ortb2: { user: { eids: [] } } } as any, oldCache as any).merged.ortb2?.user?.data).toEqual([
       { old: true },
     ]);
+  });
+
+  it("drops a legacy _ref carried on a cached EID", () => {
+    const legacy = { ortb2: { user: { eids: [eid("uidapi.com", { _ref: ref() })] } } };
+
+    const { merged } = mergeCache(null, legacy as any);
+
+    expect("_ref" in (merged.ortb2!.user!.eids![0] as any)).toBe(false);
+    expect(getRefData(merged, "uidapi.com")).toBeNull();
   });
 
   it("tolerates null inputs", () => {

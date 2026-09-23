@@ -107,18 +107,6 @@ describe("mergeIntoPubProvidedId", () => {
     expect(eids.map((e: any) => e.source)).toEqual(["a.com", "b.com", "uidapi.com", "id5-sync.com"]);
   });
 
-  it("strips underscore-prefixed cache sidecars before handing EIDs to prebid", () => {
-    seedCache([{ source: "uidapi.com", uids: [{ id: "x" }], _ref: { refresh_token: "rt" }, _id5: { t: 1 } }]);
-    const pbjs = makePbjs({});
-    w.pbjs = pbjs;
-
-    mergeIntoPubProvidedId();
-    drain(pbjs);
-
-    const eid = pbjs.setConfig.mock.calls[0][0].userSync.userIds[0].params.eids[0];
-    expect(eid).toEqual({ source: "uidapi.com", uids: [{ id: "x" }] });
-  });
-
   it("does nothing when the cache has no EIDs", () => {
     const pbjs = makePbjs({});
     w.pbjs = pbjs;
