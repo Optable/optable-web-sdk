@@ -172,6 +172,32 @@ describe("mergeIntoPubProvidedId", () => {
     expect(pbjs.refreshUserIds).toHaveBeenCalledWith();
   });
 
+  it("delivers nothing while isControlGroup returns true", () => {
+    seedCache(EIDS);
+    const pbjs = makePbjs({});
+    w.pbjs = pbjs;
+
+    mergeIntoPubProvidedId({ isControlGroup: () => true });
+
+    expect(pbjs.que).toHaveLength(0);
+    expect(pbjs.setConfig).not.toHaveBeenCalled();
+  });
+
+  it("re-evaluates the gate on every call", () => {
+    seedCache(EIDS);
+    const pbjs = makePbjs({});
+    w.pbjs = pbjs;
+    let control = true;
+
+    mergeIntoPubProvidedId({ isControlGroup: () => control });
+    expect(pbjs.que).toHaveLength(0);
+
+    control = false;
+    mergeIntoPubProvidedId({ isControlGroup: () => control });
+    drain(pbjs);
+    expect(pbjs.setConfig).toHaveBeenCalled();
+  });
+
   it("a throwing prebid config call does not break the queue", () => {
     seedCache(EIDS);
     const pbjs = makePbjs({});

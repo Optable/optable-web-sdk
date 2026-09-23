@@ -1396,12 +1396,12 @@ For the merge rules and UID2 ref handling, see the [EID cache README](lib/core/e
 
 ## Prebid pubProvidedId delivery
 
-The pubProvidedId module delivers cached EIDs to prebid through the `pubProvidedId` user-id submodule, for integrations that don't use the RTD module. EIDs from other providers are preserved, ours are replaced by source, and the work queues on the prebid global so it also runs before prebid has loaded.
+The pubProvidedId module delivers cached EIDs to prebid through the `pubProvidedId` user-id submodule, for integrations that don't use the RTD module. EIDs from other providers are preserved, ours are replaced by source, and the work queues on the prebid global so it also runs before prebid has loaded. An `isControlGroup` callback gates delivery for split tests, the same way `buildRTD` takes one.
 
 ```typescript
 import { mergeIntoPubProvidedId } from "@optable/web-sdk/lib/dist/core/prebid/pubProvidedId";
 
-mergeIntoPubProvidedId({ instances: ["pbjs"] });
+mergeIntoPubProvidedId({ instances: ["pbjs"], isControlGroup: () => isControlGroup });
 ```
 
 On Prebid versions without the fix for [prebid/Prebid.js#15562](https://github.com/prebid/Prebid.js/pull/15562), the module's filtered ID refresh can drop other vendors (LiveIntent, ID5, …) from the page's first auction. Passing `refreshAll: true` works around it with a full ID refresh: the upside is that no vendor is dropped from the first auction; the downside is that every ID vendor re-requests on that pageview (relevant under per-request quotas) and the auction can start later. Leave it off on Prebid versions that include the fix.

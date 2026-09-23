@@ -18,6 +18,9 @@ type PubProvidedIdOptions = {
   // Refresh every user-id submodule after merging, not just pubProvidedId.
   // Workaround for prebid/Prebid.js#15562; see pubProvidedId.md.
   refreshAll?: boolean;
+  // Split-test gate, same shape as buildRTD's: while it returns true, nothing
+  // is delivered. Checked per call, since a wrapper merges from several places.
+  isControlGroup?: () => boolean;
 };
 
 const DEFAULT_CACHE_KEY = "OPTABLE_RESOLVED";
@@ -44,6 +47,11 @@ function stripSidecars(eid: Eid): Eid {
 }
 
 export function mergeIntoPubProvidedId(options: PubProvidedIdOptions = {}): void {
+  if (options.isControlGroup?.()) {
+    debugLog("log", "PPID: control group, delivering nothing");
+    return;
+  }
+
   const instances = options.instances ?? ["pbjs"];
   const ourEids = (options.eids ?? cachedEids(options.cacheKey ?? DEFAULT_CACHE_KEY)).map(stripSidecars);
 
