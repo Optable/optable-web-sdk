@@ -7,7 +7,7 @@ Delivers cached EIDs to prebid through the [`pubProvidedId` user-id submodule](h
 ```js
 import { mergeIntoPubProvidedId } from "@optable/web-sdk/lib/dist/core/prebid/pubProvidedId";
 
-mergeIntoPubProvidedId({ instances: ["pbjs"] });
+mergeIntoPubProvidedId({ instances: ["pbjs"], isControlGroup: () => isControlGroup });
 ```
 
 Call it after each write to the rolling EID cache (targeting, tokenize, UID2 refresh). By default it reads EIDs from the `OPTABLE_RESOLVED` key in `localStorage`; pass `cacheKey` to read another key, or `eids` to merge an explicit list.
@@ -18,16 +18,18 @@ Call it after each write to the rolling EID cache (targeting, tokenize, UID2 ref
 - EIDs from other providers already in `pubProvidedId` are preserved; ours are replaced by `source`.
 - Duplicate `pubProvidedId` entries in an already polluted config are collapsed back to a single entry; other user-id submodules and the rest of the `userSync` config are untouched.
 - After merging, `refreshUserIds({ submoduleNames: ["pubProvidedId"] })` propagates the change — or a full `refreshUserIds()` with `refreshAll: true` (see below).
+- Underscore-prefixed `_ref` refresh material is stripped on read, covering a cache written before this SDK rewrote it and EIDs passed explicitly.
 - `isControlGroup` gates delivery: while it returns true, nothing is merged. It is checked on every call, so a wrapper that merges after targeting, after tokenize and after a UID2 refresh cannot leak identifiers to a control user by forgetting one of them. Same shape as `buildRTD`'s option, so both delivery modes take the same callback.
 
 ## Options
 
-| Option       | Default              | Description                                                                         |
-| ------------ | -------------------- | ----------------------------------------------------------------------------------- |
-| `instances`  | `["pbjs"]`           | Names of the prebid globals to merge into.                                          |
-| `cacheKey`   | `"OPTABLE_RESOLVED"` | localStorage key of the rolling EID cache.                                          |
-| `eids`       | read from the cache  | Explicit EIDs to merge, bypassing the cache.                                        |
-| `refreshAll` | `false`              | Refresh every user-id submodule after merging, not just `pubProvidedId`. See below. |
+| Option           | Default              | Description                                                                              |
+| ---------------- | -------------------- | ---------------------------------------------------------------------------------------- |
+| `instances`      | `["pbjs"]`           | Names of the prebid globals to merge into.                                               |
+| `cacheKey`       | `"OPTABLE_RESOLVED"` | localStorage key of the rolling EID cache.                                               |
+| `eids`           | read from the cache  | Explicit EIDs to merge, bypassing the cache.                                             |
+| `refreshAll`     | `false`              | Refresh every user-id submodule on the first merge, not just `pubProvidedId`. See below. |
+| `isControlGroup` | `() => false`        | Split-test gate; while it returns true, nothing is delivered.                            |
 
 ## First-auction identity and `refreshAll`
 

@@ -34,13 +34,13 @@ type ResolvedCache = {
 
 type StaleUid2 = { source: string; ref: Uid2RefData };
 
-// Wrappers before the refs sidecar stored refresh material as _ref on the EID,
-// where every consumer had to strip it or leak it into bid requests. Dropped on
-// the way into the cache so no consumer has to.
-function withoutLegacyRef(eid: CachedEid): CachedEid {
+// Wrappers before the refs sidecar stored refresh material as _ref on the EID.
+// Dropped on the way into the cache, and applied again by consumers that read a
+// cache this SDK has not rewritten yet.
+export function withoutLegacyRef<T extends object>(eid: T): T {
   if (!("_ref" in eid)) return eid;
-  const { _ref: _dropped, ...clean } = eid as CachedEid & { _ref?: unknown };
-  return clean;
+  const { _ref: _dropped, ...clean } = eid as T & { _ref?: unknown };
+  return clean as T;
 }
 
 const UID2_SOURCE = "uidapi.com";

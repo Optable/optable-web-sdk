@@ -1,3 +1,4 @@
+import { withoutLegacyRef } from "../eid-cache";
 import { debugLog } from "../log";
 
 // Delivers cached EIDs to prebid through the pubProvidedId user-id submodule,
@@ -44,7 +45,9 @@ export function mergeIntoPubProvidedId(options: PubProvidedIdOptions = {}): void
   }
 
   const instances = options.instances ?? ["pbjs"];
-  const ourEids = options.eids ?? cachedEids(options.cacheKey ?? DEFAULT_CACHE_KEY);
+  // A cache written by an older wrapper still carries _ref until this SDK
+  // rewrites it, and the first merge can run before that happens.
+  const ourEids = (options.eids ?? cachedEids(options.cacheKey ?? DEFAULT_CACHE_KEY)).map(withoutLegacyRef);
 
   instances.forEach((instanceName) => {
     if (!ourEids.length) {
