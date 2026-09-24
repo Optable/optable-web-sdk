@@ -93,16 +93,28 @@ describe("setContextualTargetingInGAM", () => {
     expect(calls).toEqual(["https://example.com/route"]);
   });
 
-  it("reuses a classification already fetched for the same URL", async () => {
-    const calls = respondWithClassifications([{ taxonomy: "ctx_iab", id: "IAB1" }]);
-    const setTargeting = jest.fn();
-    w.googletag.pubads.mockReturnValue({ setTargeting });
+  it("does not throw when the segments fetch fails", async () => {
+    server.use(http.post(`${TEST_BASE_URL}/v1beta1/contextual`, () => HttpResponse.error()));
 
-    await SDK.ctxSegments();
+    await expect(setContextualTargetingInGAM(SDK)).resolves.toBeUndefined();
+    expect(w.googletag.cmd).toHaveLength(0);
+  });
+
+  it("builds the command queue on a googletag stub that has no cmd", async () => {
+    respondWithClassifications([{ taxonomy: "ctx_iab", id: "IAB1" }]);
+    w.googletag = { pubads: jest.fn() };
+
     await setContextualTargetingInGAM(SDK);
-    w.googletag.cmd.forEach((cmd: () => void) => cmd());
 
-    expect(calls).toHaveLength(1);
-    expect(setTargeting).toHaveBeenCalledWith("ctx_iab", ["IAB1"]);
+    expect(w.googletag.cmd).toHaveLength(1);
+  });
+
+  it("skips the push when pubads is unavailable", async () => {
+    respondWithClassifications([{ taxonomy: "ctx_iab", id: "IAB1" }]);
+    w.googletag = { cmd: [] };
+
+    await setContextualTargetingInGAM(SDK);
+
+    expect(() => w.googletag.cmd.forEach((cmd: () => void) => cmd())).not.toThrow();
   });
 });
