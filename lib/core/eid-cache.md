@@ -37,7 +37,7 @@ So anything read back out of storage is ready to merge as-is, and anything comin
 
 A source's refs entry follows its EID: replaced when the source is re-resolved, dropped when it is evicted or the new response carries no ref for it.
 
-Caches written by earlier bundle versions carried refresh material as `_ref` on the EID; there is no read-side fallback for that shape. Such a cache simply cannot refresh its UID2 until the next targeting response repopulates the sidecar.
+Caches written by earlier wrappers carried refresh material as `_ref` on the EID, where every consumer had to strip it or leak it into bid requests. Both write paths drop it, so a cache this SDK has written is clean. Consumers still apply `withoutLegacyRef` on read, since the first merge of a pageview can run against a cache written before the upgrade. There is no read-side fallback: such a cache cannot refresh its UID2 until the next targeting response repopulates the sidecar.
 
 ## API
 

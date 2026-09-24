@@ -34,6 +34,15 @@ type ResolvedCache = {
 
 type StaleUid2 = { source: string; ref: Uid2RefData };
 
+// Wrappers before the refs sidecar stored refresh material as _ref on the EID.
+// Dropped on the way into the cache, and applied again by consumers that read a
+// cache this SDK has not rewritten yet.
+export function withoutLegacyRef<T extends object>(eid: T): T {
+  if (!("_ref" in eid)) return eid;
+  const { _ref: _dropped, ...clean } = eid as T & { _ref?: unknown };
+  return clean as T;
+}
+
 const UID2_SOURCE = "uidapi.com";
 const DEFAULT_MAX_UIDS_PER_EID = 2;
 
@@ -105,7 +114,10 @@ export function replaceCache<T extends ResolvedCache>(response: T): T {
   if (user?.eids) {
     copy.ortb2 = {
       ...response.ortb2,
-      user: { ...user, eids: eids.map((eid) => ({ ...eid, uids: (eid.uids ?? []).map(stripRefPointer) })) },
+      user: {
+        ...user,
+        eids: eids.map((eid) => ({ ...withoutLegacyRef(eid), uids: (eid.uids ?? []).map(stripRefPointer) })),
+      },
     };
   }
   return copy;
@@ -130,7 +142,7 @@ export function mergeCache(
   // Copies are wire-clean: capped uids, and the ref pointer into the response
   // refs map is dropped since the sidecar replaces it.
   const copyOf = (eid: CachedEid): CachedEid => ({
-    ...eid,
+    ...withoutLegacyRef(eid),
     uids: (eid.uids || []).slice(0, maxUids).map(stripRefPointer),
   });
 
