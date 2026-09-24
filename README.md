@@ -534,6 +534,16 @@ You can also rename and allow-list the GAM keys by passing a `taxonomyKeys` map 
 loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));
 ```
 
+When GAM is the only consumer, `setContextualTargetingInGAM(sdk, taxonomyKeys?, options?, url?)` wraps the fetch-convert-push sequence into one call: it fetches the segments, converts them with `ctxTargetingKeyValues()` (forwarding `taxonomyKeys` and `options`), and queues a `googletag.pubads().setTargeting()` call per key — creating the `googletag` command queue if the page has none yet. Pass `url` to classify a route other than the current location, as in an SPA:
+
+```javascript
+import { setContextualTargetingInGAM } from "@optable/web-sdk/lib/dist/addons/gpt";
+
+await setContextualTargetingInGAM(sdk, { iab_ct_3_1: "ctx_iab" });
+```
+
+Nothing is queued when the page yields no key-values, and the call never rejects: a failed classification is logged under `optableDebug` and ads load untargeted rather than an unhandled rejection reaching a page that fired this without awaiting. For the full behaviour, including the extra request when the SDK is configured with `initContextual`, see the [GPT addon README](lib/addons/gpt.md).
+
 ## Using a script tag
 
 For each [SDK release](https://github.com/Optable/optable-web-sdk/releases), a webpack-generated browser bundle targeting the browsers list described by `pnpm dlx browserslist "> 0.25%, not dead"` can be loaded on a website via a `script` tag.
