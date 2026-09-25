@@ -1199,13 +1199,13 @@ The SDK dispatches an `optable-ois:change` event on `window` whenever the stored
 window.addEventListener("optable-ois:change", (e) => console.log(e.detail));
 ```
 
-`oisId()` returns `null` until a response has returned an ID. Unlike `passport()`, that does **not** happen during initialization: `/config` derives no identity, so the first ID arrives on the first `identify()` or `profile()` call.
+`oisId()` returns `null` until a response has returned an ID. Unlike `passport()`, that does **not** happen during initialization: `/config` derives no identity, so the first ID arrives on the first `identify()`, `profile()` or `targeting()` call.
 
 ### How it travels
 
 The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>` as an opaque string, and sent back on `X-Optable-OID`.
 
-Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token` and `/profile`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
+Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token`, `/profile` and `/v2/targeting`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
 
 There is no write policy to reason about. The DCN returns the identity it derived for the _current_ request rather than the one the client replayed, so as those signals drift (a new IP subnet, a browser upgrade, a resized window) the stored value simply rolls forward. The SDK stores whatever the last response returned.
 
