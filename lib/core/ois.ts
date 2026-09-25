@@ -7,7 +7,7 @@ const oisChangeEventName = "optable-ois:change";
 
 // A custom header makes a request non-simple, so sending it where the node
 // derives no id buys a CORS preflight for nothing.
-const HEADER_PATHS = new Set(["/identify", "/sync", "/uid2/token", "/profile", "/v2/targeting"]);
+const HEADER_PATHS = new Set(["/identify", "/uid2/token", "/profile", "/v2/targeting"]);
 
 function derivesOISID(pathname: string): boolean {
   return HEADER_PATHS.has(pathname);
