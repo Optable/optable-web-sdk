@@ -17,6 +17,7 @@ const pairEIDSource = "pair-protocol.com";
 class LocalStorage {
   private passportKeys: StorageKeys;
   private targetingKeys: StorageKeys;
+  private targetingTsKeys: StorageKeys;
   private siteKeys: StorageKeys;
   private pairKeys: StorageKeys;
   private oisKeys: StorageKeys;
@@ -25,6 +26,12 @@ class LocalStorage {
   constructor(private config: ResolvedConfig) {
     this.passportKeys = generatePassportKeys(config);
     this.targetingKeys = generateTargetingKeys(config);
+    // "<key>:ts" siblings hold the epoch ms of the last targeting write, so analytics can
+    // report cache age without changing the cache format that wrappers parse.
+    this.targetingTsKeys = {
+      read: this.targetingKeys.read.map((k) => `${k}:ts`),
+      write: this.targetingKeys.write.map((k) => `${k}:ts`),
+    };
     this.siteKeys = generateSiteKeys(config);
     this.pairKeys = generatedPairKeys();
     this.oisKeys = generateOISKeys(config);
@@ -87,6 +94,7 @@ class LocalStorage {
 
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
     this.writeToStorageKeys(this.targetingKeys, JSON.stringify(replaceCache(targeting)));
+    this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
     this.setPairIDs(targeting);
   }
 
@@ -181,6 +189,7 @@ class LocalStorage {
 
   clearTargeting() {
     this.clearStorageKeys(this.targetingKeys);
+    this.clearStorageKeys(this.targetingTsKeys);
   }
 
   clearSite() {
