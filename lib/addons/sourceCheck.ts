@@ -22,7 +22,7 @@ type SourceCheckOptions = {
  * origin) marks a source missing.
  */
 async function checkSourceExists({ site, defaultSite, node, host }: SourceCheckOptions): Promise<string> {
-  const fallback = defaultSite || "default-sdk";
+  const fallback = defaultSite || "default";
 
   let cached: string | null = null;
   try {
