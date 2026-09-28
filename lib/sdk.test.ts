@@ -103,6 +103,15 @@ describe("Breaking change detection: if typescript complains or a test fails it'
     const sdk = new OptableSDK({ ...defaultConfig });
     sdk.ctxTargetingKeyValues();
     sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" });
+    sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "ctx_bs_max" });
+  });
+
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: ctxBrandSafety", () => {
+    new OptableSDK({ ...defaultConfig }).ctxBrandSafety();
+  });
+
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: ctxMaxRiskLevel", () => {
+    new OptableSDK({ ...defaultConfig }).ctxMaxRiskLevel();
   });
 
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: profile", async () => {
@@ -504,6 +513,70 @@ describe("behavior testing of", () => {
     expect(result.classifications.categories).toBeUndefined();
   });
 
+  test("ctxBrandSafety reads the brand-safety group cached by ctxSegments", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(
+          {
+            classifications: {
+              categories: [],
+              keywords: [],
+              brandSafety: {
+                assessed: true,
+                categories: [
+                  { name: "Death, Injury or Military Conflict", riskLevel: "low" },
+                  { name: "Terrorism", riskLevel: "floor" },
+                ],
+              },
+            },
+          },
+          { status: 200 }
+        );
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxBrandSafety()).toEqual({
+      assessed: true,
+      categories: [
+        { name: "Death, Injury or Military Conflict", riskLevel: "low" },
+        { name: "Terrorism", riskLevel: "floor" },
+      ],
+    });
+    expect(sdk.ctxMaxRiskLevel()).toBe("floor");
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "ctx_bs_max" })).toEqual({
+      ctx_bs_max: ["floor"],
+    });
+  });
+
+  // A DCN on an edge build predating brand-safety serving omits the field, the
+  // same answer it already gives for a node that does not run the classifier.
+  test("ctxBrandSafety reports nothing known when the DCN serves no brand safety", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: { categories: [], keywords: [] } }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxBrandSafety()).toEqual({ assessed: false, categories: [] });
+    expect(sdk.ctxMaxRiskLevel()).toBeNull();
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "ctx_bs_max" })).toEqual({
+      ctx_bs_max: ["not_assessed"],
+    });
+  });
+
+  test("ctxBrandSafety reports nothing known before ctxSegments has been called", () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+
+    expect(sdk.ctxBrandSafety()).toEqual({ assessed: false, categories: [] });
+    expect(sdk.ctxMaxRiskLevel()).toBeNull();
+  });
+
   test("ctxSegments passes through categories spanning multiple taxonomies", async () => {
     server.use(
       http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
@@ -591,10 +664,13 @@ describe("behavior testing of", () => {
     },
   };
 
-  test("ctxTargetingKeyValues returns {} before any ctxSegments call has populated the cache", () => {
+  test("ctxTargetingKeyValues reports brand safety as not_assessed before ctxSegments populates the cache", () => {
     const sdk = new OptableSDK({ ...defaultConfig });
-    expect(sdk.ctxTargetingKeyValues()).toEqual({});
-    expect(sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" })).toEqual({});
+    // Brand safety is emitted by default, and an empty cache is a page nothing
+    // is known about, so the key is present and reports not_assessed.
+    expect(sdk.ctxTargetingKeyValues()).toEqual({ ctx_bs_max: ["not_assessed"] });
+    expect(sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" })).toEqual({ ctx_bs_max: ["not_assessed"] });
+    expect(sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" })).toEqual({});
   });
 
   test("ctxSegments caches the response and ctxTargetingKeyValues derives GAM key-values (default keys)", async () => {
@@ -610,6 +686,7 @@ describe("behavior testing of", () => {
     // Default: key is the raw taxonomy value, ids grouped under it in response order.
     expect(sdk.ctxTargetingKeyValues()).toEqual({
       iab_ct_3_1: ["53", "91", "58", "115", "90", "52"],
+      ctx_bs_max: ["not_assessed"],
     });
   });
 
@@ -625,6 +702,7 @@ describe("behavior testing of", () => {
 
     expect(sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" })).toEqual({
       foo: ["53", "91", "58", "115", "90", "52"],
+      ctx_bs_max: ["not_assessed"],
     });
   });
 
@@ -653,11 +731,13 @@ describe("behavior testing of", () => {
     expect(sdk.ctxTargetingKeyValues()).toEqual({
       iab_ct_3_1: ["53", "42"],
       iab_ct_2_2: ["123"],
+      ctx_bs_max: ["not_assessed"],
     });
 
     // Map covers only iab_ct_3_1 -> iab_ct_2_2 is dropped (filter + rename).
     expect(sdk.ctxTargetingKeyValues({ iab_ct_3_1: "ctx" })).toEqual({
       ctx: ["53", "42"],
+      ctx_bs_max: ["not_assessed"],
     });
   });
 

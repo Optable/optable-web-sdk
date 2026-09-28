@@ -440,25 +440,60 @@ type ContextualSegmentsResponse = {
   classifications: {
     categories: { id: string; name: string; score: number; taxonomy: string }[];
     keywords: { keyword: string; prominence: number }[];
+    brandSafety: {
+      assessed: boolean;
+      categories: { name: string; riskLevel: "low" | "medium" | "high" | "floor" | "not_assessed" | "" }[];
+    };
   };
 };
 ```
 
-`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page. A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
+`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page; `brandSafety` is the page's brand-safety assessment, described [below](#brand-safety). A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
 
 Each call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
 
-> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays.
+> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays, and `brandSafety.assessed` will be `false`.
+
+#### Brand safety
+
+`ctxBrandSafety()` reads the brand-safety classifications off the cached `ctxSegments()` response, as `{ assessed, categories }`. The categories and the risk tiers follow the [Brand Safety Floor + Suitability Framework](https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability), which is where the category list and the term `floor` come from.
+
+> **Note:** Only the page's **text** is assessed. Embedded media, such as images, video and audio, is not, so a page can come back with nothing flagged and still carry unsafe media. Treat the result as a signal about what the page says, not about everything a visitor sees.
+
+**Read `assessed` before `categories`.** An empty `categories` list means two opposite things depending on it:
+
+| `assessed` | `categories` | Meaning                                                                                                                                                                           |
+| ---------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `true`     | empty        | An assessment ran and flagged nothing.                                                                                                                                            |
+| `true`     | non-empty    | An assessment ran: each entry is a category it flagged, at its `riskLevel`, or a `not_assessed` category the pass did not cover. Assessed categories with no finding are omitted. |
+| `false`    | always empty | Nothing is known about this page. The DCN never classified it, the read failed, or this DCN does not run the brand-safety classifier at all.                                      |
+
+Three more things to keep in mind:
+
+- **`floor` is the most severe tier, not a baseline.** The order is `low` < `medium` < `high` < `floor`, `floor` being the framework's brand-safety floor, below which inventory should not monetize. `not_assessed` is not a severity at all; it is the entry's own state.
+- **A page assessed clean is not a clearance.** The taxonomy enumerates risks, so the classifier can report that a page matches one but never that it is free of them. Neither the response nor these helpers can express "safe".
+- **`riskLevel` can be `""`.** Only when the DCN stored a tier it could not resolve, which is a defect on its side rather than a state of the page. It is in the type because the wire can carry it, so an exhaustive `switch` has to handle it; treat it as "no usable tier". `ctxMaxRiskLevel()` already ignores it.
+
+`ctxMaxRiskLevel()` returns the most severe tier flagged on the page, or `null` when nothing is flagged, which is convenient for a single gate:
+
+```javascript
+if (sdk.ctxMaxRiskLevel() === "floor") {
+  // Do not monetize this page.
+}
+```
+
+`null` comes back in two different situations: an assessment ran and flagged nothing, and nothing is known about the page at all. A gate that must tell those apart reads `ctxBrandSafety().assessed` as well.
 
 #### Contextual targeting key-values
 
-`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under the key `ctx_kw`:
+`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under `ctx_kw` and its brand-safety tier under `ctx_bs_max`:
 
 ```javascript
 sdk.ctxTargetingKeyValues();
 // => {
 //   "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
-//   "ctx_kw": ["advertising", "programmatic", "ad tech"]
+//   "ctx_kw": ["advertising", "programmatic", "ad tech"],
+//   "ctx_bs_max": ["no_flags"]
 // }
 ```
 
@@ -466,7 +501,7 @@ Pass a `taxonomyKeys` map to rename category keys. Only taxonomies present in th
 
 ```javascript
 sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" });
-// => { "foo": ["53", "91", "58", "115", "90", "52"], "ctx_kw": ["advertising", "programmatic", "ad tech"] }
+// => { "foo": ["53", ...], "ctx_kw": ["advertising", "programmatic", "ad tech"], "ctx_bs_max": ["no_flags"] }
 ```
 
 Keyword values are ordered by `prominence` (most prominent first), capped to the top 10, and sanitized to GAM's value rules (lowercased, [reserved characters](https://support.google.com/admanager/answer/10020177) stripped, truncated to the 40-character value limit). Use the `options` argument to change the keyword key (`keywordKey`), change the cap (`maxKeywords`), or opt out of keyword key-values by passing an empty `keywordKey`:
@@ -474,12 +509,38 @@ Keyword values are ordered by `prominence` (most prominent first), capped to the
 ```javascript
 // Rename the keyword key and emit only the top 5 keywords:
 sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" }, { keywordKey: "kw", maxKeywords: 5 });
-// => { "foo": ["53", ...], "kw": ["advertising", "programmatic", "ad tech", "marketing", "audience targeting"] }
+// => { "foo": ["53", ...], "kw": ["advertising", "programmatic", "ad tech", "marketing", "audience targeting"], ... }
 
 // Opt out of keyword key-values entirely:
 sdk.ctxTargetingKeyValues(undefined, { keywordKey: "" });
-// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"] }
+// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"], "ctx_bs_max": ["no_flags"] }
 ```
+
+Brand safety is emitted by default under `ctx_bs_max`, carrying the page's most severe flagged tier. It is the same text-only assessment described [above](#brand-safety), so a line item keyed on it is gating on the page's words and not on its embedded media. Use `brandSafetyKey` to rename it, or pass an empty `brandSafetyKey` to opt out, exactly as `keywordKey` works:
+
+```javascript
+// Rename the brand-safety key:
+sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "bs" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "bs": ["floor"] }
+
+// Opt out of the brand-safety key-value entirely:
+sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...] }
+```
+
+A value is emitted for every state rather than the key being dropped when nothing is flagged:
+
+| State                           | Value                                                   |
+| ------------------------------- | ------------------------------------------------------- |
+| A tier was flagged              | The most severe one: `low`, `medium`, `high` or `floor` |
+| Assessed, nothing flagged       | `no_flags`                                              |
+| Nothing is known about the page | `not_assessed`                                          |
+
+The two sentinels exist so a line item can tell them apart. If the key were simply absent when nothing was flagged, "we never looked" and "we looked and flagged nothing" would look identical in GAM, and you could not exclude unassessed inventory without also excluding clean inventory. Note that `no_flags` is deliberately not named `safe`: a pass with no finding is not a clearance.
+
+`not_assessed` is spelled the same as the `riskLevel` a category carries when the assessment did not cover it. That is deliberate: one word for one idea, "nothing is known here", at two scopes. The scopes cannot be confused, because `ctx_bs_max` only ever carries a page-level answer.
+
+One difference from `keywordKey` is worth knowing before you ship: keywords are dropped when the DCN produced none, whereas `ctx_bs_max` is always present unless you disable it. A DCN that does not run the brand-safety classifier therefore adds `ctx_bs_max=not_assessed` to every ad request. That is the intended behavior, since it is a state a line item may want to target, but if you do not use brand safety at all, pass an empty `brandSafetyKey` to keep it out of the request.
 
 A typical Google Ad Manager activation uses a `loadGAM()` helper:
 
