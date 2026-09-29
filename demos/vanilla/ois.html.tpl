@@ -117,6 +117,9 @@
       <div class="row">
         <div class="twelve column">
           <fieldset>
+            <label for="email-checked"><input id="email-checked" type="checkbox" checked /> Email address</label>
+            <input id="email" type="email" size="48" value="ois-demo@example.com" />
+
             <button id="identify-button" class="button-primary">Run identify call</button>
             <button id="clear-button">Clear stored ID</button>
             <button id="reload-button">Reload page</button>
@@ -191,14 +194,41 @@
         document.getElementById("result").append(line + "\n");
       }
 
+      function selectedIDs() {
+        const ids = [];
+
+        if (document.getElementById("email-checked").checked) {
+          ids.push(optable.SDK.eid(document.getElementById("email").value));
+        }
+
+        return ids.filter((id) => id);
+      }
+
       // Fires whenever the stored ID changes, so the table follows the wire
       // without the handlers below having to re-render.
       window.addEventListener("optable-ois:change", render);
 
       optable.cmd.push(function () {
+        document.getElementById("email-checked").onchange = function () {
+          document.getElementById("email").disabled = !this.checked;
+        };
+
         document.getElementById("identify-button").addEventListener("click", () => {
+          const ids = selectedIDs();
+
+          // identify accepts an empty identifier list and does nothing with it, so
+          // with nothing checked call targeting, which runs either way.
+          if (!ids.length) {
+            optable.instance
+              .targeting()
+              .then(() => log("targeting ok"))
+              .catch((err) => log("targeting error: " + err.message));
+            return;
+          }
+
+          log("sending " + ids.join("  "));
           optable.instance
-            .identify(optable.SDK.eid("ois-demo@example.com"))
+            .identify(...ids)
             .then(() => log("identify ok"))
             .catch((err) => log("identify error: " + err.message));
         });
