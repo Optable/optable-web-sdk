@@ -1435,6 +1435,16 @@ if (!SkipTargetingForBots()) {
 }
 ```
 
+A wrapper that resolves targeting itself can share the same marker rather than tracking its own: `TargetingResolvedThisSession()` is true once targeting has resolved this session (or a bot was detected), and `MarkTargetingResolved()` sets it. The `optableForceTargeting` flag overrides the check.
+
+```typescript
+import { TargetingOncePerSession } from "@optable/web-sdk/lib/dist/edge/targeting";
+
+const response = await TargetingOncePerSession(sdk);
+```
+
+`TargetingOncePerSession(sdk, input?)` wraps the whole pattern: it skips the call when the marker is set, marks it on success, and resolves `null` rather than rejecting when the edge call fails, so identity resolution cannot break the page. A failed call leaves the marker unset, so a later page retries. A bot reads as already resolved, since `SkipTargetingForBots` sets the same marker.
+
 Matching is substring-based and case-insensitive, covering generic crawlers, headless browsers, HTTP clients and Google's non-search agents. It is deliberately broad and user-agent only — a cost-saving filter, not a fraud signal. For the full match list, see the [bot detection addon README](lib/addons/botDetection.md).
 
 ## Command queue

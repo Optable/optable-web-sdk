@@ -6,6 +6,8 @@ import { isBot } from "../addons/botDetection";
 import * as ortb2 from "iab-openrtb/v26";
 import * as adcom from "iab-adcom";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
+import { flagEnabled } from "../core/flags";
+import { debugLog } from "../core/log";
 
 type Identifier = {
   id: string;
@@ -97,20 +99,65 @@ function TargetingClearCache(config: ResolvedConfig) {
 }
 
 /**
- * Skip targeting for bots by marking targeting as already done,
- * so RTD short-circuits and returns null. No-op for real users.
- * Returns whether the request was identified as a bot.
+ * Skip targeting for bots by marking targeting as already done, so a wrapper's
+ * session guard (TargetingOncePerSession) skips the edge call. No-op for real
+ * users. Returns whether the request was identified as a bot.
  */
 export function SkipTargetingForBots(): boolean {
   try {
     if (typeof isBot === "function" && isBot()) {
-      sessionStorage.setItem(TARGETING_DONE_KEY, "1");
+      markTargetingResolved();
       return true;
     }
   } catch {
     // isBot is unavailable or threw; fall through and treat as a real user.
   }
   return false;
+}
+
+/**
+ * Resolves targeting at most once per session and never rejects, the shape a
+ * wrapper needs: skipped when the marker is already set, marked on success,
+ * and a failed call resolves null so identity resolution cannot break the page.
+ *
+ * Typed structurally rather than against OptableSDK so edge does not depend on
+ * the class that imports it.
+ */
+export async function TargetingOncePerSession(
+  sdk: { targeting: (input?: string | TargetingRequest) => Promise<TargetingResponse> },
+  input?: string | TargetingRequest
+): Promise<TargetingResponse | null> {
+  let alreadyResolved = false;
+  try {
+    // sessionStorage unavailable leaves this false, so we resolve rather than skip.
+    alreadyResolved = sessionStorage.getItem(TARGETING_DONE_KEY) === "1" && !flagEnabled("optableForceTargeting");
+  } catch {
+    // Ignored.
+  }
+
+  if (alreadyResolved) {
+    debugLog("log", "Targeting: already resolved this session");
+    return null;
+  }
+
+  try {
+    const response = await sdk.targeting(input);
+    markTargetingResolved();
+    debugLog("log", "Targeting: resolved");
+    return response;
+  } catch (err) {
+    debugLog("error", "Targeting: failed", err);
+    return null;
+  }
+}
+
+// Marks targeting as resolved for the rest of the session.
+function markTargetingResolved(): void {
+  try {
+    sessionStorage.setItem(TARGETING_DONE_KEY, "1");
+  } catch {
+    // sessionStorage unavailable; the guard just never trips.
+  }
 }
 
 // Prebid.js supports setting ortb2 object for compatible bidder adapters.
