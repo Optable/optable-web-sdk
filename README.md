@@ -1389,9 +1389,13 @@ import { isBot } from "@optable/web-sdk/lib/dist/addons/botDetection";
 const id5Id = await resolveId5(id5PartnerId, { isBot });
 ```
 
-The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value. Concurrent calls share one script load and resolution.
+The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value. Concurrent calls for the same partner share one script load and resolution, and an ID5 API already on the page is reused rather than loaded again.
 
-Consent-gating the call is the caller's responsibility: ID5's own CMP integration covers TCF pages, but the resolved id is cached in `localStorage`, so don't call `resolveId5` when device access is not permitted.
+ID5's own CMP integration covers TCF pages, but the resolved id is cached in `localStorage`. Pass `deviceAccess` to gate that cache; when it returns `false` the cache is neither read nor written and every call resolves live:
+
+```javascript
+const id5Id = await resolveId5(id5PartnerId, { isBot, deviceAccess: () => consent.deviceAccess });
+```
 
 ## Demo Pages
 
