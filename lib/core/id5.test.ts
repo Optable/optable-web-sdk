@@ -155,3 +155,64 @@ describe("resolveId5", () => {
     await expect(resolveId5(42, { timeoutMs: 20 })).resolves.toBeNull();
   });
 });
+
+describe("resolveId5 - reuse, consent and partner-id handling", () => {
+  it("reuses an ID5 API already on the page instead of injecting a second script", async () => {
+    const first = resolveId5(42, { timeoutMs: 20 });
+    loadId5(42, undefined);
+    await expect(first).resolves.toBeNull();
+
+    const second = resolveId5(42, { timeoutMs: 20 });
+    await expect(second).resolves.toBeNull();
+    expect(document.head.querySelectorAll("script[src*='id5-sync.com']")).toHaveLength(1);
+  });
+
+  it("skips both cache read and write when deviceAccess denies storage", async () => {
+    localStorage.setItem(
+      ID5_CACHE_KEY,
+      JSON.stringify({ partnerId: 42, userId: "cached-id5", resolvedAt: Date.now() })
+    );
+
+    const pending = resolveId5(42, { deviceAccess: () => false, timeoutMs: 20 });
+    expect(document.head.querySelector("script")).not.toBeNull();
+    loadId5(42, "live-id5");
+
+    await expect(pending).resolves.toBe("live-id5");
+    expect(JSON.parse(localStorage.getItem(ID5_CACHE_KEY) || "null").userId).toBe("cached-id5");
+  });
+
+  it("treats a numeric and a string partner id as the same partner", async () => {
+    const pending = resolveId5(42);
+    loadId5(42, "live-id5");
+
+    await expect(pending).resolves.toBe("live-id5");
+    expect(getCachedId5UserId("42")).toBe("live-id5");
+  });
+
+  it("keeps per-partner dedupe when partner ids interleave", async () => {
+    const first = resolveId5(1, { timeoutMs: 20 });
+    const other = resolveId5(2, { timeoutMs: 20 });
+    const again = resolveId5(1, { timeoutMs: 20 });
+
+    expect(again).toBe(first);
+    expect(document.head.querySelectorAll("script[src*='id5-sync.com']")).toHaveLength(2);
+    await Promise.all([first, other, again]);
+  });
+
+  it("caches an onUpdate that arrives after the timeout", async () => {
+    let fire = () => {};
+    const instance: Record<string, unknown> = {
+      config: { providedOptions: { partnerId: 42 } },
+      getUserId: () => "late-id5",
+      onUpdate: (cb: () => void) => {
+        fire = cb;
+        return instance;
+      },
+    };
+    (window as any).ID5 = { init: () => instance };
+
+    await expect(resolveId5(42, { timeoutMs: 20 })).resolves.toBeNull();
+    fire();
+    expect(getCachedId5UserId(42)).toBe("late-id5");
+  });
+});

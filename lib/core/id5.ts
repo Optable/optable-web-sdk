@@ -5,6 +5,9 @@ import { flagEnabled, getFlags } from "./flags";
 // QA flags, then the local cache (7-day TTL, its own storage key — never
 // piggybacked on cached EIDs), then a live resolution. ID5's own A/B holdout
 // is disabled so every consented user gets an id.
+//
+// The cache is raw localStorage rather than LocalStorageProxy, which needs a
+// ResolvedConfig this module is not given. Gate it with options.deviceAccess.
 
 const ID5_API_URL = "https://cdn.id5-sync.com/api/1.0/id5-api.js";
 const ID5_CACHE_KEY = "OPTABLE_ID5";
@@ -19,6 +22,9 @@ type Id5Options = {
   isBot?: () => boolean;
   // Give up on live resolution after this long. Defaults to 10s.
   timeoutMs?: number;
+  // Gate the cache on device-access consent. Reads and writes are skipped
+  // when this returns false. Defaults to allowed.
+  deviceAccess?: () => boolean;
 };
 
 type Id5Instance = {
@@ -36,12 +42,16 @@ declare global {
   }
 }
 
+// Partner ids are compared as strings throughout: a caller reading the id from
+// a DOM attribute or JSON config passes "42" where another passed 42.
+const partnerKey = (partnerId: number | string | undefined): string => String(partnerId);
+
 // The cache entry is partner-scoped: after a partner-id change, the previous
 // partner's id is not served.
 export function getCachedId5UserId(partnerId?: number | string): string | null {
   try {
     const cached = JSON.parse(localStorage.getItem(ID5_CACHE_KEY) || "null");
-    if (partnerId !== undefined && cached?.partnerId !== partnerId) {
+    if (partnerId !== undefined && partnerKey(cached?.partnerId) !== partnerKey(partnerId)) {
       return null;
     }
     if (typeof cached?.userId === "string" && cached.userId && Date.now() - cached.resolvedAt < ID5_TTL_MS) {
@@ -55,13 +65,16 @@ export function getCachedId5UserId(partnerId?: number | string): string | null {
 
 function cacheId5UserId(partnerId: number | string, userId: string): void {
   try {
-    localStorage.setItem(ID5_CACHE_KEY, JSON.stringify({ partnerId, userId, resolvedAt: Date.now() }));
+    localStorage.setItem(
+      ID5_CACHE_KEY,
+      JSON.stringify({ partnerId: partnerKey(partnerId), userId, resolvedAt: Date.now() })
+    );
   } catch {
     // Storage unavailable; the id still resolves for this page.
   }
 }
 
-let pending: { partnerId: number | string; promise: Promise<string | null> } | null = null;
+const pending = new Map<string, Promise<string | null>>();
 
 export function resolveId5(partnerId: number | string, options: Id5Options = {}): Promise<string | null> {
   // QA: inject a specific value, or a placeholder, without loading the API.
@@ -77,7 +90,8 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     return Promise.resolve("ID5-QA");
   }
 
-  const cached = getCachedId5UserId(partnerId);
+  const storageAllowed = options.deviceAccess?.() ?? true;
+  const cached = storageAllowed ? getCachedId5UserId(partnerId) : null;
   if (cached) {
     debugLog("log", "ID5: using cached value");
     return Promise.resolve(cached);
@@ -88,9 +102,11 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     return Promise.resolve(null);
   }
 
-  // Concurrent callers share one script load and one resolution.
-  if (pending?.partnerId === partnerId) {
-    return pending.promise;
+  // Concurrent callers share one script load and one resolution, per partner.
+  const key = partnerKey(partnerId);
+  const inflight = pending.get(key);
+  if (inflight) {
+    return inflight;
   }
 
   const promise = new Promise<string | null>((resolve) => {
@@ -106,9 +122,7 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
       settle(null);
     }, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
-    const script = document.createElement("script");
-    script.src = ID5_API_URL;
-    script.onload = () => {
+    const init = () => {
       // An ID5.init throw must settle rather than stall until the timeout.
       try {
         debugLog("log", "ID5 library init");
@@ -126,11 +140,9 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
           abTesting: { enabled: false, controlGroupPct: 0 },
         });
         instance.onUpdate(() => {
-          if (instance.config?.providedOptions?.partnerId !== partnerId) {
-            debugLog(
-              "warn",
-              `ID5: partner id mismatch: ${instance.config?.providedOptions?.partnerId} instead of ${partnerId}`
-            );
+          const resolvedPartner = instance.config?.providedOptions?.partnerId;
+          if (partnerKey(resolvedPartner) !== key) {
+            debugLog("warn", `ID5: partner id mismatch: ${resolvedPartner} instead of ${partnerId}`);
             settle(null);
             return;
           }
@@ -142,7 +154,11 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
             return;
           }
           debugLog("log", `ID5: resolved ${id5Id}`);
-          cacheId5UserId(partnerId, id5Id);
+          // An onUpdate arriving after the timeout still caches, so the next
+          // call gets the id rather than resolving again.
+          if (storageAllowed) {
+            cacheId5UserId(partnerId, id5Id);
+          }
           settle(id5Id);
         });
       } catch (err) {
@@ -150,6 +166,17 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
         settle(null);
       }
     };
+
+    // Reuse an API the page or an earlier resolution already loaded, rather
+    // than downloading it again.
+    if (window.ID5) {
+      init();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = ID5_API_URL;
+    script.onload = init;
     script.onerror = () => {
       debugLog("warn", "ID5: API load failed");
       settle(null);
@@ -157,10 +184,10 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     document.head.appendChild(script);
   });
 
-  pending = { partnerId, promise };
+  pending.set(key, promise);
   promise.finally(() => {
-    if (pending?.promise === promise) {
-      pending = null;
+    if (pending.get(key) === promise) {
+      pending.delete(key);
     }
   });
   return promise;
