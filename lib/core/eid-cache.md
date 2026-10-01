@@ -33,7 +33,7 @@ So anything read back out of storage is ready to merge as-is, and anything comin
 
 ## UID2 refresh material
 
-`replaceCache` validates the refresh material a response points at and keys it by EID `source`, dropping the `ext.optable.ref` pointers. `mergeCache` then carries those entries across merges and returns sources past their `refresh_from` as `staleUid2s` (`{ source, ref }` pairs); refresh each with the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshUid2Token(ref.refresh_token, ref.refresh_response_key)` and apply the outcome with `applyUid2Refresh`.
+`replaceCache` validates the refresh material a response points at and keys it by EID `source`, dropping the `ext.optable.ref` pointers. `mergeCache` then carries those entries across merges and returns sources past their `refresh_from` as `staleUid2s` (`{ source, ref }` pairs); pass them to the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshStaleUid2s(config, staleUid2s)` to refresh each and apply the outcome to the cache.
 
 A source's refs entry follows its EID: replaced when the source is re-resolved, dropped when it is evicted or the new response carries no ref for it.
 
