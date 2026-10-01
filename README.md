@@ -1537,7 +1537,7 @@ window.optable.site = await checkSourceExists({
 });
 ```
 
-The result is cached in `sessionStorage`, so the probe runs at most once per session. For the probe and fallback details, see the [source check addon README](lib/addons/sourceCheck.md).
+The result is cached in `sessionStorage`, so the probe runs at most once per session for each site, node and host. For the probe and fallback details, see the [source check addon README](lib/addons/sourceCheck.md).
 
 ## Demo Pages
 

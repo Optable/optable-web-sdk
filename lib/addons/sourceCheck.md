@@ -19,5 +19,6 @@ Returns the site to use: `site` when the source exists, `defaultSite` (or `"defa
 ## Behaviour
 
 - Probes `https://<host>/config?o=<site>&t=<node>&purpose=check-source-exists` (`host` defaults to `na.edge.optable.co`). Only a network-level failure — the edge rejecting the unknown origin — marks the source missing; any HTTP response counts as existing.
-- The result is cached in `sessionStorage` (`optable_source_exists`), so the probe runs at most once per session.
+- The result is cached in `sessionStorage` under `optable_source_exists:<host>:<node>:<site>`, so the probe runs at most once per session for each combination. A verdict for one site, node or host is never applied to another.
+- The probe is aborted after 1500ms. A timeout falls back for that call only and is not cached, since a slow network is not evidence the source is missing.
 - A browser with `sessionStorage` blocked degrades to probing every page load.
