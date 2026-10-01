@@ -2,9 +2,10 @@ import { http, HttpResponse } from "msw";
 import { server } from "../test/server";
 import { checkSourceExists } from "./sourceCheck";
 
-const CHECK_URL = "https://na.edge.optable.co/config";
+const CHECK_URL = "https://us.edge.optable.co/config";
 
-const keyFor = (site: string, node = "", host = "na.edge.optable.co") => `optable_source_exists:${host}:${node}:${site}`;
+const keyFor = (site: string, node = "", host = "us.edge.optable.co") =>
+  `optable_source_exists:${host}:${node}:${site}`;
 
 beforeEach(() => {
   sessionStorage.clear();

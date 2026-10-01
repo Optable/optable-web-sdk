@@ -1,7 +1,7 @@
 import { debugLog } from "../core/log";
 
 const SOURCE_EXISTS_KEY = "optable_source_exists";
-const DEFAULT_CHECK_HOST = "na.edge.optable.co";
+const DEFAULT_CHECK_HOST = "us.edge.optable.co";
 const CHECK_TIMEOUT_MS = 1500;
 
 type SourceCheckOptions = {
@@ -32,9 +32,10 @@ function cacheVerdict(key: string, verdict: string): void {
 /**
  * Verifies that `site` has a matching source configured in the DCN and
  * returns the site to use: `site` when it exists, `defaultSite` when it does
- * not. The result is cached in sessionStorage, so the probe runs at most once
- * per session. Only a network-level failure (the edge rejecting the unknown
- * origin) marks a source missing.
+ * not. The result is cached in sessionStorage per site, node and host, so the
+ * probe runs at most once per session for each. Only a network-level failure
+ * (the edge rejecting the unknown origin) marks a source missing; a timeout
+ * falls back without being cached.
  */
 async function checkSourceExists({ site, defaultSite, node, host }: SourceCheckOptions): Promise<string> {
   const fallback = defaultSite || "default";
