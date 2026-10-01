@@ -354,13 +354,26 @@ describe("refreshStaleUid2s", () => {
 
   it("keeps going after a failed entry", async () => {
     seedCache();
-    server.use(http.post(UID2_REFRESH_ENDPOINT, () => HttpResponse.error()));
+    const encrypted = await encryptResponse({ status: "success", body: BODY });
+    server.use(
+      http.post(UID2_REFRESH_ENDPOINT, async ({ request }) =>
+        (await request.text()) === "FAILING_TOKEN" ? HttpResponse.error() : new HttpResponse(encrypted, { status: 200 })
+      )
+    );
 
     await expect(
-      refreshStaleUid2s(config, [{ source: "uidapi.com" } as unknown as StaleUid2, ...stale()])
+      refreshStaleUid2s(config, [
+        { source: "uidapi.com", ref: { ...STALE_REF, refresh_token: "FAILING_TOKEN" } },
+        { source: "other.com", ref: STALE_REF },
+      ])
     ).resolves.toBeUndefined();
 
-    expect(cachedEids().map((e) => e.source)).toEqual(["uidapi.com", "other.com"]);
+    const eids = cachedEids();
+    expect(eids.map((e) => e.source)).toEqual(["uidapi.com", "other.com"]);
+    expect(eids[0].uids).toEqual([{ atype: 3, id: "OLD_TOKEN" }]);
+    expect(eids[1].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    expect(new LocalStorage(config).getTargeting()?.refs).toEqual({ "uidapi.com": STALE_REF, "other.com": BODY });
+    expect(events).toHaveLength(1);
   });
 
   it("is a no-op for an empty list", async () => {

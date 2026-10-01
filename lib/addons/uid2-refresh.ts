@@ -127,6 +127,7 @@ async function refreshStaleUid2s(config: ResolvedConfig, stale: StaleUid2[]): Pr
   for (const entry of stale) {
     try {
       if (!isUid2RefData(entry?.ref)) {
+        debugLog("warn", `UID2: ${entry?.source} skipped, no usable refresh material`);
         continue;
       }
 
