@@ -14,7 +14,7 @@ window.optable.site = await checkSourceExists({
 });
 ```
 
-Returns the site to use: `site` when the source exists, `defaultSite` (or `"default-sdk"` when that is empty) when it does not. Call it before constructing the SDK and pass the result as the constructor's `site`.
+Returns the site to use: `site` when the source exists, `defaultSite` (or `"default"` when that is empty) when it does not. Call it before constructing the SDK and pass the result as the constructor's `site`.
 
 ## Behaviour
 
