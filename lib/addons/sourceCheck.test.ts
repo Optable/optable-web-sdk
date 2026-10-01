@@ -34,10 +34,10 @@ describe("checkSourceExists", () => {
     expect(sessionStorage.getItem("optable_source_exists")).toBe("0");
   });
 
-  it("falls back to 'default-sdk' when no defaultSite is configured", async () => {
+  it("falls back to 'default' when no defaultSite is configured", async () => {
     server.use(http.get(CHECK_URL, () => HttpResponse.error()));
 
-    await expect(checkSourceExists({ site: "unknown-site", defaultSite: "" })).resolves.toBe("default-sdk");
+    await expect(checkSourceExists({ site: "unknown-site", defaultSite: "" })).resolves.toBe("default");
   });
 
   it("uses the cached miss without probing", async () => {
