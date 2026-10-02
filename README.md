@@ -1499,7 +1499,7 @@ For the merge rules and a full wrapper example, see the [static mappings README]
 
 ## ID5 resolution
 
-`resolveId5(partnerId, options?)` resolves an [ID5](https://id5.io/) user id, loading the ID5 API on demand: QA flags first, then a local 7-day cache (its own `OPTABLE_ID5` key), then a live resolution with ID5's own A/B holdout disabled. Live resolution is bounded (10s default, `timeoutMs` option) and resolves `null` on timeout, load failure, partner-id mismatch or the ID5 `"0"` placeholder. Pass the bot detection addon's `isBot` to skip live resolution for crawlers:
+`resolveId5(partnerId, options?)` resolves an [ID5](https://id5.io/) user id, loading the ID5 API on demand: QA flags first, then a local 7-day cache (its own key per partner, `OPTABLE_ID5:<partnerId>`), then a live resolution with ID5's own A/B holdout disabled. Live resolution is bounded (10s default, `timeoutMs` option) and resolves `null` on timeout, load failure, partner-id mismatch or the ID5 `"0"` placeholder. Pass the bot detection addon's `isBot` to skip live resolution for crawlers:
 
 ```javascript
 import { resolveId5 } from "@optable/web-sdk/lib/dist/core/id5";

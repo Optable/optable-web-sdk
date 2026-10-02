@@ -39,24 +39,24 @@ beforeEach(() => {
 
 describe("getCachedId5UserId", () => {
   it("returns a cached id within the TTL and null past it", () => {
-    localStorage.setItem(ID5_CACHE_KEY, JSON.stringify({ partnerId: 42, userId: "id5-x", resolvedAt: Date.now() }));
+    localStorage.setItem(`${ID5_CACHE_KEY}:42`, JSON.stringify({ userId: "id5-x", resolvedAt: Date.now() }));
     expect(getCachedId5UserId(42)).toBe("id5-x");
 
     localStorage.setItem(
-      ID5_CACHE_KEY,
-      JSON.stringify({ partnerId: 42, userId: "id5-x", resolvedAt: Date.now() - 8 * 24 * 60 * 60 * 1000 })
+      `${ID5_CACHE_KEY}:42`,
+      JSON.stringify({ userId: "id5-x", resolvedAt: Date.now() - 8 * 24 * 60 * 60 * 1000 })
     );
     expect(getCachedId5UserId(42)).toBeNull();
   });
 
   it("does not serve another partner's cached id", () => {
-    localStorage.setItem(ID5_CACHE_KEY, JSON.stringify({ partnerId: 42, userId: "id5-x", resolvedAt: Date.now() }));
+    localStorage.setItem(`${ID5_CACHE_KEY}:42`, JSON.stringify({ userId: "id5-x", resolvedAt: Date.now() }));
     expect(getCachedId5UserId(99)).toBeNull();
   });
 
   it("tolerates a malformed cache", () => {
-    localStorage.setItem(ID5_CACHE_KEY, "{nope");
-    expect(getCachedId5UserId()).toBeNull();
+    localStorage.setItem(`${ID5_CACHE_KEY}:42`, "{nope");
+    expect(getCachedId5UserId(42)).toBeNull();
   });
 });
 
@@ -83,10 +83,7 @@ describe("resolveId5", () => {
   });
 
   it("returns the cached id without loading the API", async () => {
-    localStorage.setItem(
-      ID5_CACHE_KEY,
-      JSON.stringify({ partnerId: 42, userId: "cached-id5", resolvedAt: Date.now() })
-    );
+    localStorage.setItem(`${ID5_CACHE_KEY}:42`, JSON.stringify({ userId: "cached-id5", resolvedAt: Date.now() }));
     await expect(resolveId5(42)).resolves.toBe("cached-id5");
     expect(document.head.querySelector("script")).toBeNull();
   });
@@ -168,17 +165,14 @@ describe("resolveId5 - reuse, consent and partner-id handling", () => {
   });
 
   it("skips both cache read and write when deviceAccess denies storage", async () => {
-    localStorage.setItem(
-      ID5_CACHE_KEY,
-      JSON.stringify({ partnerId: 42, userId: "cached-id5", resolvedAt: Date.now() })
-    );
+    localStorage.setItem(`${ID5_CACHE_KEY}:42`, JSON.stringify({ userId: "cached-id5", resolvedAt: Date.now() }));
 
     const pending = resolveId5(42, { deviceAccess: () => false, timeoutMs: 20 });
     expect(document.head.querySelector("script")).not.toBeNull();
     loadId5(42, "live-id5");
 
     await expect(pending).resolves.toBe("live-id5");
-    expect(JSON.parse(localStorage.getItem(ID5_CACHE_KEY) || "null").userId).toBe("cached-id5");
+    expect(JSON.parse(localStorage.getItem(`${ID5_CACHE_KEY}:42`) || "null").userId).toBe("cached-id5");
   });
 
   it("treats a numeric and a string partner id as the same partner", async () => {
@@ -214,5 +208,31 @@ describe("resolveId5 - reuse, consent and partner-id handling", () => {
     await expect(resolveId5(42, { timeoutMs: 20 })).resolves.toBeNull();
     fire();
     expect(getCachedId5UserId(42)).toBe("late-id5");
+  });
+});
+
+describe("resolveId5 - per-partner cache slots", () => {
+  it("caches two partner ids alongside each other", async () => {
+    (window as any).ID5 = {
+      init: (opts: Record<string, unknown>) => {
+        const instance: Record<string, unknown> = {
+          config: { providedOptions: { partnerId: opts.partnerId } },
+          getUserId: () => `id-for-${opts.partnerId}`,
+          onUpdate: (cb: () => void) => {
+            cb();
+            return instance;
+          },
+        };
+        return instance;
+      },
+    };
+
+    await expect(resolveId5(1, { timeoutMs: 20 })).resolves.toBe("id-for-1");
+    await expect(resolveId5(2, { timeoutMs: 20 })).resolves.toBe("id-for-2");
+
+    expect(getCachedId5UserId(1)).toBe("id-for-1");
+    expect(getCachedId5UserId(2)).toBe("id-for-2");
+    expect(localStorage.getItem(`${ID5_CACHE_KEY}:1`)).not.toBeNull();
+    expect(localStorage.getItem(`${ID5_CACHE_KEY}:2`)).not.toBeNull();
   });
 });
