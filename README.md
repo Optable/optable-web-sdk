@@ -1504,6 +1504,22 @@ setStaticMappings({
 
 For the merge rules and a full wrapper example, see the [static mappings README](lib/core/staticMappings.md).
 
+## Source check
+
+The source check addon verifies that a page's site slug has a matching source configured in the DCN before the SDK is constructed, falling back to a default source when it does not — so multi-site publishers keep default enrichment on domains that were never provisioned.
+
+```typescript
+import { checkSourceExists } from "@optable/web-sdk/lib/dist/addons/sourceCheck";
+
+window.optable.site = await checkSourceExists({
+  site: window.optable.site,
+  defaultSite: window.optable.defaultSite,
+  node: "customer-node",
+});
+```
+
+The result is cached in `sessionStorage`, so the probe runs at most once per session for each site, node and host. For the probe and fallback details, see the [source check addon README](lib/addons/sourceCheck.md).
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
