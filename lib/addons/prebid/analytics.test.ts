@@ -1132,6 +1132,51 @@ describe("OptablePrebidAnalytics", () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
+    it("should not mark a replayed auction as missed when Optable sources are present", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-with-cache",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, [], true);
+
+      expect(result.missed).toBe(false);
+    });
+
+    it("should keep a replayed auction as missed when no Optable sources are present", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-no-cache",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, [], true);
+
+      expect(result.missed).toBe(true);
+    });
+
     it("should handle multiple bidder requests", async () => {
       const auctionEndEvent = {
         auctionId: "auction-multi",

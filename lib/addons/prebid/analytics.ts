@@ -108,7 +108,7 @@ class OptablePrebidAnalytics {
           auction.bidWonEvents.length > 0
             ? new Date(Math.min(...auction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
             : null;
-        payload["optableLoaded"] = !auction.missed;
+        payload["optableLoaded"] = !payload.missed;
 
         navigator.sendBeacon(
           witnessUrl,
@@ -302,7 +302,7 @@ class OptablePrebidAnalytics {
         storedAuction.bidWonEvents.length > 0
           ? new Date(Math.min(...storedAuction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
           : null;
-      payload["optableLoaded"] = !effectiveMissed;
+      payload["optableLoaded"] = !payload.missed;
       this.sendToWitnessAPI("optable.prebid.auction", payload);
       this.auctions.delete(auctionId);
     }, this.config.bidWinTimeout);
@@ -483,7 +483,7 @@ class OptablePrebidAnalytics {
         adUnitCode: e.adUnitCode,
         cpm: e.cpm,
       })),
-      missed,
+      missed: missed && oSourcesSet.size === 0,
       url: `${window.location.hostname}${window.location.pathname}`,
       tenant: this.optableInstance?.dcn?.node ?? "unknown",
       // eslint-disable-next-line no-undef
