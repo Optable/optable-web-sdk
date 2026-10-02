@@ -1,4 +1,6 @@
 import { getCachedId5UserId, resolveId5, ID5_CACHE_KEY } from "./id5";
+import OptableSDK from "../sdk";
+import { TEST_HOST, TEST_SITE } from "../test/mocks";
 import { resetFlags } from "./flags";
 
 type Id5Mock = {
@@ -234,5 +236,33 @@ describe("resolveId5 - per-partner cache slots", () => {
     expect(getCachedId5UserId(2)).toBe("id-for-2");
     expect(localStorage.getItem(`${ID5_CACHE_KEY}:1`)).not.toBeNull();
     expect(localStorage.getItem(`${ID5_CACHE_KEY}:2`)).not.toBeNull();
+  });
+});
+
+describe("resolveId5 - documented consent wiring", () => {
+  it("accepts the SDK's own consent as the cache gate", async () => {
+    const sdk = new OptableSDK({ host: TEST_HOST, site: TEST_SITE, initPassport: false });
+    (window as any).ID5 = {
+      init: () => {
+        const instance: Record<string, unknown> = {
+          config: { providedOptions: { partnerId: 42 } },
+          getUserId: () => "live-id5",
+          onUpdate: (cb: () => void) => {
+            cb();
+            return instance;
+          },
+        };
+        return instance;
+      },
+    };
+
+    const id5Id = await resolveId5(42, {
+      isBot: () => false,
+      deviceAccess: () => sdk.dcn.consent.deviceAccess,
+      timeoutMs: 20,
+    });
+
+    expect(id5Id).toBe("live-id5");
+    expect(getCachedId5UserId(42)).toBe("live-id5");
   });
 });

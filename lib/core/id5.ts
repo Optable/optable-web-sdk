@@ -6,8 +6,8 @@ import { flagEnabled, getFlags } from "./flags";
 // never piggybacked on cached EIDs), then a live resolution. ID5's own holdout
 // is disabled so every consented user gets an id.
 //
-// The cache is raw localStorage rather than LocalStorageProxy, which needs a
-// ResolvedConfig this module is not given. Gate it with options.deviceAccess.
+// The cache is raw localStorage gated by options.deviceAccess, not a
+// LocalStorageProxy. Pass sdk.dcn.consent.deviceAccess so the two agree.
 
 const ID5_API_URL = "https://cdn.id5-sync.com/api/1.0/id5-api.js";
 const ID5_CACHE_KEY = "OPTABLE_ID5";
@@ -22,8 +22,8 @@ type Id5Options = {
   isBot?: () => boolean;
   // Give up on live resolution after this long. Defaults to 2s.
   timeoutMs?: number;
-  // Gate the cache on device-access consent. Reads and writes are skipped
-  // when this returns false. Defaults to allowed.
+  // Gate the cache on device-access consent: pass sdk.dcn.consent.deviceAccess.
+  // Skips both read and write when false. Defaults to allowed, as the SDK does.
   deviceAccess?: () => boolean;
 };
 
