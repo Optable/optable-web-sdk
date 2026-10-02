@@ -13,6 +13,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 describe("checkSourceExists", () => {
@@ -89,7 +90,18 @@ describe("checkSourceExists", () => {
 
   it("falls back without caching a miss when the probe times out", async () => {
     jest.useFakeTimers();
-    server.use(http.get(CHECK_URL, () => new Promise<never>(() => {})));
+    // msw settles an aborted request with a 500 rather than rejecting it, so a
+    // hanging handler never reaches the timeout branch. Drive fetch directly
+    // instead: a request that only settles when its signal aborts, the way a
+    // browser behaves.
+    jest.spyOn(globalThis, "fetch").mockImplementation(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("The operation was aborted.", "AbortError"))
+          );
+        })
+    );
 
     const pending = checkSourceExists({ site: "slow-site", defaultSite: "pub-sdk" });
     await jest.advanceTimersByTimeAsync(1500);
