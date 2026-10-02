@@ -2,8 +2,8 @@ import { debugLog } from "./log";
 import { flagEnabled, getFlags } from "./flags";
 
 // Resolves an ID5 user id, loading the ID5 API on demand. Resolution order:
-// QA flags, then the local cache (7-day TTL, its own storage key — never
-// piggybacked on cached EIDs), then a live resolution. ID5's own A/B holdout
+// QA flags, then the local cache (7-day TTL, one storage key per partner —
+// never piggybacked on cached EIDs), then a live resolution. ID5's own holdout
 // is disabled so every consented user gets an id.
 //
 // The cache is raw localStorage rather than LocalStorageProxy, which needs a
@@ -11,7 +11,7 @@ import { flagEnabled, getFlags } from "./flags";
 
 const ID5_API_URL = "https://cdn.id5-sync.com/api/1.0/id5-api.js";
 const ID5_CACHE_KEY = "OPTABLE_ID5";
-const ID5_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const ID5_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Live resolution is bounded: ID5's onUpdate is not guaranteed to fire, and
 // callers await this before targeting.
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -46,14 +46,13 @@ declare global {
 // a DOM attribute or JSON config passes "42" where another passed 42.
 const partnerKey = (partnerId: number | string | undefined): string => String(partnerId);
 
-// The cache entry is partner-scoped: after a partner-id change, the previous
-// partner's id is not served.
-export function getCachedId5UserId(partnerId?: number | string): string | null {
+// Each partner gets its own entry, so several partner ids on one page cache
+// alongside each other instead of evicting one another.
+const cacheKeyFor = (partnerId: number | string): string => `${ID5_CACHE_KEY}:${partnerKey(partnerId)}`;
+
+export function getCachedId5UserId(partnerId: number | string): string | null {
   try {
-    const cached = JSON.parse(localStorage.getItem(ID5_CACHE_KEY) || "null");
-    if (partnerId !== undefined && partnerKey(cached?.partnerId) !== partnerKey(partnerId)) {
-      return null;
-    }
+    const cached = JSON.parse(localStorage.getItem(cacheKeyFor(partnerId)) || "null");
     if (typeof cached?.userId === "string" && cached.userId && Date.now() - cached.resolvedAt < ID5_TTL_MS) {
       return cached.userId;
     }
@@ -65,10 +64,7 @@ export function getCachedId5UserId(partnerId?: number | string): string | null {
 
 function cacheId5UserId(partnerId: number | string, userId: string): void {
   try {
-    localStorage.setItem(
-      ID5_CACHE_KEY,
-      JSON.stringify({ partnerId: partnerKey(partnerId), userId, resolvedAt: Date.now() })
-    );
+    localStorage.setItem(cacheKeyFor(partnerId), JSON.stringify({ userId, resolvedAt: Date.now() }));
   } catch {
     // Storage unavailable; the id still resolves for this page.
   }
