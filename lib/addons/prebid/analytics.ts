@@ -108,7 +108,7 @@ class OptablePrebidAnalytics {
           auction.bidWonEvents.length > 0
             ? new Date(Math.min(...auction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
             : null;
-        payload["optableLoaded"] = !payload.missed;
+        payload["optableLoaded"] = !auction.missed;
 
         navigator.sendBeacon(
           witnessUrl,
@@ -302,7 +302,7 @@ class OptablePrebidAnalytics {
         storedAuction.bidWonEvents.length > 0
           ? new Date(Math.min(...storedAuction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
           : null;
-      payload["optableLoaded"] = !payload.missed;
+      payload["optableLoaded"] = !effectiveMissed;
       this.sendToWitnessAPI("optable.prebid.auction", payload);
       this.auctions.delete(auctionId);
     }, this.config.bidWinTimeout);
