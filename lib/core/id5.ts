@@ -14,13 +14,13 @@ const ID5_CACHE_KEY = "OPTABLE_ID5";
 const ID5_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Live resolution is bounded: ID5's onUpdate is not guaranteed to fire, and
 // callers await this before targeting.
-const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_TIMEOUT_MS = 2_000;
 
 type Id5Options = {
   // Skip live resolution (returning null) when true — wire to the bot
   // detection addon's isBot.
   isBot?: () => boolean;
-  // Give up on live resolution after this long. Defaults to 10s.
+  // Give up on live resolution after this long. Defaults to 2s.
   timeoutMs?: number;
   // Gate the cache on device-access consent. Reads and writes are skipped
   // when this returns false. Defaults to allowed.
