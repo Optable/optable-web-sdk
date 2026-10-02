@@ -543,6 +543,40 @@ describe("OptablePrebidAnalytics", () => {
       );
     });
 
+    it("should report not missed but not loaded when a replayed auction carries Optable sources", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-cache-read",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(auctionEndEvent, true);
+      await jest.runAllTimersAsync();
+
+      expect(mockOptableInstance.witness).toHaveBeenCalledWith(
+        "optable.prebid.auction",
+        expect.objectContaining({
+          missed: false,
+          optableLoaded: false,
+        })
+      );
+    });
+
     it("should accumulate multiple bidWon events and emit one witness with an array", async () => {
       const auctionId = "auction-multi-unit";
       const auctionEndEvent = {
@@ -1130,6 +1164,51 @@ describe("OptablePrebidAnalytics", () => {
   describe("toWitness - advanced scenarios", () => {
     beforeEach(() => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
+    });
+
+    it("should not mark a replayed auction as missed when Optable sources are present", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-with-cache",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, [], true);
+
+      expect(result.missed).toBe(false);
+    });
+
+    it("should keep a replayed auction as missed when no Optable sources are present", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-no-cache",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, [], true);
+
+      expect(result.missed).toBe(true);
     });
 
     it("should handle multiple bidder requests", async () => {
