@@ -1513,7 +1513,15 @@ const id5Id = await resolveId5(id5PartnerId, {
 
 The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value. Concurrent calls for the same partner share one script load and resolution, and an ID5 API already on the page is reused rather than loaded again.
 
-`deviceAccess` gates the cache: when it returns `false` the id is neither read from nor written to `localStorage`, and every call resolves live. It defaults to allowed, the same posture as the SDK's own default consent, so pass `sdk.dcn.consent.deviceAccess` as above. Omitting it on a page where the SDK is configured with `consent.cmpapi` leaves the ID5 cache ungated while every other SDK cache honours the CMP. ID5's own CMP integration separately gates its network call.
+`deviceAccess` gates the cache on both sides: when it returns `false` the id is neither read from nor written to `localStorage`, and every call resolves live. The gate is re-checked at write time, so consent withdrawn mid-resolution stops the write. On `resolveId5` it defaults to allowed, the same posture as the SDK's own default consent, so pass `sdk.dcn.consent.deviceAccess` as above — omitting it on a page configured with `consent.cmpapi` would leave the ID5 cache ungated while every other SDK cache honours the CMP. ID5's own CMP integration separately gates its network call.
+
+Reading the cache directly takes the same gate, as a required argument, so a cached user id cannot be read out of storage without stating a consent position:
+
+```javascript
+import { getCachedId5UserId } from "@optable/web-sdk/lib/dist/core/id5";
+
+const cached = getCachedId5UserId(id5PartnerId, () => sdk.dcn.consent.deviceAccess);
+```
 
 ## Demo Pages
 

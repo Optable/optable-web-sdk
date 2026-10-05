@@ -1,6 +1,9 @@
 import { getCachedId5UserId, resolveId5, ID5_CACHE_KEY } from "./id5";
 import OptableSDK from "../sdk";
 import { TEST_HOST, TEST_SITE } from "../test/mocks";
+
+// Consent granted, the posture the SDK itself defaults to.
+const allow = () => true;
 import { resetFlags } from "./flags";
 
 type Id5Mock = {
@@ -42,23 +45,23 @@ beforeEach(() => {
 describe("getCachedId5UserId", () => {
   it("returns a cached id within the TTL and null past it", () => {
     localStorage.setItem(`${ID5_CACHE_KEY}:42`, JSON.stringify({ userId: "id5-x", resolvedAt: Date.now() }));
-    expect(getCachedId5UserId(42)).toBe("id5-x");
+    expect(getCachedId5UserId(42, allow)).toBe("id5-x");
 
     localStorage.setItem(
       `${ID5_CACHE_KEY}:42`,
       JSON.stringify({ userId: "id5-x", resolvedAt: Date.now() - 8 * 24 * 60 * 60 * 1000 })
     );
-    expect(getCachedId5UserId(42)).toBeNull();
+    expect(getCachedId5UserId(42, allow)).toBeNull();
   });
 
   it("does not serve another partner's cached id", () => {
     localStorage.setItem(`${ID5_CACHE_KEY}:42`, JSON.stringify({ userId: "id5-x", resolvedAt: Date.now() }));
-    expect(getCachedId5UserId(99)).toBeNull();
+    expect(getCachedId5UserId(99, allow)).toBeNull();
   });
 
   it("tolerates a malformed cache", () => {
     localStorage.setItem(`${ID5_CACHE_KEY}:42`, "{nope");
-    expect(getCachedId5UserId(42)).toBeNull();
+    expect(getCachedId5UserId(42, allow)).toBeNull();
   });
 });
 
@@ -100,7 +103,7 @@ describe("resolveId5", () => {
     const id5 = loadId5(42, "live-id5");
 
     await expect(pending).resolves.toBe("live-id5");
-    expect(getCachedId5UserId(42)).toBe("live-id5");
+    expect(getCachedId5UserId(42, allow)).toBe("live-id5");
     expect(id5.init).toHaveBeenCalledWith(
       expect.objectContaining({ partnerId: 42, abTesting: { enabled: false, controlGroupPct: 0 } })
     );
@@ -133,7 +136,7 @@ describe("resolveId5", () => {
     loadId5(99, "live-id5");
 
     await expect(pending).resolves.toBeNull();
-    expect(getCachedId5UserId(42)).toBeNull();
+    expect(getCachedId5UserId(42, allow)).toBeNull();
   });
 
   it("rejects the ID5 '0' placeholder", async () => {
@@ -182,7 +185,7 @@ describe("resolveId5 - reuse, consent and partner-id handling", () => {
     loadId5(42, "live-id5");
 
     await expect(pending).resolves.toBe("live-id5");
-    expect(getCachedId5UserId("42")).toBe("live-id5");
+    expect(getCachedId5UserId("42", allow)).toBe("live-id5");
   });
 
   it("keeps per-partner dedupe when partner ids interleave", async () => {
@@ -209,7 +212,7 @@ describe("resolveId5 - reuse, consent and partner-id handling", () => {
 
     await expect(resolveId5(42, { timeoutMs: 20 })).resolves.toBeNull();
     fire();
-    expect(getCachedId5UserId(42)).toBe("late-id5");
+    expect(getCachedId5UserId(42, allow)).toBe("late-id5");
   });
 });
 
@@ -232,8 +235,8 @@ describe("resolveId5 - per-partner cache slots", () => {
     await expect(resolveId5(1, { timeoutMs: 20 })).resolves.toBe("id-for-1");
     await expect(resolveId5(2, { timeoutMs: 20 })).resolves.toBe("id-for-2");
 
-    expect(getCachedId5UserId(1)).toBe("id-for-1");
-    expect(getCachedId5UserId(2)).toBe("id-for-2");
+    expect(getCachedId5UserId(1, allow)).toBe("id-for-1");
+    expect(getCachedId5UserId(2, allow)).toBe("id-for-2");
     expect(localStorage.getItem(`${ID5_CACHE_KEY}:1`)).not.toBeNull();
     expect(localStorage.getItem(`${ID5_CACHE_KEY}:2`)).not.toBeNull();
   });
@@ -263,6 +266,36 @@ describe("resolveId5 - documented consent wiring", () => {
     });
 
     expect(id5Id).toBe("live-id5");
-    expect(getCachedId5UserId(42)).toBe("live-id5");
+    expect(getCachedId5UserId(42, allow)).toBe("live-id5");
+  });
+});
+
+describe("getCachedId5UserId - consent gate", () => {
+  const deny = () => false;
+
+  it("refuses to read a cached id when device access is denied", () => {
+    localStorage.setItem(`${ID5_CACHE_KEY}:42`, JSON.stringify({ userId: "id5-x", resolvedAt: Date.now() }));
+
+    expect(getCachedId5UserId(42, allow)).toBe("id5-x");
+    expect(getCachedId5UserId(42, deny)).toBeNull();
+  });
+
+  it("does not write a resolved id when device access is denied", async () => {
+    (window as any).ID5 = {
+      init: () => {
+        const instance: Record<string, unknown> = {
+          config: { providedOptions: { partnerId: 42 } },
+          getUserId: () => "live-id5",
+          onUpdate: (cb: () => void) => {
+            cb();
+            return instance;
+          },
+        };
+        return instance;
+      },
+    };
+
+    await expect(resolveId5(42, { deviceAccess: deny, timeoutMs: 20 })).resolves.toBe("live-id5");
+    expect(localStorage.getItem(`${ID5_CACHE_KEY}:42`)).toBeNull();
   });
 });

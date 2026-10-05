@@ -6,8 +6,8 @@ import { flagEnabled, getFlags } from "./flags";
 // never piggybacked on cached EIDs), then a live resolution. ID5's own holdout
 // is disabled so every consented user gets an id.
 //
-// The cache is raw localStorage gated by options.deviceAccess, not a
-// LocalStorageProxy. Pass sdk.dcn.consent.deviceAccess so the two agree.
+// The cache is raw localStorage, not a LocalStorageProxy. Every read and
+// write takes a deviceAccess gate; pass sdk.dcn.consent.deviceAccess.
 
 const ID5_API_URL = "https://cdn.id5-sync.com/api/1.0/id5-api.js";
 const ID5_CACHE_KEY = "OPTABLE_ID5";
@@ -50,7 +50,13 @@ const partnerKey = (partnerId: number | string | undefined): string => String(pa
 // alongside each other instead of evicting one another.
 const cacheKeyFor = (partnerId: number | string): string => `${ID5_CACHE_KEY}:${partnerKey(partnerId)}`;
 
-export function getCachedId5UserId(partnerId: number | string): string | null {
+// deviceAccess is required rather than defaulted so a caller cannot read a
+// user id out of storage without stating a consent position.
+export function getCachedId5UserId(partnerId: number | string, deviceAccess: () => boolean): string | null {
+  if (!deviceAccess()) {
+    return null;
+  }
+
   try {
     const cached = JSON.parse(localStorage.getItem(cacheKeyFor(partnerId)) || "null");
     if (typeof cached?.userId === "string" && cached.userId && Date.now() - cached.resolvedAt < ID5_TTL_MS) {
@@ -62,7 +68,11 @@ export function getCachedId5UserId(partnerId: number | string): string | null {
   return null;
 }
 
-function cacheId5UserId(partnerId: number | string, userId: string): void {
+function cacheId5UserId(partnerId: number | string, userId: string, deviceAccess: () => boolean): void {
+  if (!deviceAccess()) {
+    return;
+  }
+
   try {
     localStorage.setItem(cacheKeyFor(partnerId), JSON.stringify({ userId, resolvedAt: Date.now() }));
   } catch {
@@ -86,8 +96,9 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
     return Promise.resolve("ID5-QA");
   }
 
-  const storageAllowed = options.deviceAccess?.() ?? true;
-  const cached = storageAllowed ? getCachedId5UserId(partnerId) : null;
+  // Re-evaluated at write time too, so consent withdrawn mid-resolution stops the write.
+  const deviceAccess = options.deviceAccess ?? (() => true);
+  const cached = getCachedId5UserId(partnerId, deviceAccess);
   if (cached) {
     debugLog("log", "ID5: using cached value");
     return Promise.resolve(cached);
@@ -152,9 +163,7 @@ export function resolveId5(partnerId: number | string, options: Id5Options = {})
           debugLog("log", `ID5: resolved ${id5Id}`);
           // An onUpdate arriving after the timeout still caches, so the next
           // call gets the id rather than resolving again.
-          if (storageAllowed) {
-            cacheId5UserId(partnerId, id5Id);
-          }
+          cacheId5UserId(partnerId, id5Id, deviceAccess);
           settle(id5Id);
         });
       } catch (err) {
