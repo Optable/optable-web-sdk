@@ -1,7 +1,6 @@
 import type { ResolvedConfig } from "../config";
 import { default as buildInfo } from "../build.json";
 import { LocalStorage } from "./storage";
-import { deviceSignals } from "./signals";
 import { oisHeaderName, oisRequestID, readOISHeader } from "./ois";
 
 function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit): Request {
@@ -54,13 +53,6 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
     const pass = ls.getPassport();
     url.searchParams.set("cookies", "no");
     url.searchParams.set("passport", pass ? pass : "");
-  }
-
-  if (config.forwardSignals && config.consent.deviceAccess) {
-    const sig = deviceSignals();
-    if (sig) {
-      url.searchParams.set("sig", sig);
-    }
   }
 
   const requestInit: RequestInit = { ...init };

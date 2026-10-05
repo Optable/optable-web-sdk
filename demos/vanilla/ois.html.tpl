@@ -22,9 +22,6 @@
           site: "${DCN_SITE}",
           node: "${DCN_NODE}",
           ois: true,
-          // The DCN derives this identity from these signals, so
-          // without them there is nothing to derive it from.
-          forwardSignals: true,
         });
       });
     </script>
