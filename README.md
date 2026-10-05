@@ -1497,6 +1497,32 @@ setStaticMappings({
 
 For the merge rules and a full wrapper example, see the [static mappings README](lib/core/staticMappings.md).
 
+## ID5 resolution
+
+`resolveId5(partnerId, options?)` resolves an [ID5](https://id5.io/) user id, loading the ID5 API on demand: QA flags first, then a local 7-day cache (its own key per partner, `OPTABLE_ID5:<partnerId>`), then a live resolution with ID5's own A/B holdout disabled. Live resolution is bounded (2s default, `timeoutMs` option) and resolves `null` on timeout, load failure, partner-id mismatch or the ID5 `"0"` placeholder. Pass the bot detection addon's `isBot` to skip live resolution for crawlers:
+
+```javascript
+import { resolveId5 } from "@optable/web-sdk/lib/dist/core/id5";
+import { isBot } from "@optable/web-sdk/lib/dist/addons/botDetection";
+
+const id5Id = await resolveId5(id5PartnerId, {
+  isBot,
+  deviceAccess: () => sdk.dcn.consent.deviceAccess,
+});
+```
+
+The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value. Concurrent calls for the same partner share one script load and resolution, and an ID5 API already on the page is reused rather than loaded again.
+
+`deviceAccess` gates the cache on both sides: when it returns `false` the id is neither read from nor written to `localStorage`, and every call resolves live. The gate is re-checked at write time, so consent withdrawn mid-resolution stops the write. On `resolveId5` it defaults to allowed, the same posture as the SDK's own default consent, so pass `sdk.dcn.consent.deviceAccess` as above — omitting it on a page configured with `consent.cmpapi` would leave the ID5 cache ungated while every other SDK cache honours the CMP. ID5's own CMP integration separately gates its network call.
+
+Reading the cache directly takes the same gate, as a required argument, so a cached user id cannot be read out of storage without stating a consent position:
+
+```javascript
+import { getCachedId5UserId } from "@optable/web-sdk/lib/dist/core/id5";
+
+const cached = getCachedId5UserId(id5PartnerId, () => sdk.dcn.consent.deviceAccess);
+```
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
