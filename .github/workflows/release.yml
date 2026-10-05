@@ -4,27 +4,55 @@ on:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
       - v[0-9]+.[0-9]+.[0-9]+-*
+  # Called by tag.yml after it pushes a tag. A tag pushed with GITHUB_TOKEN does
+  # not start another workflow run, so the push trigger above will not fire for
+  # that tag and the release has to be invoked directly.
+  workflow_call:
+    inputs:
+      version:
+        description: "Tag to release, e.g. v1.2.3"
+        required: true
+        type: string
 
 env:
   workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
   service-account: ${{ secrets.SERVICE_ACCOUNT }}
 
 jobs:
+  # On a tag push the version is the tag that triggered the run. When tag.yml
+  # calls this workflow the run is still on master, so github.ref_name is the
+  # branch and the version has to come from the caller instead.
+  version:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Resolve version
+        id: resolve
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${INPUT_VERSION:-$REF_NAME}"
+          echo "Releasing ${version}"
+          echo "version=${version}" >>"$GITHUB_OUTPUT"
+
   tests-prettier:
     uses: ./.github/workflows/reusable-lint-test.yml
 
   build:
-    needs: [tests-prettier]
+    needs: [tests-prettier, version]
     uses: ./.github/workflows/reusable-build.yml
     permissions:
       contents: read
       id-token: write
     with:
-      version: ${{ github.ref_name }}
+      version: ${{ needs.version.outputs.version }}
 
   # This job needs to run before deploying to npm otherwise `latest` won't be updated
   define-gcs-versions-to-update:
-    needs: [build]
+    needs: [build, version]
     runs-on: ubuntu-22.04
 
     outputs:
@@ -49,7 +77,7 @@ jobs:
       - name: Determine versions to update
         id: sdk-versions
         env:
-          REF_NAME: ${{ github.ref_name }}
+          REF_NAME: ${{ needs.version.outputs.version }}
         run: ./scripts/versions-to-update.sh @optable/web-sdk "$REF_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Show versions that will be updated
@@ -59,7 +87,7 @@ jobs:
           echo "SDK versions: $SDK_VERSIONS"
 
   deploy-sdk-to-npm:
-    needs: [build, define-gcs-versions-to-update]
+    needs: [build, define-gcs-versions-to-update, version]
     runs-on: ubuntu-22.04
     permissions:
       id-token: write
@@ -80,10 +108,10 @@ jobs:
           name: dist-lib
           path: lib/dist
 
-      # Step will fail if the version is invalid, github.ref_name is the tag name (v.*.*.*)
+      # Step will fail if the version is invalid, the resolved version is the tag name (v.*.*.*)
       - name: Patch version
         env:
-          REF_NAME: ${{ github.ref_name }}
+          REF_NAME: ${{ needs.version.outputs.version }}
         run: ./scripts/patch-version.sh "$REF_NAME"
 
       - name: Setup pnpm
@@ -99,7 +127,7 @@ jobs:
         run: pnpm publish --provenance --access public --no-git-checks
 
   deploy-sdk-to-gcs:
-    needs: [deploy-sdk-to-npm, define-gcs-versions-to-update]
+    needs: [deploy-sdk-to-npm, define-gcs-versions-to-update, version]
     strategy:
       matrix:
         sdk-version: ${{ fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions) }}
@@ -127,10 +155,10 @@ jobs:
           destination: "optable-web-sdk/${{ matrix.sdk-version }}"
           process_gcloudignore: false
           headers: |
-            x-goog-meta-optable-sdk-version: ${{ github.ref_name }}
+            x-goog-meta-optable-sdk-version: ${{ needs.version.outputs.version }}
 
   deploy-demo:
-    needs: [deploy-sdk-to-npm]
+    needs: [deploy-sdk-to-npm, version]
     permissions:
       contents: "read"
       id-token: "write"
@@ -172,7 +200,7 @@ jobs:
 
       - name: Build web-sdk-demos Docker Image
         env:
-          REF_NAME: ${{ github.ref_name }}
+          REF_NAME: ${{ needs.version.outputs.version }}
         run: |
           DOCKER_BUILDKIT=1 docker build \
             -t "us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:$REF_NAME" \
@@ -187,11 +215,12 @@ jobs:
 
       - name: Publish web-sdk-demos to us-docker.pkg.dev
         env:
-          REF_NAME: ${{ github.ref_name }}
+          REF_NAME: ${{ needs.version.outputs.version }}
         run: docker push "us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:$REF_NAME"
 
   slack-notification:
-    needs: [tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-demo]
+    needs:
+      [version, tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-demo]
     runs-on: ubuntu-22.04
     if: ${{ failure() }}
     steps:
@@ -214,7 +243,7 @@ jobs:
                   - type: "mrkdwn"
                     text: "*Status:*\nFailure"
                   - type: "mrkdwn"
-                    text: "*Branch:*\n${{ github.ref_name }}"
+                    text: "*Version:*\n${{ needs.version.outputs.version }}"
                   - type: "mrkdwn"
                     text: "*Author:*\n${{ github.actor || github.triggering_actor }}"
                   - type: "mrkdwn"

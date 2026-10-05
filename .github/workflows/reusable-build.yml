@@ -64,8 +64,11 @@ jobs:
   build-vanilla-demo:
     runs-on: ubuntu-22.04
     env:
-      # The ref_name (tag) is not relevant when it runs on something other than a tag so we use latest
-      SDK_URI: https://cdn.optable.co/web-sdk/${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}/sdk.js
+      # Only a release passes a vX.Y.Z version; PR builds pass 0.0.0-experimental,
+      # which was never published, so those fall back to latest. Keyed off the
+      # input rather than github.ref because a release dispatched through tag.yml
+      # runs on master and would otherwise read as "not a tag".
+      SDK_URI: https://cdn.optable.co/web-sdk/${{ startsWith(inputs.version, 'v') && inputs.version || 'latest' }}/sdk.js
       DCN_HOST: ca.edge.optable.co
       DCN_SITE: web-sdk-demo
       DCN_NODE: optable
