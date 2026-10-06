@@ -16,6 +16,11 @@ import * as ustn from "./ustn";
 import * as ustx from "./ustx";
 import * as usut from "./usut";
 import * as usva from "./usva";
+import * as usmn from "./usmn";
+import * as usmd from "./usmd";
+import * as usin from "./usin";
+import * as usky from "./usky";
+import * as usri from "./usri";
 
 export const euSectionIDs = [tcfeuv2.SectionID];
 
@@ -38,6 +43,11 @@ export const usSectionIDs = [
   ustx.SectionID,
   usut.SectionID,
   usva.SectionID,
+  usmn.SectionID,
+  usmd.SectionID,
+  usin.SectionID,
+  usky.SectionID,
+  usri.SectionID,
 ];
 
 export {
@@ -59,4 +69,9 @@ export {
   ustx,
   usut,
   usva,
+  usmn,
+  usmd,
+  usin,
+  usky,
+  usri,
 };
