@@ -1,4 +1,4 @@
-import { mergeCache } from "./eid-cache";
+import { mergeCache, replaceCache } from "./eid-cache";
 import type { ResolvedCache, StaleUid2 } from "./eid-cache";
 import { sendTargetingUpdateEvent } from "./events/cache-refresh";
 import { flagEnabled } from "./flags";
@@ -14,6 +14,7 @@ import type { TargetingResponse } from "../edge/targeting";
 
 const TOKENIZE_DONE_KEY = "OPTABLE_TOKENIZE_DONE";
 const DEFAULT_CACHE_KEY = "OPTABLE_RESOLVED";
+const FINGERPRINT_SALT = "optable-id-fingerprint-v1";
 
 type IdentifyAndTokenizeOptions = {
   // Split-test gate: while true, identify still runs but tokenize is skipped,
@@ -39,10 +40,23 @@ function normalizeId(id: string): string {
   } catch {
     // Not URI-encoded (a bare % throws); take the id as given.
   }
-  if (!decoded.match(/^.{1,3}:/) && !decoded.match(/utiq:/)) {
+  if (!decoded.match(/^[a-z0-9]{1,3}:/i) && !decoded.match(/^utiq:/)) {
     return `e:${decoded}`;
   }
   return decoded;
+}
+
+// The guard records a fingerprint of the id, never the id. Noticing a change is
+// all it needs, and the raw value would put a user identifier under our own key
+// in storage every frame on the page can read.
+function idFingerprint(id: string): string {
+  let hash = 2166136261;
+  const salted = `${FINGERPRINT_SALT}:${id}`;
+  for (let i = 0; i < salted.length; i++) {
+    hash ^= salted.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
 }
 
 export async function identifyAndTokenize(
@@ -50,12 +64,19 @@ export async function identifyAndTokenize(
   id: string,
   options: IdentifyAndTokenizeOptions = {}
 ): Promise<IdentifyAndTokenizeResult> {
-  if (!id || (sessionStorage.getItem(TOKENIZE_DONE_KEY) && !flagEnabled("optableForceTokenize"))) {
+  if (!id) {
     return null;
   }
 
   const finalId = normalizeId(id);
-  sessionStorage.setItem(TOKENIZE_DONE_KEY, "1");
+  // Keyed on the id, so signing in as someone else in the same tab resolves
+  // them rather than being swallowed by the guard.
+  const fingerprint = idFingerprint(finalId);
+  if (sessionStorage.getItem(TOKENIZE_DONE_KEY) === fingerprint && !flagEnabled("optableForceTokenize")) {
+    return null;
+  }
+
+  sessionStorage.setItem(TOKENIZE_DONE_KEY, fingerprint);
 
   // identify always runs, control group included. It is deliberately not
   // awaited, and its failure does not reset the guard: that guards tokenize.
@@ -83,7 +104,9 @@ export async function identifyAndTokenize(
       // failing the call and re-running both requests on every later one.
     }
 
-    const result = mergeCache(asCache, cached, { maxUidsPerEid: options.maxUidsPerEid });
+    // mergeCache takes cache format; replaceCache is idempotent, so this is
+    // free insurance should tokenize ever carry UID2 refresh pointers.
+    const result = mergeCache(replaceCache(asCache), cached, { maxUidsPerEid: options.maxUidsPerEid });
     localStorage.setItem(cacheKey, JSON.stringify(result.merged));
     sendTargetingUpdateEvent(sdk.dcn, result.merged as TargetingResponse);
 

@@ -1192,7 +1192,7 @@ For example:
 
 ## Identify and tokenize (hashed email)
 
-`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), always calls `identify`, and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It runs once per session (`OPTABLE_TOKENIZE_DONE`), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
+`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), always calls `identify`, and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It runs once per id per session (`OPTABLE_TOKENIZE_DONE` holds a fingerprint of the id, never the id itself, so signing in as someone else in the same tab resolves them), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
 
 ```javascript
 import { identifyAndTokenize } from "@optable/web-sdk/lib/dist/core/identify-tokenize";

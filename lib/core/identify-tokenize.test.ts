@@ -117,7 +117,7 @@ describe("identifyAndTokenize - failure paths and options", () => {
     // Resolves normally, and the rejection never escapes the module.
     await expect(identifyAndTokenize(sdk, "abc123")).resolves.not.toBeNull();
     // identify failing does not reopen the tokenize guard: tokenize succeeded.
-    expect(sessionStorage.getItem("OPTABLE_TOKENIZE_DONE")).toBe("1");
+    expect(sessionStorage.getItem("OPTABLE_TOKENIZE_DONE")).not.toBeNull();
   });
 
   it("takes an id that is not URI-encoded as given", async () => {
@@ -137,7 +137,7 @@ describe("identifyAndTokenize - failure paths and options", () => {
     expect(result).not.toBeNull();
     expect(cachedEids().map((e: { source: string }) => e.source)).toEqual(["uidapi.com"]);
     // The guard holds, so a second call does not repeat both requests.
-    expect(sessionStorage.getItem("OPTABLE_TOKENIZE_DONE")).toBe("1");
+    expect(sessionStorage.getItem("OPTABLE_TOKENIZE_DONE")).not.toBeNull();
   });
 
   it("honours cacheKey and maxUidsPerEid", async () => {
@@ -177,5 +177,36 @@ describe("identifyAndTokenize - failure paths and options", () => {
     const result = await identifyAndTokenize(sdk, "abc123");
 
     expect(result?.staleUid2s.map((s) => s.source)).toEqual(["uidapi.com"]);
+  });
+});
+
+describe("identifyAndTokenize - guard keying", () => {
+  it("resolves a different id in the same session", async () => {
+    const { sdk, tokenize } = makeSdk();
+
+    await identifyAndTokenize(sdk, "first@example");
+    await identifyAndTokenize(sdk, "second@example");
+
+    expect(tokenize).toHaveBeenNthCalledWith(1, "e:first@example");
+    expect(tokenize).toHaveBeenNthCalledWith(2, "e:second@example");
+  });
+
+  it("stores a fingerprint of the id, never the id", async () => {
+    const { sdk } = makeSdk();
+
+    await identifyAndTokenize(sdk, "e:0123456789abcdef");
+
+    const guard = sessionStorage.getItem("OPTABLE_TOKENIZE_DONE");
+    expect(guard).not.toBeNull();
+    expect(guard).not.toContain("0123456789abcdef");
+  });
+
+  it("prefixes an id whose colon is not a short alphanumeric prefix", async () => {
+    const { sdk, identify } = makeSdk();
+
+    // /utiq:/ unanchored used to let this through unprefixed.
+    await identifyAndTokenize(sdk, "xutiq:abc");
+
+    expect(identify).toHaveBeenCalledWith("e:xutiq:abc");
   });
 });
