@@ -108,3 +108,74 @@ describe("identifyAndTokenize", () => {
     expect(identify).not.toHaveBeenCalled();
   });
 });
+
+describe("identifyAndTokenize - failure paths and options", () => {
+  it("swallows an identify rejection instead of leaking an unhandled one", async () => {
+    const { sdk, identify } = makeSdk();
+    identify.mockRejectedValueOnce(new Error("network"));
+
+    // Resolves normally, and the rejection never escapes the module.
+    await expect(identifyAndTokenize(sdk, "abc123")).resolves.not.toBeNull();
+    // identify failing does not reopen the tokenize guard: tokenize succeeded.
+    expect(sessionStorage.getItem("OPTABLE_TOKENIZE_DONE")).toBe("1");
+  });
+
+  it("takes an id that is not URI-encoded as given", async () => {
+    const { sdk, identify } = makeSdk();
+
+    // decodeURIComponent throws on a bare %.
+    await expect(identifyAndTokenize(sdk, "100%")).resolves.not.toBeNull();
+    expect(identify).toHaveBeenCalledWith("e:100%");
+  });
+
+  it("replaces a corrupt cache instead of failing every later call", async () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "{not json");
+    const { sdk } = makeSdk();
+
+    const result = await identifyAndTokenize(sdk, "abc123");
+
+    expect(result).not.toBeNull();
+    expect(cachedEids().map((e: { source: string }) => e.source)).toEqual(["uidapi.com"]);
+    // The guard holds, so a second call does not repeat both requests.
+    expect(sessionStorage.getItem("OPTABLE_TOKENIZE_DONE")).toBe("1");
+  });
+
+  it("honours cacheKey and maxUidsPerEid", async () => {
+    const { sdk, tokenize } = makeSdk();
+    tokenize.mockResolvedValue({
+      user: { eids: [{ source: "uidapi.com", uids: [{ id: "a" }, { id: "b" }, { id: "c" }] }] },
+    } as any);
+
+    await identifyAndTokenize(sdk, "abc123", { cacheKey: "CUSTOM_CACHE", maxUidsPerEid: 1 });
+
+    expect(localStorage.getItem("OPTABLE_RESOLVED")).toBeNull();
+    const eids = JSON.parse(localStorage.getItem("CUSTOM_CACHE") || "null")?.ortb2?.user?.eids;
+    expect(eids[0].uids).toHaveLength(1);
+  });
+
+  it("returns the stale UID2s the merge found, for the refresh loop to chain on", async () => {
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { eids: [{ source: "uidapi.com", uids: [{ id: "cached" }] }] } },
+        refs: {
+          "uidapi.com": {
+            advertising_token: "adv",
+            refresh_token: "rt",
+            refresh_response_key: "rk",
+            refresh_from: Date.now() - 1000,
+            refresh_expires: Date.now() + 60_000,
+            identity_expires: Date.now() + 60_000,
+          },
+        },
+      })
+    );
+    const { sdk, tokenize } = makeSdk();
+    // Tokenize fills a different source, so the stale cached UID2 carries over.
+    tokenize.mockResolvedValue({ user: { eids: [{ source: "liveramp.com", uids: [{ id: "lr" }] }] } } as any);
+
+    const result = await identifyAndTokenize(sdk, "abc123");
+
+    expect(result?.staleUid2s.map((s) => s.source)).toEqual(["uidapi.com"]);
+  });
+});

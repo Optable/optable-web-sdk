@@ -4,6 +4,7 @@ import { sendTargetingUpdateEvent } from "./events/cache-refresh";
 import { flagEnabled } from "./flags";
 import { debugLog } from "./log";
 import type OptableSDK from "../sdk";
+import type { TargetingResponse } from "../edge/targeting";
 
 // Publisher-facing identity entry point: identifies a hashed email (or other
 // prefixed id) and, outside the control group, tokenizes it and merges the
@@ -32,7 +33,12 @@ type IdentifyAndTokenizeResult = {
 // Bare ids get the hashed-email prefix; ids already carrying a short prefix
 // ("e:", "c:", …) or a utiq id pass through unchanged.
 function normalizeId(id: string): string {
-  const decoded = decodeURIComponent(id);
+  let decoded = id;
+  try {
+    decoded = decodeURIComponent(id);
+  } catch {
+    // Not URI-encoded (a bare % throws); take the id as given.
+  }
   if (!decoded.match(/^.{1,3}:/) && !decoded.match(/utiq:/)) {
     return `e:${decoded}`;
   }
@@ -51,9 +57,10 @@ export async function identifyAndTokenize(
   const finalId = normalizeId(id);
   sessionStorage.setItem(TOKENIZE_DONE_KEY, "1");
 
-  // identify always runs, control group included.
+  // identify always runs, control group included. It is deliberately not
+  // awaited, and its failure does not reset the guard: that guards tokenize.
   debugLog("log", "identify");
-  sdk.identify(finalId);
+  sdk.identify(finalId).catch((err) => debugLog("error", "identify: error", err));
 
   if (options.isControlGroup?.()) {
     debugLog("log", "tokenize: skipped (control group)");
@@ -62,14 +69,23 @@ export async function identifyAndTokenize(
 
   try {
     debugLog("log", "tokenize");
+    // tokenize resolves { user }, but a wrapper shim may hand back an
+    // ortb2-shaped body, so accept either rather than nesting one twice.
     const response = (await sdk.tokenize(finalId)) as { ortb2?: unknown };
     const asCache = (response?.ortb2 ? response : { ortb2: response }) as ResolvedCache;
 
     const cacheKey = options.cacheKey ?? DEFAULT_CACHE_KEY;
-    const cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+    let cached: ResolvedCache | null = null;
+    try {
+      cached = JSON.parse(localStorage.getItem(cacheKey) || "null");
+    } catch {
+      // Corrupt cache; merge onto nothing and overwrite it rather than
+      // failing the call and re-running both requests on every later one.
+    }
+
     const result = mergeCache(asCache, cached, { maxUidsPerEid: options.maxUidsPerEid });
     localStorage.setItem(cacheKey, JSON.stringify(result.merged));
-    sendTargetingUpdateEvent(sdk.dcn, result.merged as Parameters<typeof sendTargetingUpdateEvent>[1]);
+    sendTargetingUpdateEvent(sdk.dcn, result.merged as TargetingResponse);
 
     debugLog("log", "tokenize: done");
     return result;
