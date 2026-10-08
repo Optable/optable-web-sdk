@@ -210,3 +210,39 @@ describe("identifyAndTokenize - guard keying", () => {
     expect(identify).toHaveBeenCalledWith("e:xutiq:abc");
   });
 });
+
+describe("identifyAndTokenize - guard resilience", () => {
+  it("still resolves when sessionStorage throws", async () => {
+    const getItem = jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+
+    try {
+      const { sdk } = makeSdk();
+      await expect(identifyAndTokenize(sdk, "abc123")).resolves.not.toBeNull();
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+    }
+  });
+
+  it("a failing call does not reopen a guard a later id already claimed", async () => {
+    const { sdk, tokenize } = makeSdk();
+
+    // First call hangs, so the second claims the guard while it is in flight.
+    let failFirst: (err: Error) => void = () => {};
+    tokenize.mockReturnValueOnce(new Promise((_, reject) => (failFirst = reject)) as any);
+
+    const first = identifyAndTokenize(sdk, "first@example");
+    await identifyAndTokenize(sdk, "second@example");
+    const claimed = sessionStorage.getItem("OPTABLE_TOKENIZE_DONE");
+
+    failFirst(new Error("boom"));
+    await first;
+
+    expect(sessionStorage.getItem("OPTABLE_TOKENIZE_DONE")).toBe(claimed);
+  });
+});

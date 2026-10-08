@@ -45,6 +45,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
+- [Identify and tokenize (hashed email)](#identify-and-tokenize-hashed-email)
 - [Passport and Visitor ID](#passport-and-visitor-id)
 - [Optable Identity System (OIS)](#optable-identity-system-ois)
   - [The cookie identity needs no SDK code](#the-cookie-identity-needs-no-sdk-code)
