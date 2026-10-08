@@ -483,7 +483,7 @@ class OptablePrebidAnalytics {
         adUnitCode: e.adUnitCode,
         cpm: e.cpm,
       })),
-      missed,
+      missed: missed && oSourcesSet.size === 0,
       url: `${window.location.hostname}${window.location.pathname}`,
       tenant: this.optableInstance?.dcn?.node ?? "unknown",
       // eslint-disable-next-line no-undef
