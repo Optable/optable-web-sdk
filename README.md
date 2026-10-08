@@ -45,6 +45,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
+- [Identify and tokenize (hashed email)](#identify-and-tokenize-hashed-email)
 - [Passport and Visitor ID](#passport-and-visitor-id)
 - [Optable Identity System (OIS)](#optable-identity-system-ois)
   - [The cookie identity needs no SDK code](#the-cookie-identity-needs-no-sdk-code)
@@ -1189,6 +1190,18 @@ For example:
   });
 </script>
 ```
+
+## Identify and tokenize (hashed email)
+
+`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), always calls `identify`, and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It runs once per id per session (`OPTABLE_TOKENIZE_DONE` holds a fingerprint of the id, never the id itself, so signing in as someone else in the same tab resolves them), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
+
+```javascript
+import { identifyAndTokenize } from "@optable/web-sdk/lib/dist/core/identify-tokenize";
+
+window.optable.identifyAndTokenize = (id) => identifyAndTokenize(sdk, id, { isControlGroup: () => isControlGroup });
+```
+
+The returned `{ merged, staleUid2s }` (null when skipped) lets the caller chain UID2 refreshes on the merged cache.
 
 ## Passport and Visitor ID
 
