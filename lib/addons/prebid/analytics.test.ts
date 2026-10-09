@@ -362,6 +362,75 @@ describe("OptablePrebidAnalytics", () => {
 
       expect(result.optableTargetingDone).toBe("1");
     });
+
+    const liveintentAuction = (bidderRequests: any[]) => ({
+      auctionId: "auction-liveintent",
+      bidderRequests: bidderRequests.map((user, i) => ({
+        bidderCode: `bidder${i + 1}`,
+        bidderRequestId: `req-${i + 1}`,
+        ortb2: { site: { domain: "example.com" }, user },
+        bids: [],
+      })),
+      bidsReceived: [],
+      noBids: [],
+      timeoutBids: [],
+    });
+
+    it("reports LiveIntent EIDs per bidder and at the top level", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([
+          {
+            eids: [
+              { source: "uidapi.com", uids: [{ id: "a", ext: { provider: "liveintent.com" } }] },
+              { source: "openx.net", uids: [{ id: "b", ext: { provider: "liveintent.com" } }] },
+            ],
+          },
+          { eids: [{ source: "uidapi.com", uids: [{ id: "a", ext: { provider: "liveintent.com" } }] }] },
+        ]),
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({ hasLiEids: true, liSources: ["uidapi.com", "openx.net"] });
+      expect(result.bidderRequests[1]).toMatchObject({ hasLiEids: true, liSources: ["uidapi.com"] });
+      expect(result.liveintentEIDs).toEqual(["uidapi.com", "openx.net"]);
+    });
+
+    it("reports no LiveIntent EIDs when none carry the LiveIntent provider", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([
+          { eids: [{ source: "adsrvr.org", uids: [{ id: "a", ext: { provider: "example.com" } }] }] },
+          {},
+        ]),
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({ hasLiEids: false, liSources: [] });
+      expect(result.bidderRequests[1]).toMatchObject({ hasLiEids: false, liSources: [] });
+      expect(result.liveintentEIDs).toEqual([]);
+    });
+
+    it("reports LiveIntent and Optable EIDs side by side, before the source dedupe", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([
+          {
+            ext: { eids: [{ source: "uidapi.com", uids: [{ id: "li", ext: { provider: "liveintent.com" } }] }] },
+            eids: [
+              { inserter: "optable.co", matcher: "uid2", source: "uidapi.com", uids: [{ id: "o" }] },
+              { inserter: "optable.co", matcher: "id5", source: "id5-sync.com", uids: [{ id: "o2" }] },
+            ],
+          },
+        ]),
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({
+        optableSources: ["uidapi.com", "id5-sync.com"],
+        hasLiEids: true,
+        liSources: ["uidapi.com"],
+      });
+      expect(result.optableSources).toEqual(["uidapi.com", "id5-sync.com"]);
+      expect(result.liveintentEIDs).toEqual(["uidapi.com"]);
+    });
   });
 
   describe("trackAuctionEnd", () => {

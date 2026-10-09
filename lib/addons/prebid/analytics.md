@@ -128,6 +128,7 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 
 Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `bidderRequests` (with per-bid `status`, `cpm`, `size`, `splitTestAssignment`),
-`optableMatchers`, `optableSources`, `optableTargetingDone`, `bidWon`, `missed`,
+`optableMatchers`, `optableSources`, `optableTargetingDone`, `liveintentEIDs`
+(with per-bidder `hasLiEids` and `liSources`), `bidWon`, `missed`,
 `url`, `tenant`, `prebidjsVersion`, `sessionDepth`, `pageAuctionsCount`,
 `originSlug`, and the parsed `userAgent`/`device`.
