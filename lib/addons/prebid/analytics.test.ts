@@ -194,7 +194,7 @@ describe("OptablePrebidAnalytics", () => {
 
       expect(result).toMatchObject({
         auctionId: "auction-123",
-        adUnitCode: "unknown",
+        adUnitCode: "ad-unit-1",
         totalRequests: 1,
         optableMatchers: ["matcher1"],
         optableSources: ["source1"],
@@ -945,6 +945,62 @@ describe("OptablePrebidAnalytics", () => {
       expect(bid.size).toBe("300x250");
       expect(bid.currency).toBe("USD");
       expect(payload.bidderRequests[0].status).toBe("RECEIVED");
+    });
+
+    const bidCountAuction = (bidsPerRequest: string[][], bidsReceived: any[]) => ({
+      auctionId: "auction-bid-count",
+      bidderRequests: bidsPerRequest.map((adUnits, i) => ({
+        bidderCode: `bidder${i + 1}`,
+        bidderRequestId: `req-${i + 1}`,
+        ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+        bids: adUnits.map((adUnitCode, j) => ({ bidId: `bid-${i + 1}-${j + 1}`, adUnitCode })),
+      })),
+      bidsReceived,
+      noBids: [],
+      timeoutBids: [],
+    });
+
+    it("reports totalBids: 0 when no bids are received", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([["ad-unit-1"], ["ad-unit-1"]], []), []);
+      expect(payload.totalBids).toBe(0);
+    });
+
+    it("reports totalBids: 1 for a single received bid", async () => {
+      const payload = await analytics.toWitness(
+        bidCountAuction([["ad-unit-1"], ["ad-unit-1"]], [{ requestId: "bid-2-1", cpm: 1.2 }]),
+        []
+      );
+      expect(payload.totalBids).toBe(1);
+    });
+
+    it("counts received bids with a cpm across bidder requests", async () => {
+      const payload = await analytics.toWitness(
+        bidCountAuction(
+          [
+            ["ad-unit-1", "ad-unit-2"],
+            ["ad-unit-1", "ad-unit-2"],
+          ],
+          [
+            { requestId: "bid-1-1", cpm: 1.2 },
+            { requestId: "bid-1-2", cpm: 0 },
+            { requestId: "bid-2-1", cpm: 0.8 },
+            { requestId: "bid-2-2", cpm: null },
+            { requestId: "bid-unrequested", cpm: 3 },
+          ]
+        ),
+        []
+      );
+      expect(payload.totalBids).toBe(3);
+    });
+
+    it("sets the top-level adUnitCode to the first bid's ad unit", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([["ad-unit-1", "ad-unit-2"], ["ad-unit-3"]], []), []);
+      expect(payload.adUnitCode).toBe("ad-unit-1");
+    });
+
+    it("falls back to an 'unknown' adUnitCode when there are no bids", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([[], []], []), []);
+      expect(payload.adUnitCode).toBe("unknown");
     });
 
     it("should extract splitTestAssignment from bidsReceived", async () => {

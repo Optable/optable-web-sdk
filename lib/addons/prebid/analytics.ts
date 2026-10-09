@@ -440,8 +440,10 @@ class OptablePrebidAnalytics {
 
     requests.forEach((request: any) => {
       request.bids.forEach((bid: any) => {
+        if (adUnitCode === "unknown" && bid.adUnitCode) adUnitCode = bid.adUnitCode;
         const bidReceived = bidsReceivedMap.get(bid.bidId);
         if (bidReceived) {
+          if (bidReceived.cpm != null) totalBids += 1;
           bid.status = STATUS.RECEIVED;
           bid.cpm = bidReceived.cpm;
           bid.size = `${bidReceived.width}x${bidReceived.height}`;
@@ -471,6 +473,7 @@ class OptablePrebidAnalytics {
       auctionId,
       adUnitCode,
       totalRequests: bidderRequests.length,
+      totalBids,
       optableSampling: this.config.samplingRate || 1,
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
