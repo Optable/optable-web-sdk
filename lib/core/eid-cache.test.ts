@@ -326,3 +326,48 @@ describe("mergeCache - firstPartyMatchers", () => {
     expect(idOn(merged, "liveramp.com")).toBe("first-party");
   });
 });
+
+describe("mergeCache - first-party revocation", () => {
+  const FP = { firstPartyMatchers: ["acme.com"] };
+  const sources = (merged: unknown) => (merged as any).ortb2?.user?.eids?.map((e: any) => e.source);
+
+  it("does not let a first-party revocation drop a held third-party EID", () => {
+    const kept = ref({ advertising_token: "kept" });
+    const held = cache([eid("uidapi.com", { matcher: "3p.example" })], { refs: { "uidapi.com": kept } });
+    const incoming = cache([{ source: "uidapi.com", matcher: "acme.com", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(sources(merged)).toEqual(["uidapi.com"]);
+    expect(getRefData(merged, "uidapi.com")).toEqual(kept);
+  });
+
+  it("lets a third-party revocation drop a held first-party EID", () => {
+    const held = cache([eid("uidapi.com", { matcher: "acme.com" })], { refs: { "uidapi.com": ref() } });
+    const incoming = cache([{ source: "uidapi.com", matcher: "3p.example", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(sources(merged)).toEqual([]);
+    expect(getRefData(merged, "uidapi.com")).toBeNull();
+  });
+
+  it("lets an unlabelled revocation drop a held first-party EID", () => {
+    const held = cache([eid("id5-sync.com", { matcher: "acme.com" })]);
+    const incoming = cache([{ source: "id5-sync.com", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(sources(merged)).toEqual([]);
+  });
+
+  it("without the option, any revocation still drops the held EID", () => {
+    const held = cache([eid("uidapi.com", { matcher: "3p.example" })], { refs: { "uidapi.com": ref() } });
+    const incoming = cache([{ source: "uidapi.com", matcher: "acme.com", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any);
+
+    expect(sources(merged)).toEqual([]);
+    expect(getRefData(merged, "uidapi.com")).toBeNull();
+  });
+});

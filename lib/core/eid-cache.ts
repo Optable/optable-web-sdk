@@ -157,13 +157,10 @@ export function mergeCache(
   const eidMap = new Map<string, CachedEid>();
   const refs: Record<string, Uid2RefData> = {};
 
-  // A source sent with no uids is revoked: the old entry goes.
-  const revokedSources = new Set(newEids.filter((eid) => !eid.uids?.length).map((eid) => eid.source));
-
-  // Every other old EID is a candidate, contested sources included: the
-  // collision is settled below rather than by arrival order.
+  // Every old EID is a candidate, contested sources included: the collision is
+  // settled below rather than by arrival order.
   oldEids.forEach((eid) => {
-    if (!eid.uids?.length || revokedSources.has(eid.source)) return;
+    if (!eid.uids?.length) return;
     eidMap.set(eid.source, copyOf(eid));
     const ref = getRefData(oldObj, eid.source);
     if (ref) {
@@ -171,13 +168,18 @@ export function mergeCache(
     }
   });
 
-  // New EIDs overwrite their source, refs included: a source re-resolved
-  // without one has its stale entry dropped. A first-party EID yields to a
-  // third-party one already held, which keeps its own refs.
+  // New EIDs take their source, refs included: a source re-resolved without one
+  // has its stale entry dropped, and one sent with no uids is revoked. A
+  // first-party EID yields to a third-party one held, revocation included.
   newEids.forEach((eid) => {
-    if (!eid.uids?.length) return;
     const held = eidMap.get(eid.source);
     if (held && isFirstParty(eid) && !isFirstParty(held)) return;
+
+    if (!eid.uids?.length) {
+      eidMap.delete(eid.source);
+      delete refs[eid.source];
+      return;
+    }
 
     eidMap.set(eid.source, copyOf(eid));
     const ref = getRefData(newObj, eid.source);

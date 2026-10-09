@@ -32,7 +32,7 @@ So anything read back out of storage is ready to merge as-is, and anything comin
 
 ## First-party preference
 
-`firstPartyMatchers` names the domains the edge labels first-party matches with. Set it and a first-party EID will not displace a third-party one already cached on that source; anything else still wins, so a call keeps refreshing its own entries, and the kept EID keeps its refs. The edge labels each EID with `eid.matcher`, and an EID with no matcher counts as third-party.
+`firstPartyMatchers` names the domains the edge labels first-party matches with. Set it and a first-party EID will not displace a third-party one already cached on that source, revocation included: a first-party response sending the source with no uids leaves the cached third-party EID alone. Anything else still wins, so a call keeps refreshing and revoking its own entries, and the kept EID keeps its refs. The edge labels each EID with `eid.matcher`, and an EID with no matcher counts as third-party.
 
 ```typescript
 const { merged } = mergeCache(replaceCache(response), cached, { firstPartyMatchers: ["acme.com"] });
