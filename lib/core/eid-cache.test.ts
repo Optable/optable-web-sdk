@@ -254,3 +254,120 @@ describe("mergeCache", () => {
     expect(staleUid2s).toEqual([]);
   });
 });
+
+describe("mergeCache - firstPartyMatchers", () => {
+  const FP = { firstPartyMatchers: ["acme.com"] };
+  const idOn = (merged: unknown, source: string) =>
+    (merged as any).ortb2?.user?.eids?.find((e: any) => e.source === source)?.uids?.[0]?.id;
+
+  it("keeps a third-party EID when a first-party one lands on the same source", () => {
+    const held = cache([eid("liveramp.com", { matcher: "3p.example", uids: [{ id: "third-party" }] })]);
+    const incoming = cache([eid("liveramp.com", { matcher: "acme.com", uids: [{ id: "first-party" }] })]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(idOn(merged, "liveramp.com")).toBe("third-party");
+  });
+
+  it("lets a third-party EID displace a first-party one", () => {
+    const held = cache([eid("liveramp.com", { matcher: "acme.com", uids: [{ id: "first-party" }] })]);
+    const incoming = cache([eid("liveramp.com", { matcher: "3p.example", uids: [{ id: "third-party" }] })]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(idOn(merged, "liveramp.com")).toBe("third-party");
+  });
+
+  it("lets a first-party EID refresh its own entry", () => {
+    const held = cache([eid("liveramp.com", { matcher: "acme.com", uids: [{ id: "stale" }] })]);
+    const incoming = cache([eid("liveramp.com", { matcher: "acme.com", uids: [{ id: "fresh" }] })]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(idOn(merged, "liveramp.com")).toBe("fresh");
+  });
+
+  it("treats an EID with no matcher as third-party", () => {
+    const held = cache([eid("liveramp.com", { uids: [{ id: "unlabelled" }] })]);
+    const incoming = cache([eid("liveramp.com", { matcher: "acme.com", uids: [{ id: "first-party" }] })]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(idOn(merged, "liveramp.com")).toBe("unlabelled");
+  });
+
+  it("keeps the held EID's refs when a first-party EID is turned away", () => {
+    const kept = ref({ advertising_token: "kept" });
+    const held = cache([eid("uidapi.com", { matcher: "3p.example" })], { refs: { "uidapi.com": kept } });
+    const incoming = cache([eid("uidapi.com", { matcher: "acme.com" })], {
+      refs: { "uidapi.com": ref({ advertising_token: "discarded" }) },
+    });
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(getRefData(merged, "uidapi.com")).toEqual(kept);
+  });
+
+  it("still revokes a source the new response sends with no uids", () => {
+    const held = cache([eid("id5-sync.com", { matcher: "3p.example" })]);
+    const incoming = cache([{ source: "id5-sync.com", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(merged.ortb2?.user?.eids).toEqual([]);
+  });
+
+  it("without the option, a first-party EID wins its source as before", () => {
+    const held = cache([eid("liveramp.com", { matcher: "3p.example", uids: [{ id: "third-party" }] })]);
+    const incoming = cache([eid("liveramp.com", { matcher: "acme.com", uids: [{ id: "first-party" }] })]);
+
+    const { merged } = mergeCache(incoming as any, held as any);
+
+    expect(idOn(merged, "liveramp.com")).toBe("first-party");
+  });
+});
+
+describe("mergeCache - first-party revocation", () => {
+  const FP = { firstPartyMatchers: ["acme.com"] };
+  const sources = (merged: unknown) => (merged as any).ortb2?.user?.eids?.map((e: any) => e.source);
+
+  it("does not let a first-party revocation drop a held third-party EID", () => {
+    const kept = ref({ advertising_token: "kept" });
+    const held = cache([eid("uidapi.com", { matcher: "3p.example" })], { refs: { "uidapi.com": kept } });
+    const incoming = cache([{ source: "uidapi.com", matcher: "acme.com", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(sources(merged)).toEqual(["uidapi.com"]);
+    expect(getRefData(merged, "uidapi.com")).toEqual(kept);
+  });
+
+  it("lets a third-party revocation drop a held first-party EID", () => {
+    const held = cache([eid("uidapi.com", { matcher: "acme.com" })], { refs: { "uidapi.com": ref() } });
+    const incoming = cache([{ source: "uidapi.com", matcher: "3p.example", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(sources(merged)).toEqual([]);
+    expect(getRefData(merged, "uidapi.com")).toBeNull();
+  });
+
+  it("lets an unlabelled revocation drop a held first-party EID", () => {
+    const held = cache([eid("id5-sync.com", { matcher: "acme.com" })]);
+    const incoming = cache([{ source: "id5-sync.com", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any, FP);
+
+    expect(sources(merged)).toEqual([]);
+  });
+
+  it("without the option, any revocation still drops the held EID", () => {
+    const held = cache([eid("uidapi.com", { matcher: "3p.example" })], { refs: { "uidapi.com": ref() } });
+    const incoming = cache([{ source: "uidapi.com", matcher: "acme.com", uids: [] }]);
+
+    const { merged } = mergeCache(incoming as any, held as any);
+
+    expect(sources(merged)).toEqual([]);
+    expect(getRefData(merged, "uidapi.com")).toBeNull();
+  });
+});

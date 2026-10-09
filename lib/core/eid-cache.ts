@@ -18,6 +18,8 @@ type Uid2RefData = {
 
 type CachedEid = {
   source: string;
+  // Matching domain the edge labelled this EID with; absent counts as third-party.
+  matcher?: string;
   uids?: Array<{
     id?: string;
     atype?: number;
@@ -129,15 +131,21 @@ export function replaceCache<T extends ResolvedCache>(response: T): T {
  * result. The cache read back from storage already is, since setTargeting
  * writes through replaceCache; a wire response goes through replaceCache
  * first.
+ *
+ * With firstPartyMatchers set, a first-party EID never displaces a third-party
+ * one already held on that source. Unset, every new EID wins its source.
  */
 export function mergeCache(
   newObj: ResolvedCache | null | undefined,
   oldObj: ResolvedCache | null | undefined,
-  options?: { maxUidsPerEid?: number }
+  options?: { maxUidsPerEid?: number; firstPartyMatchers?: string[] }
 ): { merged: ResolvedCache; staleUid2s: StaleUid2[] } {
   const oldEids = oldObj?.ortb2?.user?.eids || [];
   const newEids = newObj?.ortb2?.user?.eids || [];
   const maxUids = options?.maxUidsPerEid ?? DEFAULT_MAX_UIDS_PER_EID;
+
+  const firstPartyMatchers = new Set(options?.firstPartyMatchers ?? []);
+  const isFirstParty = (eid: CachedEid): boolean => !!eid.matcher && firstPartyMatchers.has(eid.matcher);
 
   // Copies are wire-clean: capped uids, and the ref pointer into the response
   // refs map is dropped since the sidecar replaces it.
@@ -146,27 +154,33 @@ export function mergeCache(
     uids: (eid.uids || []).slice(0, maxUids).map(stripRefPointer),
   });
 
-  const newSources = new Set(newEids.map((e) => e.source));
   const eidMap = new Map<string, CachedEid>();
   const refs: Record<string, Uid2RefData> = {};
 
-  // Carry over old EIDs whose source is not in the new response, along with
-  // their refs entry.
+  // Every old EID is a candidate, contested sources included: the collision is
+  // settled below rather than by arrival order.
   oldEids.forEach((eid) => {
     if (!eid.uids?.length) return;
-    if (!newSources.has(eid.source)) {
-      eidMap.set(eid.source, copyOf(eid));
-      const ref = getRefData(oldObj, eid.source);
-      if (ref) {
-        refs[eid.source] = ref;
-      }
+    eidMap.set(eid.source, copyOf(eid));
+    const ref = getRefData(oldObj, eid.source);
+    if (ref) {
+      refs[eid.source] = ref;
     }
   });
 
-  // New EIDs overwrite old ones with the same source, and so does their refs
-  // entry: a source re-resolved without one has its stale entry dropped.
+  // New EIDs take their source, refs included: a source re-resolved without one
+  // has its stale entry dropped, and one sent with no uids is revoked. A
+  // first-party EID yields to a third-party one held, revocation included.
   newEids.forEach((eid) => {
-    if (!eid.uids?.length) return;
+    const held = eidMap.get(eid.source);
+    if (held && isFirstParty(eid) && !isFirstParty(held)) return;
+
+    if (!eid.uids?.length) {
+      eidMap.delete(eid.source);
+      delete refs[eid.source];
+      return;
+    }
+
     eidMap.set(eid.source, copyOf(eid));
     const ref = getRefData(newObj, eid.source);
     if (ref) {
