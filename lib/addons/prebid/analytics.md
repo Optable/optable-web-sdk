@@ -130,5 +130,6 @@ Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `bidderRequests` (with per-bid `status`, `cpm`, `size`, `splitTestAssignment`),
 `optableMatchers`, `optableSources`, `optableTargetingDone`, `liveintentEIDs`
 (with per-bidder `hasLiEids` and `liSources`), `bidWon`, `missed`,
+`adUnitCode` (first bid's ad unit), `totalBids` (received bids with a `cpm`),
 `url`, `tenant`, `prebidjsVersion`, `sessionDepth`, `pageAuctionsCount`,
 `originSlug`, and the parsed `userAgent`/`device`.
