@@ -383,6 +383,7 @@ class OptablePrebidAnalytics {
 
     const oMatchersSet = new Set();
     const oSourcesSet = new Set();
+    const lSourcesSet = new Set();
     let adUnitCode: string = "unknown";
     let totalBids = 0;
     let device = null;
@@ -400,6 +401,10 @@ class OptablePrebidAnalytics {
       const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
       const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
 
+      // LiveIntent EIDs, matched before the dedupe so a same-source EID can't hide them
+      const liveintentEIDS = allEids.filter((e: any) => e.uids?.some((u: any) => u.ext?.provider === "liveintent.com"));
+      const liSources = [...new Set(liveintentEIDS.map((e: any) => e.source).filter(Boolean))];
+
       device = br.ortb2.device;
 
       return {
@@ -409,6 +414,8 @@ class OptablePrebidAnalytics {
         optableTargetingDone: optableEIDS.length > 0,
         optableMatchers,
         optableSources,
+        hasLiEids: liveintentEIDS.length > 0,
+        liSources,
         status: STATUS.REQUESTED,
         bids: bids.map(
           (b: {
@@ -465,6 +472,7 @@ class OptablePrebidAnalytics {
       bidderRequests: requests.map((br: any) => {
         br.optableMatchers.forEach((m: unknown) => oMatchersSet.add(m));
         br.optableSources.forEach((s: unknown) => oSourcesSet.add(s));
+        br.liSources.forEach((s: unknown) => lSourcesSet.add(s));
 
         return br;
       }),
@@ -478,6 +486,7 @@ class OptablePrebidAnalytics {
       optableTargetingDone: oMatchersSet.size > 0 || oSourcesSet.size > 0 ? "1" : "0",
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
+      liveintentEIDs: Array.from(lSourcesSet),
       bidWon: bidWonEvents.map((e) => ({
         bidderCode: e.bidderCode,
         adUnitCode: e.adUnitCode,
