@@ -51,7 +51,13 @@ function referrerHost(): string {
   }
 }
 
+// Internal is checked first so that UTM-tagged links between the site's own
+// pages are not reported as campaign traffic. Matching on the registrable name
+// rather than the exact host keeps www.site.com -> news.site.com internal.
 function classify(host: string): TrafficSource {
+  const site = siteName(host);
+  if (host && site === siteName(window.location.hostname)) return "internal";
+
   const params = new URLSearchParams(window.location.search);
   const medium = (params.get("utm_medium") || "").toLowerCase();
 
@@ -59,9 +65,7 @@ function classify(host: string): TrafficSource {
   if (medium === "email") return "email";
   if (params.has("utm_source")) return "campaign";
   if (!host) return "direct";
-  if (host === window.location.hostname) return "internal";
 
-  const site = siteName(host);
   if (SEARCH_SITES.includes(site)) return "organic_search";
   if (SOCIAL_SITES.includes(site)) return "social";
 
@@ -76,26 +80,32 @@ function classify(host: string): TrafficSource {
  * that, `document.referrer` becomes the site's own hostname after the first
  * internal click and every later event would report `internal`.
  *
+ * A cached `direct` is the one exception. It is the weakest signal (in-app
+ * browsers and `no-referrer` policies also land there), so a later non-internal
+ * classification in the same tab replaces it.
+ *
  * Only the referring hostname is reported, never the full referring URL, which
  * can carry query strings with personal data.
  */
 function getTrafficSource(): TrafficSourceProperties {
+  let cached: TrafficSourceProperties | null = null;
   try {
-    const cached = window.sessionStorage?.getItem(TRAFFIC_SOURCE_KEY);
-    if (cached) return JSON.parse(cached) as TrafficSourceProperties;
+    const stored = window.sessionStorage?.getItem(TRAFFIC_SOURCE_KEY);
+    if (stored) cached = JSON.parse(stored) as TrafficSourceProperties;
   } catch {
     // sessionStorage unavailable or holding malformed JSON, fall through and recompute.
   }
+  if (cached && cached.trafficSource !== "direct") return cached;
 
   const referrer = referrerHost();
   const properties: TrafficSourceProperties = { referrer, trafficSource: classify(referrer) };
 
-  if (properties.trafficSource !== "internal") {
-    try {
-      window.sessionStorage?.setItem(TRAFFIC_SOURCE_KEY, JSON.stringify(properties));
-    } catch {
-      // Storage blocked or full, the value is still returned for this event.
-    }
+  if (properties.trafficSource === "internal") return cached ?? properties;
+
+  try {
+    window.sessionStorage?.setItem(TRAFFIC_SOURCE_KEY, JSON.stringify(properties));
+  } catch {
+    // Storage blocked or full, the value is still returned for this event.
   }
 
   return properties;

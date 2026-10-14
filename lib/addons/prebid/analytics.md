@@ -138,4 +138,7 @@ Each sampled auction sends an `optable.prebid.auction` event with, among others:
 first-touch per tab: the first non-internal result is cached in `sessionStorage`
 under `optableTrafficSource` and reused for the rest of the session, because
 `document.referrer` becomes the site's own hostname after the first internal
-click.
+click. A cached `direct` is the exception: a later non-internal result in the
+same tab replaces it. A referrer counts as `internal` when its registrable name
+matches the page's (`news.site.com` on `www.site.com`), and that check runs
+before the UTM and click-id checks.
