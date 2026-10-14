@@ -255,8 +255,8 @@ describe("mergeCache", () => {
   });
 });
 
-describe("mergeCache - firstPartyMatchers", () => {
-  const FP = { firstPartyMatchers: ["acme.com"] };
+describe("mergeCache - nonOverridingMatchers", () => {
+  const FP = { nonOverridingMatchers: ["acme.com"] };
   const idOn = (merged: unknown, source: string) =>
     (merged as any).ortb2?.user?.eids?.find((e: any) => e.source === source)?.uids?.[0]?.id;
 
@@ -328,7 +328,7 @@ describe("mergeCache - firstPartyMatchers", () => {
 });
 
 describe("mergeCache - first-party revocation", () => {
-  const FP = { firstPartyMatchers: ["acme.com"] };
+  const FP = { nonOverridingMatchers: ["acme.com"] };
   const sources = (merged: unknown) => (merged as any).ortb2?.user?.eids?.map((e: any) => e.source);
 
   it("does not let a first-party revocation drop a held third-party EID", () => {

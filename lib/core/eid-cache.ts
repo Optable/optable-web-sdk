@@ -132,20 +132,20 @@ export function replaceCache<T extends ResolvedCache>(response: T): T {
  * writes through replaceCache; a wire response goes through replaceCache
  * first.
  *
- * With firstPartyMatchers set, a first-party EID never displaces a third-party
- * one already held on that source. Unset, every new EID wins its source.
+ * An EID whose matcher is in nonOverridingMatchers never displaces one held on
+ * that source from a matcher that is not. Unset, every new EID wins its source.
  */
 export function mergeCache(
   newObj: ResolvedCache | null | undefined,
   oldObj: ResolvedCache | null | undefined,
-  options?: { maxUidsPerEid?: number; firstPartyMatchers?: string[] }
+  options?: { maxUidsPerEid?: number; nonOverridingMatchers?: string[] }
 ): { merged: ResolvedCache; staleUid2s: StaleUid2[] } {
   const oldEids = oldObj?.ortb2?.user?.eids || [];
   const newEids = newObj?.ortb2?.user?.eids || [];
   const maxUids = options?.maxUidsPerEid ?? DEFAULT_MAX_UIDS_PER_EID;
 
-  const firstPartyMatchers = new Set(options?.firstPartyMatchers ?? []);
-  const isFirstParty = (eid: CachedEid): boolean => !!eid.matcher && firstPartyMatchers.has(eid.matcher);
+  const nonOverriding = new Set(options?.nonOverridingMatchers ?? []);
+  const yieldsToHeld = (eid: CachedEid): boolean => !!eid.matcher && nonOverriding.has(eid.matcher);
 
   // Copies are wire-clean: capped uids, and the ref pointer into the response
   // refs map is dropped since the sidecar replaces it.
@@ -173,7 +173,7 @@ export function mergeCache(
   // first-party EID yields to a third-party one held, revocation included.
   newEids.forEach((eid) => {
     const held = eidMap.get(eid.source);
-    if (held && isFirstParty(eid) && !isFirstParty(held)) return;
+    if (held && yieldsToHeld(eid) && !yieldsToHeld(held)) return;
 
     if (!eid.uids?.length) {
       eidMap.delete(eid.source);
