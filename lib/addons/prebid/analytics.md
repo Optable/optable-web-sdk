@@ -128,7 +128,17 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 
 Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `bidderRequests` (with per-bid `status`, `cpm`, `size`, `splitTestAssignment`),
-`optableMatchers`, `optableSources`, `optableTargetingDone`, `liveintentEIDs`
-(with per-bidder `hasLiEids` and `liSources`), `bidWon`, `missed`,
-`url`, `tenant`, `prebidjsVersion`, `sessionDepth`, `pageAuctionsCount`,
-`originSlug`, and the parsed `userAgent`/`device`.
+`optableMatchers`, `optableSources`, `optableTargetingDone`, `bidWon`, `missed`,
+`url`, `referrer`, `trafficSource`, `tenant`, `prebidjsVersion`, `sessionDepth`,
+`pageAuctionsCount`, `originSlug`, and the parsed `userAgent`/`device`.
+
+`referrer` is the referring hostname only, never the full referring URL.
+`trafficSource` classifies it as one of `direct`, `internal`, `paid`,
+`campaign`, `email`, `organic_search`, `social` or `referral`. Both are
+first-touch per tab: the first non-internal result is cached in `sessionStorage`
+under `optableTrafficSource` and reused for the rest of the session, because
+`document.referrer` becomes the site's own hostname after the first internal
+click. A cached `direct` is the exception: a later non-internal result in the
+same tab replaces it. A referrer counts as `internal` when its registrable name
+matches the page's (`news.site.com` on `www.site.com`), and that check runs
+before the UTM and click-id checks.
