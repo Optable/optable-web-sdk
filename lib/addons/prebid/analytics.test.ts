@@ -409,7 +409,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.liveintentEIDs).toEqual([]);
     });
 
-    it("reports LiveIntent and Optable EIDs side by side", async () => {
+    it("reports LiveIntent and Optable EIDs side by side, before the source dedupe", async () => {
       const result = await analytics.toWitness(
         liveintentAuction([
           {
