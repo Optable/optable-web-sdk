@@ -66,9 +66,6 @@ type InitConfig = {
   abTests?: ABTestConfig[];
   // Additional targeting signals to pass to the targeting call
   additionalTargetingSignals?: TargetingSignals;
-  // Forward soft device/browser signals in the 'sig' param. Opt in; also
-  // requires device access consent.
-  forwardSignals?: boolean;
   // Participate in the Optable Identity System (OIS). Opt in; requires an
   // OIS-enabled node and device access consent.
   ois?: boolean;
@@ -113,7 +110,6 @@ type ResolvedConfig = {
   initContextual?: boolean | ((response: ContextualSegmentsResponse) => void);
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
-  forwardSignals?: boolean;
   ois?: boolean;
   timeout?: string;
   insecure?: boolean;
@@ -152,7 +148,6 @@ function getConfig(init: InitConfig): ResolvedConfig {
     initContextual: init.initContextual,
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
-    forwardSignals: init.forwardSignals,
     ois: init.ois,
     timeout: init.timeout,
     insecure: init.insecure,

@@ -45,6 +45,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
+- [Identify and tokenize (hashed email)](#identify-and-tokenize-hashed-email)
 - [Passport and Visitor ID](#passport-and-visitor-id)
 - [Optable Identity System (OIS)](#optable-identity-system-ois)
   - [The cookie identity needs no SDK code](#the-cookie-identity-needs-no-sdk-code)
@@ -170,11 +171,8 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`optableCacheTargeting` (string, defaults: `optable-cache:targeting`)**
   Local storage cache key used to store latest targeting response.
 
-- **`forwardSignals` (boolean, default: `false`)**
-  When set to `true`, forwards soft device/browser signals (language, timezone, screen size, device memory, CPU cores) to the DCN in a `sig` request parameter. Also requires device access consent, so it is a no-op when consent is not granted. A signal the browser does not expose is omitted rather than sent empty.
-
 - **`ois` (boolean, default: `false`)**
-  When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK stores the derived OIS ID the DCN returns on the `X-Optable-OID` response header and replays it on subsequent requests, so the DCN recognizes the browser instead of deriving a new identity each visit. Pair it with `forwardSignals: true`, which sends the signals the identity is derived from. Requires a DCN node with OIS ID derivation enabled and device access consent, so it is a no-op otherwise. The `OPTABLE_OID` cookie identity is separate and needs no configuration.
+  When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK stores the derived OIS ID the DCN returns on the `X-Optable-OID` response header and replays it on subsequent requests, so the DCN recognizes the browser instead of deriving a new identity each visit. Requires a DCN node with OIS ID derivation enabled and device access consent, so it is a no-op otherwise. The `OPTABLE_OID` cookie identity is separate and needs no configuration.
 
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
@@ -1193,6 +1191,18 @@ For example:
 </script>
 ```
 
+## Identify and tokenize (hashed email)
+
+`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), always calls `identify`, and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It runs once per id per session (`OPTABLE_TOKENIZE_DONE` holds a fingerprint of the id, never the id itself, so signing in as someone else in the same tab resolves them), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
+
+```javascript
+import { identifyAndTokenize } from "@optable/web-sdk/lib/dist/core/identify-tokenize";
+
+window.optable.identifyAndTokenize = (id) => identifyAndTokenize(sdk, id, { isControlGroup: () => isControlGroup });
+```
+
+The returned `{ merged, staleUid2s }` (null when skipped) lets the caller chain UID2 refreshes on the merged cache.
+
 ## Passport and Visitor ID
 
 The Optable DCN issues a _passport_ (a signed JWT) that is cached in browser `localStorage`. The passport encodes a unique _visitor ID_ that the DCN uses to anonymously identify the browser. Both values can be read synchronously from the SDK:
@@ -1223,16 +1233,13 @@ That cookie is `HttpOnly` and scoped to `optable.co`, which has two consequences
 
 ### The derived identity is what the SDK holds
 
-The DCN derives this identity from the device signals sent in the `sig` parameter and returns it on the `X-Optable-OID` response header. With `ois: true` the SDK stores it and replays it on the same header, so the DCN recognizes the browser rather than deriving a fresh identity on every visit.
+The DCN derives this identity server-side and returns it on the `X-Optable-OID` response header. With `ois: true` the SDK stores it and replays it on the same header, so the DCN recognizes the browser rather than deriving a fresh identity on every visit.
 
 ```javascript
 const sdk = new OptableSDK({
   host: "dcn.customer.com",
   site: "my-site",
   ois: true,
-  // The identity is derived from these signals, so without them there is
-  // nothing to derive it from.
-  forwardSignals: true,
 });
 ```
 
@@ -1247,7 +1254,6 @@ Or with a script tag:
       host: "dcn.customer.com",
       site: "my-site",
       ois: true,
-      forwardSignals: true,
     });
   });
 </script>
@@ -1278,7 +1284,7 @@ The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>` as 
 
 Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token`, `/profile` and `/v2/targeting`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
 
-There is no write policy to reason about. The DCN returns the identity it derived for the _current_ request rather than the one the client replayed, so as those signals drift (a new IP subnet, a browser upgrade, a resized window) the stored value simply rolls forward. The SDK stores whatever the last response returned.
+There is no write policy to reason about. The DCN returns the identity it derived for the _current_ request rather than the one the client replayed, so as the inputs it derives from drift (a new IP subnet, a browser upgrade) the stored value simply rolls forward. The SDK stores whatever the last response returned.
 
 Nothing is stored and no header is sent without device access consent, so the option is a no-op when consent has not been granted.
 
@@ -1504,6 +1510,48 @@ setStaticMappings({
 
 For the merge rules and a full wrapper example, see the [static mappings README](lib/core/staticMappings.md).
 
+## ID5 resolution
+
+`resolveId5(partnerId, options?)` resolves an [ID5](https://id5.io/) user id, loading the ID5 API on demand: QA flags first, then a local 7-day cache (its own key per partner, `OPTABLE_ID5:<partnerId>`), then a live resolution with ID5's own A/B holdout disabled. Live resolution is bounded (2s default, `timeoutMs` option) and resolves `null` on timeout, load failure, partner-id mismatch or the ID5 `"0"` placeholder. Pass the bot detection addon's `isBot` to skip live resolution for crawlers:
+
+```javascript
+import { resolveId5 } from "@optable/web-sdk/lib/dist/core/id5";
+import { isBot } from "@optable/web-sdk/lib/dist/addons/botDetection";
+
+const id5Id = await resolveId5(id5PartnerId, {
+  isBot,
+  deviceAccess: () => sdk.dcn.consent.deviceAccess,
+});
+```
+
+The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value. Concurrent calls for the same partner share one script load and resolution, and an ID5 API already on the page is reused rather than loaded again.
+
+`deviceAccess` gates the cache on both sides: when it returns `false` the id is neither read from nor written to `localStorage`, and every call resolves live. The gate is re-checked at write time, so consent withdrawn mid-resolution stops the write. On `resolveId5` it defaults to allowed, the same posture as the SDK's own default consent, so pass `sdk.dcn.consent.deviceAccess` as above — omitting it on a page configured with `consent.cmpapi` would leave the ID5 cache ungated while every other SDK cache honours the CMP. ID5's own CMP integration separately gates its network call.
+
+Reading the cache directly takes the same gate, as a required argument, so a cached user id cannot be read out of storage without stating a consent position:
+
+```javascript
+import { getCachedId5UserId } from "@optable/web-sdk/lib/dist/core/id5";
+
+const cached = getCachedId5UserId(id5PartnerId, () => sdk.dcn.consent.deviceAccess);
+```
+
+## Source check
+
+The source check addon verifies that a page's site slug has a matching source configured in the DCN before the SDK is constructed, falling back to a default source when it does not — so multi-site publishers keep default enrichment on domains that were never provisioned.
+
+```typescript
+import { checkSourceExists } from "@optable/web-sdk/lib/dist/addons/sourceCheck";
+
+window.optable.site = await checkSourceExists({
+  site: window.optable.site,
+  defaultSite: window.optable.defaultSite,
+  node: "customer-node",
+});
+```
+
+The result is cached in `sessionStorage`, so the probe runs at most once per session for each site, node and host. For the probe and fallback details, see the [source check addon README](lib/addons/sourceCheck.md).
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
@@ -1524,4 +1572,4 @@ Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. Yo
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
 
-The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) covers both OIS identities: it explains why the `OPTABLE_OID` cookie identity is invisible to JavaScript, and shows the derived OIS ID the DCN returned, the `localStorage` key holding it, the decoded `sig` signals it was derived from, and the `X-Optable-OID` header sent and received on each call. It needs a DCN node with OIS ID derivation enabled, and only produces an ID for requests from a residential IP.
+The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) covers both OIS identities: it explains why the `OPTABLE_OID` cookie identity is invisible to JavaScript, and shows the derived OIS ID the DCN returned, the `localStorage` key holding it, and the `X-Optable-OID` header sent and received on each call. It needs a DCN node with OIS ID derivation enabled, and only produces an ID for requests from a residential IP.
