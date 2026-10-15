@@ -500,6 +500,12 @@ class OptablePrebidAnalytics {
       userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
       device,
       prebidjsVersion: this.prebidInstance?.version || "unknown",
+      // rtdInstalled: optableRtdProvider is compiled into the Prebid build.
+      // rtdConfigured: the "optable" provider is listed in realTimeData.dataProviders.
+      rtdInstalled: (this.prebidInstance?.installedModules ?? []).includes("optableRtdProvider"),
+      rtdConfigured: (this.prebidInstance?.getConfig?.("realTimeData")?.dataProviders ?? []).some(
+        (p: { name?: string }) => p?.name === "optable"
+      ),
       sessionDepth: sessionStorage?.optableSessionDepth || 1,
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
       originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",

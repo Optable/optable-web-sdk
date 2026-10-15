@@ -431,6 +431,44 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.optableSources).toEqual(["uidapi.com", "id5-sync.com"]);
       expect(result.liveintentEIDs).toEqual(["uidapi.com"]);
     });
+
+    describe("RTD presence", () => {
+      const emptyAuction = { auctionId: "rtd-auction", bidderRequests: [] };
+
+      it("reports the RTD module as installed and configured", async () => {
+        (analytics as any).prebidInstance = {
+          installedModules: ["rtdModule", "optableRtdProvider"],
+          getConfig: jest.fn().mockReturnValue({ dataProviders: [{ name: "other" }, { name: "optable" }] }),
+        };
+
+        const result = await analytics.toWitness(emptyAuction, []);
+
+        expect(result.rtdInstalled).toBe(true);
+        expect(result.rtdConfigured).toBe(true);
+        expect((analytics as any).prebidInstance.getConfig).toHaveBeenCalledWith("realTimeData");
+      });
+
+      it("reports installed but not configured when no optable data provider is set", async () => {
+        (analytics as any).prebidInstance = {
+          installedModules: ["optableRtdProvider"],
+          getConfig: jest.fn().mockReturnValue(undefined),
+        };
+
+        const result = await analytics.toWitness(emptyAuction, []);
+
+        expect(result.rtdInstalled).toBe(true);
+        expect(result.rtdConfigured).toBe(false);
+      });
+
+      it("reports false for both when Prebid exposes neither installedModules nor getConfig", async () => {
+        (analytics as any).prebidInstance = {};
+
+        const result = await analytics.toWitness(emptyAuction, []);
+
+        expect(result.rtdInstalled).toBe(false);
+        expect(result.rtdConfigured).toBe(false);
+      });
+    });
   });
 
   describe("trackAuctionEnd", () => {

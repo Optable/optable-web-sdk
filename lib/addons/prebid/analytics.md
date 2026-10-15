@@ -130,5 +130,11 @@ Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `bidderRequests` (with per-bid `status`, `cpm`, `size`, `splitTestAssignment`),
 `optableMatchers`, `optableSources`, `optableTargetingDone`, `liveintentEIDs`
 (with per-bidder `hasLiEids` and `liSources`), `bidWon`, `missed`,
-`url`, `tenant`, `prebidjsVersion`, `sessionDepth`, `pageAuctionsCount`,
-`originSlug`, and the parsed `userAgent`/`device`.
+`url`, `tenant`, `prebidjsVersion`, `rtdInstalled`, `rtdConfigured`,
+`sessionDepth`, `pageAuctionsCount`, `originSlug`, and the parsed
+`userAgent`/`device`.
+
+`rtdInstalled` is `true` when `optableRtdProvider` is in `pbjs.installedModules`
+(compiled into the Prebid build). `rtdConfigured` is `true` when
+`realTimeData.dataProviders` contains a provider named `optable`. Together they
+separate "module missing from the build" from "built in but not configured".
