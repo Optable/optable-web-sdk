@@ -392,17 +392,15 @@ class OptablePrebidAnalytics {
     const requests = bidderRequests.map((br: any) => {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
-      const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
-      // Deduplicate EIDs by source
-      const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
+      const eids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
       const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
       const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
 
-      // LiveIntent EIDs, matched before the dedupe so a same-source EID can't hide them
-      const liveintentEIDS = allEids.filter((e: any) => e.uids?.some((u: any) => u.ext?.provider === "liveintent.com"));
+      // LiveIntent EIDs
+      const liveintentEIDS = eids.filter((e: any) => e.uids?.some((u: any) => u.ext?.provider === "liveintent.com"));
       const liSources = [...new Set(liveintentEIDS.map((e: any) => e.source).filter(Boolean))];
 
       device = br.ortb2.device;

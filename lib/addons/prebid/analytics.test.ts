@@ -409,7 +409,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.liveintentEIDs).toEqual([]);
     });
 
-    it("reports LiveIntent and Optable EIDs side by side, before the source dedupe", async () => {
+    it("reports LiveIntent and Optable EIDs side by side", async () => {
       const result = await analytics.toWitness(
         liveintentAuction([
           {
@@ -430,6 +430,41 @@ describe("OptablePrebidAnalytics", () => {
       });
       expect(result.optableSources).toEqual(["uidapi.com", "id5-sync.com"]);
       expect(result.liveintentEIDs).toEqual(["uidapi.com"]);
+    });
+
+    it("keeps an Optable EID when a later non-Optable EID shares its source", async () => {
+      const result = await analytics.toWitness(
+        {
+          auctionId: "auction-shared-source",
+          bidderRequests: [
+            {
+              bidderCode: "bidder1",
+              bidderRequestId: "req-1",
+              ortb2: {
+                site: { domain: "example.com" },
+                user: {
+                  ext: { eids: [{ inserter: "optable.co", matcher: "uid2", source: "uidapi.com" }] },
+                  eids: [{ source: "uidapi.com", uids: [{ id: "li", ext: { provider: "liveintent.com" } }] }],
+                },
+              },
+              bids: [],
+            },
+          ],
+          bidsReceived: [],
+          noBids: [],
+          timeoutBids: [],
+        },
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({
+        optableTargetingDone: true,
+        optableMatchers: ["uid2"],
+        optableSources: ["uidapi.com"],
+      });
+      expect(result.optableMatchers).toEqual(["uid2"]);
+      expect(result.optableSources).toEqual(["uidapi.com"]);
+      expect(result.optableTargetingDone).toBe("1");
     });
   });
 
