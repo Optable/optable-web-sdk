@@ -129,6 +129,17 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `bidderRequests` (with per-bid `status`, `cpm`, `size`, `splitTestAssignment`),
 `optableMatchers`, `optableSources`, `optableTargetingDone`, `liveintentEIDs`
-(with per-bidder `hasLiEids` and `liSources`), `bidWon`, `missed`,
-`url`, `tenant`, `prebidjsVersion`, `sessionDepth`, `pageAuctionsCount`,
-`originSlug`, and the parsed `userAgent`/`device`.
+(with per-bidder `hasLiEids` and `liSources`), `intentiqEIDs`, `growthcodeEIDs`,
+`transunionEIDs` (with per-bidder `iiqSources`, `gcSources`, `tuSources`),
+`bidWon`, `missed`, `url`, `tenant`, `prebidjsVersion`, `sessionDepth`,
+`pageAuctionsCount`, `originSlug`, and the parsed `userAgent`/`device`.
+
+Competitor EIDs are the EID sources each vendor delivered, matched on the tags it
+leaves in the bid request (rules in `COMPETITOR_EIDS`, shared with the V1 add-on):
+
+| Vendor     | Rule                                                                        |
+| ---------- | --------------------------------------------------------------------------- |
+| LiveIntent | `source === "liveintent.com"` or `uids[].ext.provider === "liveintent.com"` |
+| IntentIQ   | `matcher` or `source` is `"intentiq.com"`                                   |
+| GrowthCode | `inserter`, `matcher` or `source` is `"growthcode.io"`                      |
+| TransUnion | `source === "neustar.biz"` (Fabrick ID)                                     |
