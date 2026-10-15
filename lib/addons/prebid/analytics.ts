@@ -8,6 +8,18 @@ import * as Bowser from "bowser";
 
 declare const SDK_WRAPPER_VERSION: string;
 
+// Competitor EIDs, matched on the tags each vendor leaves in the bid request.
+// Publisher wrappers can strip inserter, so each rule also checks matcher or source.
+// Same rules as the V1 add-on (lib/addons/prototypes/analytics.js).
+const COMPETITOR_EIDS: Record<string, (e: any) => boolean> = {
+  liveintent: (e) =>
+    e.source === "liveintent.com" || e.uids?.some((u: any) => u.ext?.provider === "liveintent.com") === true,
+  intentiq: (e) => e.matcher === "intentiq.com" || e.source === "intentiq.com",
+  growthcode: (e) => e.inserter === "growthcode.io" || e.matcher === "growthcode.io" || e.source === "growthcode.io",
+  transunion: (e) => e.source === "neustar.biz",
+};
+const sourcesOf = (eids: any[]): string[] => [...new Set(eids.map((e) => e.source).filter(Boolean))] as string[];
+
 declare global {
   interface Window {
     pbjs?: any;
@@ -384,6 +396,9 @@ class OptablePrebidAnalytics {
     const oMatchersSet = new Set();
     const oSourcesSet = new Set();
     const lSourcesSet = new Set();
+    const iSourcesSet = new Set();
+    const gSourcesSet = new Set();
+    const tSourcesSet = new Set();
     let adUnitCode: string = "unknown";
     let totalBids = 0;
     let device = null;
@@ -401,9 +416,11 @@ class OptablePrebidAnalytics {
       const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
       const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
 
-      // LiveIntent EIDs, matched before the dedupe so a same-source EID can't hide them
-      const liveintentEIDS = allEids.filter((e: any) => e.uids?.some((u: any) => u.ext?.provider === "liveintent.com"));
-      const liSources = [...new Set(liveintentEIDS.map((e: any) => e.source).filter(Boolean))];
+      // Competitor EIDs, matched before the dedupe so a same-source EID can't hide them
+      const liSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.liveintent));
+      const iiqSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.intentiq));
+      const gcSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.growthcode));
+      const tuSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.transunion));
 
       device = br.ortb2.device;
 
@@ -414,8 +431,11 @@ class OptablePrebidAnalytics {
         optableTargetingDone: optableEIDS.length > 0,
         optableMatchers,
         optableSources,
-        hasLiEids: liveintentEIDS.length > 0,
+        hasLiEids: liSources.length > 0,
         liSources,
+        iiqSources,
+        gcSources,
+        tuSources,
         status: STATUS.REQUESTED,
         bids: bids.map(
           (b: {
@@ -473,6 +493,9 @@ class OptablePrebidAnalytics {
         br.optableMatchers.forEach((m: unknown) => oMatchersSet.add(m));
         br.optableSources.forEach((s: unknown) => oSourcesSet.add(s));
         br.liSources.forEach((s: unknown) => lSourcesSet.add(s));
+        br.iiqSources.forEach((s: unknown) => iSourcesSet.add(s));
+        br.gcSources.forEach((s: unknown) => gSourcesSet.add(s));
+        br.tuSources.forEach((s: unknown) => tSourcesSet.add(s));
 
         return br;
       }),
@@ -487,6 +510,9 @@ class OptablePrebidAnalytics {
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
       liveintentEIDs: Array.from(lSourcesSet),
+      intentiqEIDs: Array.from(iSourcesSet),
+      growthcodeEIDs: Array.from(gSourcesSet),
+      transunionEIDs: Array.from(tSourcesSet),
       bidWon: bidWonEvents.map((e) => ({
         bidderCode: e.bidderCode,
         adUnitCode: e.adUnitCode,
