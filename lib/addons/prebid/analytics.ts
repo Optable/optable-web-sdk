@@ -53,6 +53,7 @@ class OptablePrebidAnalytics {
   private missedAuctionIds = new Set<string>();
   private pendingTimeoutBids = new Map<string, any[]>();
   private prebidInstance: any;
+  private pageConfigSent = false;
 
   /**
    * Create a new OptablePrebidAnalytics instance.
@@ -363,6 +364,26 @@ class OptablePrebidAnalytics {
    * Clear all stored analytics data (useful for tests).
    * @returns void
    */
+  /**
+   * Page configuration, sent on the first auction payload of the page only.
+   * @returns RTD presence and auction delays, or undefined when Prebid exposes no getConfig.
+   */
+  pageConfig(): Record<string, unknown> | undefined {
+    if (typeof this.prebidInstance?.getConfig !== "function") return undefined;
+    try {
+      const rtd = this.prebidInstance.getConfig("realTimeData") || {};
+      const userSync = this.prebidInstance.getConfig("userSync") || {};
+      return {
+        optableRTDInstalled: (this.prebidInstance.installedModules || []).includes("optableRtdProvider") ? 1 : 0,
+        optableRTDConfigured: (rtd.dataProviders || []).some((p: { name?: string }) => p?.name === "optable") ? 1 : 0,
+        rtdDelay: rtd.auctionDelay,
+        udDelay: userSync.auctionDelay,
+      };
+    } catch (e) {
+      return undefined;
+    }
+  }
+
   clearData() {
     this.auctions.clear();
     this.missedAuctionIds.clear();
@@ -495,6 +516,16 @@ class OptablePrebidAnalytics {
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
       originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };
+
+    // Page configuration, sent once per page. A flag instead of pageAuctionsCount === 1 because
+    // payloads are built after bidWinTimeout, when later auctions may already have bumped the count.
+    if (!this.pageConfigSent) {
+      const page = this.pageConfig();
+      if (page) {
+        witnessData.page = page;
+        this.pageConfigSent = true;
+      }
+    }
 
     // Log summary with bid counts
     this.log(
