@@ -41,6 +41,7 @@ interface AuctionItem {
   bidWonEvents: any[];
   timeoutBids: any[];
   sampled: boolean;
+  customData: Promise<Record<string, any>> | undefined;
 }
 
 class OptablePrebidAnalytics {
@@ -102,7 +103,7 @@ class OptablePrebidAnalytics {
       clearTimeout(auction.auctionEndTimeoutId);
       this.auctions.delete(auctionId);
 
-      this.toWitness(auction.auctionEnd, auction.bidWonEvents, auction.missed).then((payload) => {
+      this.toWitness(auction.auctionEnd, auction.bidWonEvents, auction.missed, auction.customData).then((payload) => {
         payload["auctionEndAt"] = auction.createdAt.toISOString();
         payload["bidWonAt"] =
           auction.bidWonEvents.length > 0
@@ -273,6 +274,8 @@ class OptablePrebidAnalytics {
    * Process a Prebid `auctionEnd` event: record the raw event and schedule a
    * delayed Witness API call, giving `bidWon` events a window to arrive. The
    * payload is built from the raw event by `toWitness` when that timer fires.
+   * `window.optable.customAnalytics` is called here rather than when the timer
+   * fires, so its fields describe the page at the time of this auction.
    * @param event - The raw Prebid auctionEnd event object.
    * @param missed - True when the event was previously emitted (missed replay).
    * @returns void
@@ -281,6 +284,7 @@ class OptablePrebidAnalytics {
     const { auctionId, bidderRequests = [] } = event;
     const timeoutBids = this.pendingTimeoutBids.get(auctionId) || [];
     const sampled = !!this.config.analytics && this.shouldSample();
+    const customData = sampled ? (window as any).optable?.customAnalytics?.() : undefined;
 
     this.log(`Processing auction ${auctionId} with ${bidderRequests.length} bidder requests`);
 
@@ -296,7 +300,12 @@ class OptablePrebidAnalytics {
         return;
       }
       const effectiveMissed = storedAuction.missed;
-      const payload = await this.toWitness(event, storedAuction.bidWonEvents, effectiveMissed);
+      const payload = await this.toWitness(
+        event,
+        storedAuction.bidWonEvents,
+        effectiveMissed,
+        storedAuction.customData
+      );
       payload["auctionEndAt"] = createdAt.toISOString();
       payload["bidWonAt"] =
         storedAuction.bidWonEvents.length > 0
@@ -316,6 +325,7 @@ class OptablePrebidAnalytics {
       bidWonEvents: [],
       timeoutBids,
       sampled,
+      customData,
     });
     this.pendingTimeoutBids.delete(auctionId);
 
@@ -375,9 +385,15 @@ class OptablePrebidAnalytics {
    * @param auctionEndEvent - The `auctionEnd` event object from Prebid.js.
    * @param bidWonEvents - Array of `bidWon` events accumulated during the auction window.
    * @param missed - True when the original events were already emitted (replayed).
+   * @param customData - Result of `customAnalytics` captured at auctionEnd; called now when omitted.
    * @returns A payload object compatible with the Witness API.
    */
-  async toWitness(auctionEndEvent: any, bidWonEvents: any[], missed = false): Promise<Record<string, any>> {
+  async toWitness(
+    auctionEndEvent: any,
+    bidWonEvents: any[],
+    missed = false,
+    customData?: Promise<Record<string, any>>
+  ): Promise<Record<string, any>> {
     const { auctionId, bidderRequests = [], bidsReceived = [], noBids = [] } = auctionEndEvent;
     const timeoutBids = this.auctions.get(auctionId)?.timeoutBids || [];
 
@@ -510,11 +526,11 @@ class OptablePrebidAnalytics {
       `Auction ${auctionId} processed: ${bidderRequests.length} requests, ${totalBids} total bids, ${bidsReceived.length} received, ${noBids.length} no-bids, ${timeoutBids.length} timeouts`
     );
 
-    if ((window as any).optable?.customAnalytics) {
-      await (window as any).optable.customAnalytics().then((response: any) => {
-        this.log(`Adding custom data to payload ${JSON.stringify(response)}`);
-        Object.assign(witnessData, response);
-      });
+    const custom = customData ?? (window as any).optable?.customAnalytics?.();
+    if (custom) {
+      const response = await custom;
+      this.log(`Adding custom data to payload ${JSON.stringify(response)}`);
+      Object.assign(witnessData, response);
     }
 
     return witnessData;

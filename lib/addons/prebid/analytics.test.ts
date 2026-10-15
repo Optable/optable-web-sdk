@@ -964,6 +964,26 @@ describe("OptablePrebidAnalytics", () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
+    it("should capture customAnalytics at auctionEnd, not when the payload is sent", async () => {
+      jest.useFakeTimers();
+      let origin = "game.example.com";
+      (window as any).optable = { customAnalytics: jest.fn(async () => ({ optableOrigin: origin })) };
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { analytics: true });
+
+      analytics.trackAuctionEnd({ auctionId: "auction-custom-timing", bidderRequests: [] });
+      origin = "later.example.com";
+      await jest.runAllTimersAsync();
+
+      expect(window.optable.customAnalytics).toHaveBeenCalledTimes(1);
+      expect(mockOptableInstance.witness).toHaveBeenCalledWith(
+        "optable.prebid.auction",
+        expect.objectContaining({ optableOrigin: "game.example.com" })
+      );
+
+      jest.useRealTimers();
+      delete (window as any).optable;
+    });
+
     it("should handle bidsReceived and update bid status", async () => {
       const event = {
         auctionId: "auction-with-bids",

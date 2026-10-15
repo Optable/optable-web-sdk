@@ -61,7 +61,9 @@ const analytics = initPrebidAnalytics({
 ### Custom payload fields
 
 Set `window.optable.customAnalytics` to an async function returning an object; its
-keys are merged into every auction payload:
+keys are merged into every auction payload. It is called once per sampled auction, at
+`auctionEnd`, so its result describes the page when that auction ended rather than when
+the payload is sent:
 
 ```js
 window.optable.customAnalytics = async () => ({ experiment: "floor-v2" });
