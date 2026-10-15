@@ -20,7 +20,7 @@ It exposes two things:
 import OptableSDK from "@optable/web-sdk";
 import { initPrebidAnalytics } from "@optable/web-sdk/lib/addons/prebid/analytics";
 
-const sdk = new OptableSDK({ host: "na.edge.optable.co", node: "my-tenant", site: "my-site" });
+const sdk = new OptableSDK({ host: "us.edge.optable.co", node: "my-tenant", site: "my-site" });
 
 const analytics = initPrebidAnalytics({
   sdkInstance: sdk,
@@ -73,7 +73,7 @@ window.optable.customAnalytics = async () => ({ experiment: "floor-v2" });
 import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
 
 const sdk = new OptableSDK({
-  host: "na.edge.optable.co",
+  host: "us.edge.optable.co",
   node: "my-tenant",
   site: "my-site",
   readOnly: true,

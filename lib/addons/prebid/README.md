@@ -15,7 +15,7 @@ when no Prebid.js instance is provided.
 import OptableSDK from "@optable/web-sdk";
 import { initPrebidAnalytics } from "@optable/web-sdk/lib/addons/prebid/analytics";
 
-const sdk = new OptableSDK({ host: "na.edge.optable.co", node: "analytics", site: "analytics" });
+const sdk = new OptableSDK({ host: "us.edge.optable.co", node: "analytics", site: "analytics" });
 
 initPrebidAnalytics({
   // An already-initialized Optable SDK instance

@@ -45,6 +45,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
+- [Identify and tokenize (hashed email)](#identify-and-tokenize-hashed-email)
 - [Passport and Visitor ID](#passport-and-visitor-id)
 - [Optable Identity System (OIS)](#optable-identity-system-ois)
   - [The cookie identity needs no SDK code](#the-cookie-identity-needs-no-sdk-code)
@@ -170,11 +171,8 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`optableCacheTargeting` (string, defaults: `optable-cache:targeting`)**
   Local storage cache key used to store latest targeting response.
 
-- **`forwardSignals` (boolean, default: `false`)**
-  When set to `true`, forwards soft device/browser signals (language, timezone, screen size, device memory, CPU cores) to the DCN in a `sig` request parameter. Also requires device access consent, so it is a no-op when consent is not granted. A signal the browser does not expose is omitted rather than sent empty.
-
 - **`ois` (boolean, default: `false`)**
-  When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK stores the derived OIS ID the DCN returns on the `X-Optable-OID` response header and replays it on subsequent requests, so the DCN recognizes the browser instead of deriving a new identity each visit. Pair it with `forwardSignals: true`, which sends the signals the identity is derived from. Requires a DCN node with OIS ID derivation enabled and device access consent, so it is a no-op otherwise. The `OPTABLE_OID` cookie identity is separate and needs no configuration.
+  When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK stores the derived OIS ID the DCN returns on the `X-Optable-OID` response header and replays it on subsequent requests, so the DCN recognizes the browser instead of deriving a new identity each visit. Requires a DCN node with OIS ID derivation enabled and device access consent, so it is a no-op otherwise. The `OPTABLE_OID` cookie identity is separate and needs no configuration.
 
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
@@ -440,25 +438,60 @@ type ContextualSegmentsResponse = {
   classifications: {
     categories: { id: string; name: string; score: number; taxonomy: string }[];
     keywords: { keyword: string; prominence: number }[];
+    brandSafety: {
+      assessed: boolean;
+      categories: { name: string; riskLevel: "low" | "medium" | "high" | "floor" | "not_assessed" | "" }[];
+    };
   };
 };
 ```
 
-`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page. A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
+`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page; `brandSafety` is the page's brand-safety assessment, described [below](#brand-safety). A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
 
 Each call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
 
-> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays.
+> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays, and `brandSafety.assessed` will be `false`.
+
+#### Brand safety
+
+`ctxBrandSafety()` reads the brand-safety classifications off the cached `ctxSegments()` response, as `{ assessed, categories }`. The categories and the risk tiers follow the [Brand Safety Floor + Suitability Framework](https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability), which is where the category list and the term `floor` come from.
+
+> **Note:** Only the page's **text** is assessed. Embedded media, such as images, video and audio, is not, so a page can come back with nothing flagged and still carry unsafe media. Treat the result as a signal about what the page says, not about everything a visitor sees.
+
+**Read `assessed` before `categories`.** An empty `categories` list means two opposite things depending on it:
+
+| `assessed` | `categories` | Meaning                                                                                                                                                                           |
+| ---------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `true`     | empty        | An assessment ran and flagged nothing.                                                                                                                                            |
+| `true`     | non-empty    | An assessment ran: each entry is a category it flagged, at its `riskLevel`, or a `not_assessed` category the pass did not cover. Assessed categories with no finding are omitted. |
+| `false`    | always empty | Nothing is known about this page. The DCN never classified it, the read failed, or this DCN does not run the brand-safety classifier at all.                                      |
+
+Three more things to keep in mind:
+
+- **`floor` is the most severe tier, not a baseline.** The order is `low` < `medium` < `high` < `floor`, `floor` being the framework's brand-safety floor, below which inventory should not monetize. `not_assessed` is not a severity at all; it is the entry's own state.
+- **A page assessed clean is not a clearance.** The taxonomy enumerates risks, so the classifier can report that a page matches one but never that it is free of them. Neither the response nor these helpers can express "safe".
+- **`riskLevel` can be `""`.** Only when the DCN stored a tier it could not resolve, which is a defect on its side rather than a state of the page. It is in the type because the wire can carry it, so an exhaustive `switch` has to handle it; treat it as "no usable tier". `ctxMaxRiskLevel()` already ignores it.
+
+`ctxMaxRiskLevel()` returns the most severe tier flagged on the page, or `null` when nothing is flagged, which is convenient for a single gate:
+
+```javascript
+if (sdk.ctxMaxRiskLevel() === "floor") {
+  // Do not monetize this page.
+}
+```
+
+`null` comes back in two different situations: an assessment ran and flagged nothing, and nothing is known about the page at all. A gate that must tell those apart reads `ctxBrandSafety().assessed` as well.
 
 #### Contextual targeting key-values
 
-`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under the key `ctx_kw`:
+`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under `ctx_kw` and its brand-safety tier under `ctx_bs_max`:
 
 ```javascript
 sdk.ctxTargetingKeyValues();
 // => {
 //   "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
-//   "ctx_kw": ["advertising", "programmatic", "ad tech"]
+//   "ctx_kw": ["advertising", "programmatic", "ad tech"],
+//   "ctx_bs_max": ["no_flags"]
 // }
 ```
 
@@ -466,7 +499,7 @@ Pass a `taxonomyKeys` map to rename category keys. Only taxonomies present in th
 
 ```javascript
 sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" });
-// => { "foo": ["53", "91", "58", "115", "90", "52"], "ctx_kw": ["advertising", "programmatic", "ad tech"] }
+// => { "foo": ["53", ...], "ctx_kw": ["advertising", "programmatic", "ad tech"], "ctx_bs_max": ["no_flags"] }
 ```
 
 Keyword values are ordered by `prominence` (most prominent first), capped to the top 10, and sanitized to GAM's value rules (lowercased, [reserved characters](https://support.google.com/admanager/answer/10020177) stripped, truncated to the 40-character value limit). Use the `options` argument to change the keyword key (`keywordKey`), change the cap (`maxKeywords`), or opt out of keyword key-values by passing an empty `keywordKey`:
@@ -474,12 +507,38 @@ Keyword values are ordered by `prominence` (most prominent first), capped to the
 ```javascript
 // Rename the keyword key and emit only the top 5 keywords:
 sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" }, { keywordKey: "kw", maxKeywords: 5 });
-// => { "foo": ["53", ...], "kw": ["advertising", "programmatic", "ad tech", "marketing", "audience targeting"] }
+// => { "foo": ["53", ...], "kw": ["advertising", "programmatic", "ad tech", "marketing", "audience targeting"], ... }
 
 // Opt out of keyword key-values entirely:
 sdk.ctxTargetingKeyValues(undefined, { keywordKey: "" });
-// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"] }
+// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"], "ctx_bs_max": ["no_flags"] }
 ```
+
+Brand safety is emitted by default under `ctx_bs_max`, carrying the page's most severe flagged tier. It is the same text-only assessment described [above](#brand-safety), so a line item keyed on it is gating on the page's words and not on its embedded media. Use `brandSafetyKey` to rename it, or pass an empty `brandSafetyKey` to opt out, exactly as `keywordKey` works:
+
+```javascript
+// Rename the brand-safety key:
+sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "bs" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "bs": ["floor"] }
+
+// Opt out of the brand-safety key-value entirely:
+sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...] }
+```
+
+A value is emitted for every state rather than the key being dropped when nothing is flagged:
+
+| State                           | Value                                                   |
+| ------------------------------- | ------------------------------------------------------- |
+| A tier was flagged              | The most severe one: `low`, `medium`, `high` or `floor` |
+| Assessed, nothing flagged       | `no_flags`                                              |
+| Nothing is known about the page | `not_assessed`                                          |
+
+The two sentinels exist so a line item can tell them apart. If the key were simply absent when nothing was flagged, "we never looked" and "we looked and flagged nothing" would look identical in GAM, and you could not exclude unassessed inventory without also excluding clean inventory. Note that `no_flags` is deliberately not named `safe`: a pass with no finding is not a clearance.
+
+`not_assessed` is spelled the same as the `riskLevel` a category carries when the assessment did not cover it. That is deliberate: one word for one idea, "nothing is known here", at two scopes. The scopes cannot be confused, because `ctx_bs_max` only ever carries a page-level answer.
+
+One difference from `keywordKey` is worth knowing before you ship: keywords are dropped when the DCN produced none, whereas `ctx_bs_max` is always present unless you disable it. A DCN that does not run the brand-safety classifier therefore adds `ctx_bs_max=not_assessed` to every ad request. That is the intended behavior, since it is a state a line item may want to target, but if you do not use brand safety at all, pass an empty `brandSafetyKey` to keep it out of the request.
 
 A typical Google Ad Manager activation uses a `loadGAM()` helper:
 
@@ -533,6 +592,16 @@ You can also rename and allow-list the GAM keys by passing a `taxonomyKeys` map 
 // Emit only the "iab_ct_3_1" taxonomy, under the GAM key "ctx_iab":
 loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }));
 ```
+
+When GAM is the only consumer, `setContextualTargetingInGAM(sdk, taxonomyKeys?, options?, url?)` wraps the fetch-convert-push sequence into one call: it fetches the segments, converts them with `ctxTargetingKeyValues()` (forwarding `taxonomyKeys` and `options`), and queues a `googletag.pubads().setTargeting()` call per key — creating the `googletag` command queue if the page has none yet. Pass `url` to classify a route other than the current location, as in an SPA:
+
+```javascript
+import { setContextualTargetingInGAM } from "@optable/web-sdk/lib/dist/addons/gpt";
+
+await setContextualTargetingInGAM(sdk, { iab_ct_3_1: "ctx_iab" });
+```
+
+Nothing is queued when the page yields no key-values, and the call never rejects: a failed classification is logged under `optableDebug` and ads load untargeted rather than an unhandled rejection reaching a page that fired this without awaiting. For the full behaviour, including the extra request when the SDK is configured with `initContextual`, see the [GPT addon README](lib/addons/gpt.md).
 
 ## Using a script tag
 
@@ -1122,6 +1191,18 @@ For example:
 </script>
 ```
 
+## Identify and tokenize (hashed email)
+
+`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), always calls `identify`, and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It runs once per id per session (`OPTABLE_TOKENIZE_DONE` holds a fingerprint of the id, never the id itself, so signing in as someone else in the same tab resolves them), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
+
+```javascript
+import { identifyAndTokenize } from "@optable/web-sdk/lib/dist/core/identify-tokenize";
+
+window.optable.identifyAndTokenize = (id) => identifyAndTokenize(sdk, id, { isControlGroup: () => isControlGroup });
+```
+
+The returned `{ merged, staleUid2s }` (null when skipped) lets the caller chain UID2 refreshes on the merged cache.
+
 ## Passport and Visitor ID
 
 The Optable DCN issues a _passport_ (a signed JWT) that is cached in browser `localStorage`. The passport encodes a unique _visitor ID_ that the DCN uses to anonymously identify the browser. Both values can be read synchronously from the SDK:
@@ -1152,16 +1233,13 @@ That cookie is `HttpOnly` and scoped to `optable.co`, which has two consequences
 
 ### The derived identity is what the SDK holds
 
-The DCN derives this identity from the device signals sent in the `sig` parameter and returns it on the `X-Optable-OID` response header. With `ois: true` the SDK stores it and replays it on the same header, so the DCN recognizes the browser rather than deriving a fresh identity on every visit.
+The DCN derives this identity server-side and returns it on the `X-Optable-OID` response header. With `ois: true` the SDK stores it and replays it on the same header, so the DCN recognizes the browser rather than deriving a fresh identity on every visit.
 
 ```javascript
 const sdk = new OptableSDK({
   host: "dcn.customer.com",
   site: "my-site",
   ois: true,
-  // The identity is derived from these signals, so without them there is
-  // nothing to derive it from.
-  forwardSignals: true,
 });
 ```
 
@@ -1176,7 +1254,6 @@ Or with a script tag:
       host: "dcn.customer.com",
       site: "my-site",
       ois: true,
-      forwardSignals: true,
     });
   });
 </script>
@@ -1199,15 +1276,15 @@ The SDK dispatches an `optable-ois:change` event on `window` whenever the stored
 window.addEventListener("optable-ois:change", (e) => console.log(e.detail));
 ```
 
-`oisId()` returns `null` until a response has returned an ID. Unlike `passport()`, that does **not** happen during initialization: `/config` derives no identity, so the first ID arrives on the first `identify()` or `profile()` call.
+`oisId()` returns `null` until a response has returned an ID. Unlike `passport()`, that does **not** happen during initialization: `/config` derives no identity, so the first ID arrives on the first `identify()`, `profile()` or `targeting()` call.
 
 ### How it travels
 
 The ID is cached in `localStorage` under `OPTABLE_OIS_<base64(host[/node])>` as an opaque string, and sent back on `X-Optable-OID`.
 
-Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token` and `/profile`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
+Both directions are limited to the endpoints where the DCN derives an identity: `/identify`, `/uid2/token`, `/profile` and `/v2/targeting`. It is deliberately absent from `/config` — a custom header makes a request non-simple, and adding a CORS preflight to the SDK's initialization path would cost a round trip on every page load for an endpoint that returns no ID anyway — and from `/witness`, where the DCN records an event without deriving one.
 
-There is no write policy to reason about. The DCN returns the identity it derived for the _current_ request rather than the one the client replayed, so as those signals drift (a new IP subnet, a browser upgrade, a resized window) the stored value simply rolls forward. The SDK stores whatever the last response returned.
+There is no write policy to reason about. The DCN returns the identity it derived for the _current_ request rather than the one the client replayed, so as the inputs it derives from drift (a new IP subnet, a browser upgrade) the stored value simply rolls forward. The SDK stores whatever the last response returned.
 
 Nothing is stored and no header is sent without device access consent, so the option is a no-op when consent has not been granted.
 
@@ -1323,7 +1400,7 @@ The geo-routing addon maps a visitor's region code to the Optable edge host that
 ```typescript
 import { getGeoRouting } from "@optable/web-sdk/lib/dist/addons/geo-routing";
 
-const host = getGeoRouting(visitorRegion); // e.g. "na.edge.optable.co" for "US"
+const host = getGeoRouting(visitorRegion); // e.g. "us.edge.optable.co" for "US"
 
 if (host) {
   const sdk = new OptableSDK({
@@ -1364,6 +1441,16 @@ if (!SkipTargetingForBots()) {
 }
 ```
 
+A wrapper that resolves targeting itself can share the same marker rather than tracking its own: `TargetingResolvedThisSession()` is true once targeting has resolved this session (or a bot was detected), and `MarkTargetingResolved()` sets it. The `optableForceTargeting` flag overrides the check.
+
+```typescript
+import { TargetingOncePerSession } from "@optable/web-sdk/lib/dist/edge/targeting";
+
+const response = await TargetingOncePerSession(sdk);
+```
+
+`TargetingOncePerSession(sdk, input?)` wraps the whole pattern: it skips the call when the marker is set, marks it on success, and resolves `null` rather than rejecting when the edge call fails, so identity resolution cannot break the page. A failed call leaves the marker unset, so a later page retries. A bot reads as already resolved, since `SkipTargetingForBots` sets the same marker.
+
 Matching is substring-based and case-insensitive, covering generic crawlers, headless browsers, HTTP clients and Google's non-search agents. It is deliberately broad and user-agent only — a cost-saving filter, not a fraud signal. For the full match list, see the [bot detection addon README](lib/addons/botDetection.md).
 
 ## Command queue
@@ -1394,6 +1481,77 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 
 For the merge rules and UID2 ref handling, see the [EID cache README](lib/core/eid-cache.md).
 
+## Prebid pubProvidedId delivery
+
+The pubProvidedId module delivers cached EIDs to prebid through the `pubProvidedId` user-id submodule, for integrations that don't use the RTD module. EIDs from other providers are preserved, ours are replaced by source, and the work queues on the prebid global so it also runs before prebid has loaded. An `isControlGroup` callback gates delivery for split tests, the same way `buildRTD` takes one.
+
+```typescript
+import { mergeIntoPubProvidedId } from "@optable/web-sdk/lib/dist/core/prebid/pubProvidedId";
+
+mergeIntoPubProvidedId({ instances: ["pbjs"], isControlGroup: () => isControlGroup });
+```
+
+On Prebid versions without the fix for [prebid/Prebid.js#15562](https://github.com/prebid/Prebid.js/pull/15562), the module's filtered ID refresh can drop other vendors (LiveIntent, ID5, …) from the page's first auction. Passing `refreshAll: true` works around it with a full ID refresh on the first merge: the upside is that no vendor is dropped from the first auction; the downside is that every ID vendor re-requests once on that pageview (relevant under per-request quotas) and the auction can start later. Leave it off on Prebid versions that include the fix.
+
+For behavior details and options, see the [pubProvidedId README](lib/core/prebid/pubProvidedId.md).
+
+## Static mappings
+
+The static mappings helper applies a wrapper's customer configuration defaults onto `window.optable`, so values a publisher sets on the page before the wrapper script loads always win. Plain-object config sections merge recursively; any other default only fills in a value the publisher left `null` or `undefined`.
+
+```typescript
+import { setStaticMappings } from "@optable/web-sdk/lib/dist/core/staticMappings";
+
+setStaticMappings({
+  defaultSite: "customer-sdk",
+  analytics: { tenant: "customer", sample: 0.1 },
+});
+```
+
+For the merge rules and a full wrapper example, see the [static mappings README](lib/core/staticMappings.md).
+
+## ID5 resolution
+
+`resolveId5(partnerId, options?)` resolves an [ID5](https://id5.io/) user id, loading the ID5 API on demand: QA flags first, then a local 7-day cache (its own key per partner, `OPTABLE_ID5:<partnerId>`), then a live resolution with ID5's own A/B holdout disabled. Live resolution is bounded (2s default, `timeoutMs` option) and resolves `null` on timeout, load failure, partner-id mismatch or the ID5 `"0"` placeholder. Pass the bot detection addon's `isBot` to skip live resolution for crawlers:
+
+```javascript
+import { resolveId5 } from "@optable/web-sdk/lib/dist/core/id5";
+import { isBot } from "@optable/web-sdk/lib/dist/addons/botDetection";
+
+const id5Id = await resolveId5(id5PartnerId, {
+  isBot,
+  deviceAccess: () => sdk.dcn.consent.deviceAccess,
+});
+```
+
+The `optableResolveID5ID` and `optableResolveId5` [QA flags](#qa-and-debug-flags) short-circuit resolution with a test value. Concurrent calls for the same partner share one script load and resolution, and an ID5 API already on the page is reused rather than loaded again.
+
+`deviceAccess` gates the cache on both sides: when it returns `false` the id is neither read from nor written to `localStorage`, and every call resolves live. The gate is re-checked at write time, so consent withdrawn mid-resolution stops the write. On `resolveId5` it defaults to allowed, the same posture as the SDK's own default consent, so pass `sdk.dcn.consent.deviceAccess` as above — omitting it on a page configured with `consent.cmpapi` would leave the ID5 cache ungated while every other SDK cache honours the CMP. ID5's own CMP integration separately gates its network call.
+
+Reading the cache directly takes the same gate, as a required argument, so a cached user id cannot be read out of storage without stating a consent position:
+
+```javascript
+import { getCachedId5UserId } from "@optable/web-sdk/lib/dist/core/id5";
+
+const cached = getCachedId5UserId(id5PartnerId, () => sdk.dcn.consent.deviceAccess);
+```
+
+## Source check
+
+The source check addon verifies that a page's site slug has a matching source configured in the DCN before the SDK is constructed, falling back to a default source when it does not — so multi-site publishers keep default enrichment on domains that were never provisioned.
+
+```typescript
+import { checkSourceExists } from "@optable/web-sdk/lib/dist/addons/sourceCheck";
+
+window.optable.site = await checkSourceExists({
+  site: window.optable.site,
+  defaultSite: window.optable.defaultSite,
+  node: "customer-node",
+});
+```
+
+The result is cached in `sessionStorage`, so the probe runs at most once per session for each site, node and host. For the probe and fallback details, see the [source check addon README](lib/addons/sourceCheck.md).
+
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
@@ -1414,4 +1572,4 @@ Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. Yo
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
 
-The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) covers both OIS identities: it explains why the `OPTABLE_OID` cookie identity is invisible to JavaScript, and shows the derived OIS ID the DCN returned, the `localStorage` key holding it, the decoded `sig` signals it was derived from, and the `X-Optable-OID` header sent and received on each call. It needs a DCN node with OIS ID derivation enabled, and only produces an ID for requests from a residential IP.
+The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) covers both OIS identities: it explains why the `OPTABLE_OID` cookie identity is invisible to JavaScript, and shows the derived OIS ID the DCN returned, the `localStorage` key holding it, and the `X-Optable-OID` header sent and received on each call. It needs a DCN node with OIS ID derivation enabled, and only produces an ID for requests from a residential IP.

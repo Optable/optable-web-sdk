@@ -23,7 +23,9 @@ jobs:
         uses: ./.github/actions/setup-pnpm
 
       - name: Patch build.json version
-        run: ./scripts/patch-version.sh "${{ inputs.version }}"
+        env:
+          VERSION: ${{ inputs.version }}
+        run: ./scripts/patch-version.sh "$VERSION"
 
       - name: Build web production
         run: pnpm build-web --mode=production
@@ -45,7 +47,9 @@ jobs:
         uses: ./.github/actions/setup-pnpm
 
       - name: Patch build.json version
-        run: ./scripts/patch-version.sh "${{ inputs.version }}"
+        env:
+          VERSION: ${{ inputs.version }}
+        run: ./scripts/patch-version.sh "$VERSION"
 
       - name: Transpile lib
         run: pnpm build-lib

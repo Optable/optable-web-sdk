@@ -22,6 +22,10 @@ import {
 import { Witness } from "./edge/witness";
 import { Profile } from "./edge/profile";
 import {
+  ContextualBrandSafety,
+  ContextualBrandSafetyOf,
+  ContextualMaxRiskLevel,
+  ContextualRiskTier,
   ContextualSegments,
   ContextualSegmentsResponse,
   ContextualTargetingKeyValues,
@@ -218,6 +222,22 @@ class OptableSDK {
     options?: ContextualTargetingKeyValuesOptions
   ): ContextualTargetingKeyValues {
     return ContextualTargetingKeyValues(this.contextualResponse, taxonomyKeys, options);
+  }
+
+  // Brand-safety classifications from the cached ctxSegments() response. Check
+  // `assessed` before reading `categories`: an empty list means the page was
+  // assessed and nothing was flagged only when `assessed` is true, and means
+  // nothing is known about the page when it is false.
+  ctxBrandSafety(): ContextualBrandSafety {
+    return ContextualBrandSafetyOf(this.contextualResponse);
+  }
+
+  // Most severe brand-safety tier flagged on the cached ctxSegments() response,
+  // or null when nothing is flagged. Null does not mean safe: it covers a page
+  // assessed without a finding and a page nothing is known about alike, so a
+  // gate that must tell those apart reads ctxBrandSafety().assessed too.
+  ctxMaxRiskLevel(): ContextualRiskTier | null {
+    return ContextualMaxRiskLevel(this.contextualResponse);
   }
 
   async tokenize(id: string): Promise<TokenizeResponse> {

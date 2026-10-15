@@ -9,7 +9,7 @@ It is a pure lookup. It performs no network calls, does no geolocation of its ow
 ```js
 import { getGeoRouting } from "@optable/web-sdk/lib/dist/addons/geo-routing";
 
-const host = getGeoRouting(visitorRegion); // "na.edge.optable.co" for "US"
+const host = getGeoRouting(visitorRegion); // "us.edge.optable.co" for "US"
 if (host) {
   const sdk = new OptableSDK({ host, node: "my-node", site: "my-site" });
 }
@@ -18,7 +18,7 @@ if (host) {
 `getGeoRouting` returns `null` when the region is missing or unsupported. Either skip region-specific initialization, or fall back to a configured default:
 
 ```js
-const host = getGeoRouting(visitorRegion) ?? "na.edge.optable.co";
+const host = getGeoRouting(visitorRegion) ?? "us.edge.optable.co";
 ```
 
 ## Supported regions
@@ -28,10 +28,10 @@ const host = getGeoRouting(visitorRegion) ?? "na.edge.optable.co";
 | `AU`        | `au.edge.optable.co` |
 | `CA`        | `ca.edge.optable.co` |
 | `EU`        | `eu.edge.optable.co` |
-| `NA`        | `na.edge.optable.co` |
-| `US`        | `na.edge.optable.co` |
+| `NA`        | `us.edge.optable.co` |
+| `US`        | `us.edge.optable.co` |
 
-`US` and `NA` are aliases for the same North America edge.
+`US` and `NA` are aliases for the same US edge.
 
 ## Custom region maps
 

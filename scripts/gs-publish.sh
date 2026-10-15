@@ -17,12 +17,15 @@ send_file() {
   local local_path="$1"
   local remote_path="$2"
   echo "Sending $local_path to $remote_path"
-  gsutil -h "x-goog-meta-optable-sdk-version:$version" cp "$local_path" "$remote_path"
+  gcloud storage cp --custom-metadata="optable-sdk-version=$version" "$local_path" "$remote_path"
 }
 
 get_version() {
   local remote_path="$1"
-  gsutil ls -L "$remote_path" 2>/dev/null | grep optable-sdk-version | cut -d ':' -f2
+  # describe exits non-zero when the object does not exist, which is expected on
+  # the first publish of an expansion path.
+  gcloud storage objects describe "$remote_path" \
+    --format="value(custom_fields.optable-sdk-version)" 2>/dev/null || true
 }
 
 publish() {

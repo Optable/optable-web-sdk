@@ -47,6 +47,38 @@
       h5 {
         margin-top: 3rem;
       }
+      /* Contents box. The page documents three classification methods plus the
+         GAM key-values, so the sections are linked up front rather than scrolled for. */
+      .toc {
+        border: 1px solid #e1e1e1;
+        border-radius: 4px;
+        background: #fafafa;
+        padding: 1.5rem 2rem;
+      }
+      .toc h6 {
+        margin-bottom: 1rem;
+      }
+      .toc ul {
+        list-style: none;
+        padding-left: 0;
+        margin-bottom: 0;
+      }
+      .toc ul ul {
+        margin-top: 0.5rem;
+        padding-left: 2rem;
+      }
+      .toc li {
+        margin-bottom: 0.5rem;
+      }
+      .toc li:last-child {
+        margin-bottom: 0;
+      }
+      .toc-note {
+        display: block;
+        font-size: 1.3rem;
+        line-height: 1.5;
+        color: #777;
+      }
       .score-bar {
         display: inline-block;
         height: 0.8rem;
@@ -68,12 +100,50 @@
 
       <div class="row">
         <div class="twelve column">
-          <h4>Example: contextual segments API</h4>
+          <nav class="toc" aria-label="Contents">
+            <h6>Contents</h6>
+            <ul>
+              <li>
+                <a href="#contextual-segments-api">Example: contextual segments API</a>
+                <span class="toc-note">Calling <code>ctxSegments()</code> and the shape of the response it returns.</span>
+                <ul>
+                  <li>
+                    <a href="#classifications-categories"><code>categories</code>: taxonomy category ids scored for the page</a>
+                    <span class="toc-note">One entry per category matched, each carrying the taxonomy it came from.</span>
+                  </li>
+                  <li>
+                    <a href="#classifications-keywords"><code>keywords</code>: free-form terms extracted from the page</a>
+                    <span class="toc-note">Page terms ranked by prominence, an ordinal rank rather than a score.</span>
+                  </li>
+                  <li>
+                    <a href="#classifications-brand-safety"><code>brandSafety</code>: brand-safety assessment of the page</a>
+                    <span class="toc-note">Risk tier per flagged category, assessed from the page's text only.</span>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <a href="#result-section">Result</a>
+                <span class="toc-note">Call <code>ctxSegments()</code> on a URL and inspect what the DCN returns.</span>
+              </li>
+              <li>
+                <a href="#gam-targeting-key-values">GAM targeting key-values</a>
+                <span class="toc-note">Turn the cached response into ad-server key-values with <code>ctxTargetingKeyValues()</code>.</span>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="twelve column">
+          <h4 id="contextual-segments-api">Example: contextual segments API</h4>
           <p>
             Shows how to call <code>ctxSegments()</code> to classify a page URL and inspect the classifications the DCN
             returns for it: taxonomy categories (e.g. against the
-            <a href="https://iabtechlab.com/standards/content-taxonomy/">IAB Content Taxonomy</a>) and/or free-form
-            keywords, depending on which classifiers the DCN has enabled.
+            <a href="https://iabtechlab.com/standards/content-taxonomy/">IAB Content Taxonomy</a>), free-form keywords,
+            and/or a brand-safety assessment (against the
+            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>), depending on which classifiers the DCN has
+            enabled.
           </p>
           <pre><code>// Classify the URL of the current page (defaults to window.location.href):
 optable.instance.ctxSegments();
@@ -85,13 +155,14 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
   classifications: {
     categories: [{ id, name, score, taxonomy }],
     keywords: [{ keyword, prominence }],
+    brandSafety: { assessed, categories: [{ name, riskLevel }] },
   },
 }</code></pre>
           <p>
             The <code>classifications</code> object groups results by classification method, and the DCN includes only
-            the methods it has enabled. Two methods exist today:
+            the methods it has enabled. Three methods exist today:
           </p>
-          <h6><code>categories</code>: taxonomy classifications</h6>
+          <h6 id="classifications-categories"><code>categories</code>: taxonomy category ids scored for the page</h6>
           <table class="u-full-width">
             <thead>
               <tr><th>Field</th><th>Description</th></tr>
@@ -106,7 +177,7 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
               </tr>
             </tbody>
           </table>
-          <h6><code>keywords</code>: free-form terms extracted from the page</h6>
+          <h6 id="classifications-keywords"><code>keywords</code>: free-form terms extracted from the page</h6>
           <table class="u-full-width">
             <thead>
               <tr><th>Field</th><th>Description</th></tr>
@@ -122,6 +193,88 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
               </tr>
             </tbody>
           </table>
+          <h6 id="classifications-brand-safety"><code>brandSafety</code>: brand-safety assessment of the page</h6>
+          <p>
+            The categories and the risk tiers follow the
+            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>, which is where the category list and the
+            term <code>floor</code> come from.
+          </p>
+          <p>
+            <strong>Note:</strong> only the page's <strong>text</strong> is assessed. Embedded media, such as images,
+            video and audio, is not, so a page can come back with nothing flagged and still carry unsafe media. Treat
+            the result as a signal about what the page says, not about everything a visitor sees.
+          </p>
+          <table class="u-full-width">
+            <thead>
+              <tr><th>Field</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>assessed</code></td>
+                <td>
+                  Whether an assessment backs <code>categories</code>. It decides what an empty
+                  <code>categories</code> means, so read it first: see the table below.
+                </td>
+              </tr>
+              <tr>
+                <td><code>categories[].name</code></td>
+                <td>Human-readable brand-safety category name.</td>
+              </tr>
+              <tr>
+                <td><code>categories[].riskLevel</code></td>
+                <td>
+                  Tier the category was flagged at: <code>low</code>, <code>medium</code>, <code>high</code> or
+                  <code>floor</code>, in increasing severity, so <code>floor</code> is the framework's brand-safety
+                  floor rather than a baseline. <code>not_assessed</code> means the pass did not cover the category,
+                  and is not a severity.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            <strong>Read <code>assessed</code> before <code>categories</code>.</strong> An empty
+            <code>categories</code> list means two opposite things depending on it:
+          </p>
+          <table class="u-full-width">
+            <thead>
+              <tr><th><code>assessed</code></th><th><code>categories</code></th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>true</code></td><td>empty</td><td>An assessment ran and flagged nothing.</td></tr>
+              <tr>
+                <td><code>true</code></td>
+                <td>non-empty</td>
+                <td>
+                  An assessment ran: each entry is a category it flagged, at its <code>riskLevel</code>, or a
+                  <code>not_assessed</code> category the pass did not cover. Assessed categories with no finding are
+                  omitted.
+                </td>
+              </tr>
+              <tr>
+                <td><code>false</code></td>
+                <td>always empty</td>
+                <td>
+                  Nothing is known about this page. The DCN never classified it, the read failed, or this DCN does not
+                  run the brand-safety classifier at all.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            Two helpers read this off the cached response, so you do not have to walk it yourself.
+            <code>ctxBrandSafety()</code> returns the group above, and <code>ctxMaxRiskLevel()</code> returns the most
+            severe tier flagged, or <code>null</code> when nothing is flagged, which is convenient for a single gate:
+          </p>
+          <pre><code>if (optable.instance.ctxMaxRiskLevel() === "floor") {
+  // Do not monetize this page.
+}</code></pre>
+          <p>
+            <code>null</code> comes back in two different situations: an assessment ran and flagged nothing, and
+            nothing is known about the page at all. A gate that must tell those apart reads
+            <code>ctxBrandSafety().assessed</code> as well. Note also that a page assessed clean is not a clearance:
+            the taxonomy enumerates risks, so the classifier can report that a page matches one but never that it is
+            free of them.
+          </p>
           <p>
             Alternatively, configure the SDK with <code>initContextual</code> set to a callback. The SDK will
             automatically call <code>ctxSegments()</code> for the URL of the current page on initialization, and
@@ -144,7 +297,9 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
         <div class="twelve column">
           <p>
             <strong>Note:</strong> the URL requested must have been classified by the DCN. For the demo DCN used by
-            this page, the URL <code>https://optable.co/</code> should have been classified, so you can try that.
+            this page, the URL <code>https://optable.co/</code> should have been classified, so you can try that. A
+            URL the DCN holds no classification for comes back with empty <code>categories</code> and
+            <code>keywords</code> arrays, and <code>brandSafety.assessed</code> set to <code>false</code>.
           </p>
         </div>
       </div>
@@ -168,7 +323,7 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
 
       <div class="row">
         <div class="twelve column">
-          <h5>Result</h5>
+          <h5 id="result-section">Result</h5>
           <div id="rendered"></div>
           <h6>Raw response</h6>
           <div class="twelve column code-result" id="result">Click the button to call ctxSegments().</div>
@@ -177,7 +332,7 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
 
       <div class="row">
         <div class="twelve column">
-          <h5>GAM targeting key-values</h5>
+          <h5 id="gam-targeting-key-values">GAM targeting key-values</h5>
           <p>
             Derived from the cached <code>ctxSegments()</code> response via
             <code>optable.instance.ctxTargetingKeyValues()</code>, this object can be passed straight to Google Ad
@@ -201,12 +356,14 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
           <pre><code>loadGAM(optable.instance.ctxTargetingKeyValues());</code></pre>
           <p>
             By default the returned map has one key per taxonomy the DCN classified into (keyed by the raw taxonomy
-            value) plus the page's keywords under <code>ctx_kw</code>. For example,
+            value), the page's keywords under <code>ctx_kw</code>, and its brand-safety tier under
+            <code>ctx_bs_max</code>. For example,
             <code>ctxTargetingKeyValues()</code> might return:
           </p>
           <pre><code>{
   "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
-  "ctx_kw": ["advertising", "programmatic", "ad tech"]
+  "ctx_kw": ["advertising", "programmatic", "ad tech"],
+  "ctx_bs_max": ["no_flags"]
 }</code></pre>
           <p>
             If you want <code>loadGAM()</code> to run as soon as the contextual segments arrive — without making a
@@ -255,6 +412,55 @@ loadGAM(optable.instance.ctxTargetingKeyValues({ iab_ct_3_1: "ctx_iab" }, { keyw
 
 // Opt out of keyword key-values:
 loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { keywordKey: "" }));</code></pre>
+          <p>
+            Brand safety is emitted by default under <code>ctx_bs_max</code>, carrying the page's most severe flagged
+            tier. It is the same text-only assessment described
+            <a href="#classifications-brand-safety">above</a>, so a line item keyed on it is gating on the page's
+            words and not on its embedded media. Use <code>brandSafetyKey</code> to rename it, or pass an empty
+            <code>brandSafetyKey</code> to opt out, exactly as <code>keywordKey</code> works:
+          </p>
+          <pre><code>// Rename the brand-safety key:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { brandSafetyKey: "bs" }));
+
+// Opt out of the brand-safety key-value:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" }));</code></pre>
+          <p>
+            A value is emitted for every state rather than the key being dropped when nothing is
+            flagged:
+          </p>
+          <table class="u-full-width">
+            <thead>
+              <tr><th>State</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>A tier was flagged</td>
+                <td>
+                  The most severe one: <code>low</code>, <code>medium</code>, <code>high</code> or <code>floor</code>
+                </td>
+              </tr>
+              <tr><td>Assessed, nothing flagged</td><td><code>no_flags</code></td></tr>
+              <tr><td>Nothing is known about the page</td><td><code>not_assessed</code></td></tr>
+            </tbody>
+          </table>
+          <p>
+            The two sentinels exist so a line item can tell them apart. If the key were simply absent when nothing was
+            flagged, "we never looked" and "we looked and flagged nothing" would look identical in GAM, and you could
+            not exclude unassessed inventory without also excluding clean inventory. <code>no_flags</code> is
+            deliberately not named <code>safe</code>: a pass with no finding is not a clearance.
+          </p>
+          <p>
+            <code>not_assessed</code> is spelled the same as the <code>riskLevel</code> a category carries when the
+            assessment did not cover it. That is deliberate: one word for one idea, "nothing is known here", at two
+            scopes. The scopes cannot be confused, because <code>ctx_bs_max</code> only ever carries a page-level
+            answer.
+          </p>
+          <p>
+            One difference from <code>keywordKey</code> is worth knowing before you ship: keywords are dropped when
+            the DCN produced none, whereas <code>ctx_bs_max</code> is always present unless you disable it. A DCN that
+            does not run the brand-safety classifier therefore adds <code>ctx_bs_max=not_assessed</code> to every ad
+            request. If you do not use brand safety at all, pass an empty <code>brandSafetyKey</code> to keep it out.
+          </p>
           <div class="twelve column code-result" id="kv-result">—</div>
         </div>
       </div>
@@ -291,8 +497,12 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { keywordKey: "" }));<
           classifications && Array.isArray(classifications.categories) ? classifications.categories : [];
         var keywords =
           classifications && Array.isArray(classifications.keywords) ? classifications.keywords : [];
+        // A DCN that does not serve brand safety omits the key entirely, which is
+        // the same answer as assessed false: nothing is known about this page.
+        var brandSafety = (classifications && classifications.brandSafety) || { assessed: false, categories: [] };
+        var brandSafetyCategories = Array.isArray(brandSafety.categories) ? brandSafety.categories : [];
 
-        if (categories.length === 0 && keywords.length === 0) {
+        if (categories.length === 0 && keywords.length === 0 && !brandSafety.assessed) {
           return "<p><em>No contextual classifications were returned for this URL.</em></p>";
         }
 
@@ -364,6 +574,42 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { keywordKey: "" }));<
             '<table class="u-full-width"><thead><tr><th>Keyword</th><th>Prominence (rank)</th></tr></thead><tbody>' +
             keywordRows +
             "</tbody></table>";
+        }
+
+        // Rendered only when an assessment backs it. Without `assessed` an empty
+        // list would read as "clean", when it can equally mean the DCN never
+        // looked, so the two answers are spelled out separately.
+        if (brandSafety.assessed) {
+          html += "<h6>Brand safety</h6>";
+
+          if (brandSafetyCategories.length === 0) {
+            html += "<p><em>Assessed, and no category was flagged.</em></p>";
+          } else {
+            var brandSafetyRows = brandSafetyCategories
+              .map(function (category) {
+                return (
+                  "<tr><td>" +
+                  escapeHtml(category.name) +
+                  "</td><td><code>" +
+                  escapeHtml(category.riskLevel) +
+                  "</code></td></tr>"
+                );
+              })
+              .join("");
+
+            html +=
+              '<table class="u-full-width"><thead><tr><th>Category</th><th>Risk level</th></tr></thead><tbody>' +
+              brandSafetyRows +
+              "</tbody></table>";
+          }
+
+          // ctxSegments() has cached the response by now, so the helper reads it
+          // synchronously off the instance.
+          var maxRiskLevel = optable.instance.ctxMaxRiskLevel();
+          html +=
+            "<p>Most severe tier flagged (<code>ctxMaxRiskLevel()</code>): <code>" +
+            escapeHtml(maxRiskLevel === null ? "null" : maxRiskLevel) +
+            "</code></p>";
         }
 
         return html;

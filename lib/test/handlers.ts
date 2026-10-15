@@ -48,7 +48,7 @@ const handlers = [
 
   http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async ({}) => {
     const data: ContextualSegmentsResponse = {
-      classifications: { categories: [] },
+      classifications: { categories: [], keywords: [], brandSafety: { assessed: false, categories: [] } },
     };
     return HttpResponse.json({ ...data, ...passport }, ok200);
   }),
