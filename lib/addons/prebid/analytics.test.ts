@@ -1051,7 +1051,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(payload.bidderRequests[0].status).toBe("RECEIVED");
     });
 
-    const bidCountAuction = (bidsPerRequest: string[][], bidsReceived: any[]) => ({
+    const bidCountAuction = (bidsPerRequest: (string | undefined)[][], bidsReceived: any[]) => ({
       auctionId: "auction-bid-count",
       bidderRequests: bidsPerRequest.map((adUnits, i) => ({
         bidderCode: `bidder${i + 1}`,
@@ -1100,6 +1100,11 @@ describe("OptablePrebidAnalytics", () => {
     it("sets the top-level adUnitCode to the first bid's ad unit", async () => {
       const payload = await analytics.toWitness(bidCountAuction([["ad-unit-1", "ad-unit-2"], ["ad-unit-3"]], []), []);
       expect(payload.adUnitCode).toBe("ad-unit-1");
+    });
+
+    it("skips bids without an ad unit when setting the top-level adUnitCode", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([[undefined], [undefined, "ad-unit-2"]], []), []);
+      expect(payload.adUnitCode).toBe("ad-unit-2");
     });
 
     it("falls back to an 'unknown' adUnitCode when there are no bids", async () => {
