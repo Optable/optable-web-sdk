@@ -393,8 +393,8 @@ class OptablePrebidAnalytics {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
       const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
-      // Deduplicate EIDs by source
-      const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
+      // Deduplicate EIDs by source and inserter, so another inserter's EID can't hide Optable's
+      const eids = Array.from(new Map(allEids.map((eid: any) => [`${eid.source}|${eid.inserter}`, eid])).values());
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
