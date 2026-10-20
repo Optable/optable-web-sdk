@@ -1,12 +1,13 @@
 import type { ContextualTargetingKeyValuesOptions } from "../edge/contextual_segments";
 import type { WitnessProperties } from "../edge/witness";
+import type { SecureSignal } from "../core/secure-signals";
 import { debugLog } from "../core/log";
 import OptableSDK from "../sdk";
 
 declare module "../sdk" {
   export interface OptableSDK {
     installGPTEventListeners: () => void;
-    installGPTSecureSignals: () => void;
+    installGPTSecureSignals: (...signals: SecureSignal[]) => void;
   }
 }
 
@@ -86,7 +87,7 @@ OptableSDK.prototype.installGPTEventListeners = function (eventSpec?: GptEventSp
 /*
  * Pass user-defined signals to GAM Secure Signals
  */
-OptableSDK.prototype.installGPTSecureSignals = function (...signals: Array<{ provider: string; id: string }>) {
+OptableSDK.prototype.installGPTSecureSignals = function (...signals: SecureSignal[]) {
   window.googletag = window.googletag || { cmd: [] };
   const gpt = window.googletag;
 

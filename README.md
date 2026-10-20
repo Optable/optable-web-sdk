@@ -925,10 +925,10 @@ With the npm package:
 ```javascript
 import { secureSignalsFromEids } from "@optable/web-sdk/lib/dist/core/secure-signals";
 
-const eids = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") || "null")?.ortb2?.user?.eids ?? [];
+const eids = sdk.targetingFromCache()?.ortb2?.user?.eids ?? [];
 const signals = secureSignalsFromEids(eids, { sources: ["uidapi.com"] });
 if (signals.length) {
-  optable.instance.installGPTSecureSignals(...signals);
+  sdk.installGPTSecureSignals(...signals);
 }
 ```
 
