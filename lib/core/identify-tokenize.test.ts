@@ -153,6 +153,23 @@ describe("identifyAndTokenize - failure paths and options", () => {
     expect(eids[0].uids).toHaveLength(1);
   });
 
+  it("keeps a held third-party EID when tokenize returns a nonOverridingMatchers EID on its source", async () => {
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { eids: [{ source: "liveramp.com", matcher: "3p.example", uids: [{ id: "third-party" }] }] } },
+      })
+    );
+    const { sdk, tokenize } = makeSdk();
+    tokenize.mockResolvedValue({
+      user: { eids: [{ source: "liveramp.com", matcher: "acme.com", uids: [{ id: "first-party" }] }] },
+    } as any);
+
+    await identifyAndTokenize(sdk, "abc123", { nonOverridingMatchers: ["acme.com"] });
+
+    expect(cachedEids().map((e: any) => e.uids[0].id)).toEqual(["third-party"]);
+  });
+
   it("returns the stale UID2s the merge found, for the refresh loop to chain on", async () => {
     localStorage.setItem(
       "OPTABLE_RESOLVED",

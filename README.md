@@ -1227,6 +1227,8 @@ import { identifyAndTokenize } from "@optable/web-sdk/lib/dist/core/identify-tok
 window.optable.identifyAndTokenize = (id) => identifyAndTokenize(sdk, id, { isControlGroup: () => isControlGroup });
 ```
 
+`options` also carries the cache write: `cacheKey` (default `OPTABLE_RESOLVED`), and `maxUidsPerEid` and `nonOverridingMatchers`, both forwarded to [`mergeCache`](lib/core/eid-cache.md). Pass `nonOverridingMatchers` when tokenize runs alongside a targeting call that skipped the first-party matcher, so a first-party EID does not displace a third-party one already held on the same source.
+
 The returned `{ merged, staleUid2s }` (null when skipped) lets the caller chain UID2 refreshes on the merged cache.
 
 ## Passport and Visitor ID

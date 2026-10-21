@@ -19,6 +19,7 @@ type IdentifyAndTokenizeOptions = {
   isControlGroup?: () => boolean;
   cacheKey?: string;
   maxUidsPerEid?: number;
+  nonOverridingMatchers?: string[];
 };
 
 type IdentifyAndTokenizeResult = {
@@ -125,7 +126,10 @@ export async function identifyAndTokenize(
     }
 
     // mergeCache takes cache format, and replaceCache is idempotent.
-    const result = mergeCache(replaceCache(asCache), cached, { maxUidsPerEid: options.maxUidsPerEid });
+    const result = mergeCache(replaceCache(asCache), cached, {
+      maxUidsPerEid: options.maxUidsPerEid,
+      nonOverridingMatchers: options.nonOverridingMatchers,
+    });
     localStorage.setItem(cacheKey, JSON.stringify(result.merged));
     sendTargetingUpdateEvent(sdk.dcn, result.merged as TargetingResponse);
 
