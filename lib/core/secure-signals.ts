@@ -5,12 +5,12 @@ import type { EID, UID } from "iab-openrtb/v26";
 // matcher. An empty or missing filter list means no constraint on that field.
 //
 // One signal per source: GPT keys secure signals by provider, so registering
-// a provider twice drops all but one id. The first EID and first non-empty
-// uid win.
+// a provider twice drops all but one id. The first EID that passes the filter
+// and carries a non-empty uid wins its source.
 
 // Cached EIDs are parsed from storage, so ORTB's required fields may be
 // absent at runtime. Derived from EID so new or renamed ORTB fields flow through.
-type SecureSignalEid = Partial<Omit<EID, "uids">> & Pick<EID, "source"> & { uids?: Array<Partial<UID>> };
+type SecureSignalEid = Partial<Omit<EID, "uids">> & Pick<EID, "source"> & { uids?: Array<Pick<Partial<UID>, "id">> };
 
 type SecureSignalsFilter = {
   sources?: string[];

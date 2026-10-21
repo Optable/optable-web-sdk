@@ -22,12 +22,34 @@ describe("secureSignalsFromEids", () => {
     expect(secureSignalsFromEids(dup)).toEqual([{ provider: "pair.optable.co", id: "pair-1" }]);
   });
 
+  it("falls through to a later EID of the same source when the first is empty or filtered out", () => {
+    expect(
+      secureSignalsFromEids([
+        { source: "s.com", uids: [{ id: "" }] },
+        { source: "s.com", uids: [{ id: "second" }] },
+      ])
+    ).toEqual([{ provider: "s.com", id: "second" }]);
+    expect(
+      secureSignalsFromEids(
+        [
+          { source: "s.com", inserter: "other", uids: [{ id: "first" }] },
+          { source: "s.com", inserter: "optable", uids: [{ id: "second" }] },
+        ],
+        { inserters: ["optable"] }
+      )
+    ).toEqual([{ provider: "s.com", id: "second" }]);
+  });
+
   it("filters by source, inserter and matcher", () => {
     expect(secureSignalsFromEids(EIDS, { sources: ["id5-sync.com"] })).toEqual([
       { provider: "id5-sync.com", id: "id5-a" },
     ]);
     expect(secureSignalsFromEids(EIDS, { inserters: ["optable"] }).map((s) => s.provider)).toEqual(["uidapi.com"]);
     expect(secureSignalsFromEids(EIDS, { matchers: ["m2"] })).toEqual([{ provider: "id5-sync.com", id: "id5-a" }]);
+  });
+
+  it("requires every provided filter to match", () => {
+    expect(secureSignalsFromEids(EIDS, { sources: ["uidapi.com"], matchers: ["m2"] })).toEqual([]);
   });
 
   it("treats an empty filter list as no constraint", () => {

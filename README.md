@@ -918,7 +918,9 @@ The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-def
 
 Please refer to the list of approved Secure Signal [providers](https://support.google.com/admanager/answer/14750072). Please refer to the provider's integration documentation for the exact provider name and value to pass as a signal.
 
-To build the signals from cached EIDs instead of by hand, `secureSignalsFromEids(eids, filter?)` builds one `{ provider, id }` pair per EID source — GPT keys secure signals by provider, so the first non-empty uid per source wins — optionally filtered by `sources`, `inserters` or `matchers` (an empty or missing list means no constraint on that field).
+To build the signals from cached EIDs instead of by hand, `secureSignalsFromEids(eids, filter?)` builds one `{ provider, id }` pair per EID source — GPT keys secure signals by provider, so the first EID that passes the filter and carries a non-empty uid wins its source — optionally filtered by `sources`, `inserters` or `matchers` (an empty or missing list means no constraint on that field).
+
+The signals come from the last cached targeting response, so a first visit installs none until `targeting()` has resolved once.
 
 With the npm package:
 
@@ -926,10 +928,7 @@ With the npm package:
 import { secureSignalsFromEids } from "@optable/web-sdk/lib/dist/core/secure-signals";
 
 const eids = sdk.targetingFromCache()?.ortb2?.user?.eids ?? [];
-const signals = secureSignalsFromEids(eids, { sources: ["uidapi.com"] });
-if (signals.length) {
-  sdk.installGPTSecureSignals(...signals);
-}
+sdk.installGPTSecureSignals(...secureSignalsFromEids(eids, { sources: ["uidapi.com"] }));
 ```
 
 With the SDK loaded from a script tag, the helper is available under `optable.utils`:
@@ -940,10 +939,7 @@ With the SDK loaded from a script tag, the helper is available under `optable.ut
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
     const eids = optable.instance.targetingFromCache()?.ortb2?.user?.eids ?? [];
-    const signals = optable.utils.secureSignalsFromEids(eids, { sources: ["uidapi.com"] });
-    if (signals.length) {
-      optable.instance.installGPTSecureSignals(...signals);
-    }
+    optable.instance.installGPTSecureSignals(...optable.utils.secureSignalsFromEids(eids, { sources: ["uidapi.com"] }));
   });
 </script>
 ```
