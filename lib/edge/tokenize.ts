@@ -4,6 +4,8 @@ import { fetch } from "../core/network";
 
 type TokenizeResponse = {
   user: User;
+  // UID2 refresh data, keyed by the ext.optable.ref pointers on user.eids
+  refs?: Record<string, unknown>;
 };
 
 type TokenizeRequest = {
