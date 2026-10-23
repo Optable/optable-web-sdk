@@ -170,6 +170,26 @@ describe("identifyAndTokenize - failure paths and options", () => {
     expect(cachedEids().map((e: any) => e.uids[0].id)).toEqual(["third-party"]);
   });
 
+  it("still caches a nonOverridingMatchers EID on a source nothing holds", async () => {
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { eids: [{ source: "id5-sync.com", matcher: "3p.example", uids: [{ id: "third-party" }] }] } },
+      })
+    );
+    const { sdk, tokenize } = makeSdk();
+    tokenize.mockResolvedValue({
+      user: { eids: [{ source: "liveramp.com", matcher: "acme.com", uids: [{ id: "first-party" }] }] },
+    } as any);
+
+    await identifyAndTokenize(sdk, "abc123", { nonOverridingMatchers: ["acme.com"] });
+
+    expect(cachedEids().map((e: any) => [e.source, e.uids[0].id])).toEqual([
+      ["id5-sync.com", "third-party"],
+      ["liveramp.com", "first-party"],
+    ]);
+  });
+
   it("returns the stale UID2s the merge found, for the refresh loop to chain on", async () => {
     localStorage.setItem(
       "OPTABLE_RESOLVED",
