@@ -111,10 +111,13 @@ export async function identifyAndTokenize(
 
   try {
     debugLog("log", "tokenize");
-    // tokenize resolves { user }, but a wrapper shim may return an
-    // ortb2-shaped body; accept either rather than nesting one twice.
-    const response = (await sdk.tokenize(finalId)) as { ortb2?: unknown };
-    const asCache = (response?.ortb2 ? response : { ortb2: response }) as ResolvedCache;
+    // tokenize resolves { user, refs }, but a wrapper shim may return an
+    // ortb2-shaped body; accept either rather than nesting one twice. refs
+    // stays at the top level, where replaceCache reads the UID2 refresh data.
+    const response = (await sdk.tokenize(finalId)) as { ortb2?: unknown; user?: unknown; refs?: unknown };
+    const asCache = (
+      response?.ortb2 ? response : { ortb2: { user: response?.user }, refs: response?.refs }
+    ) as ResolvedCache;
 
     const cacheKey = options.cacheKey ?? DEFAULT_CACHE_KEY;
     let cached: ResolvedCache | null = null;

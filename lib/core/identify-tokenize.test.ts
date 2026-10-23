@@ -178,6 +178,29 @@ describe("identifyAndTokenize - failure paths and options", () => {
 
     expect(result?.staleUid2s.map((s) => s.source)).toEqual(["uidapi.com"]);
   });
+
+  it("keeps the response's UID2 refresh data in the cache's refs sidecar", async () => {
+    const ref = {
+      advertising_token: "adv",
+      refresh_token: "rt",
+      refresh_response_key: "rk",
+      refresh_from: Date.now() + 60_000,
+      refresh_expires: Date.now() + 120_000,
+      identity_expires: Date.now() + 120_000,
+    };
+    const { sdk, tokenize } = makeSdk();
+    // The wire shape: refs at the top level, pointed to from the EID's uid.
+    tokenize.mockResolvedValue({
+      user: { eids: [{ source: "uidapi.com", uids: [{ id: "adv", ext: { optable: { ref: "0" } } }] }] },
+      refs: { "0": ref },
+    } as any);
+
+    await identifyAndTokenize(sdk, "abc123");
+
+    const cache = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") || "null");
+    expect(cache.refs).toEqual({ "uidapi.com": ref });
+    expect(cache.ortb2.user.eids[0].uids[0].ext).toBeUndefined();
+  });
 });
 
 describe("identifyAndTokenize - guard keying", () => {
