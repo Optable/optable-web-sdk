@@ -3,6 +3,7 @@
 import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
 import { buildRequest } from "../../core/network";
+import { getTrafficSource } from "../../core/traffic-source";
 
 import * as Bowser from "bowser";
 
@@ -544,6 +545,7 @@ class OptablePrebidAnalytics {
       })),
       missed: missed && oSourcesSet.size === 0,
       url: `${window.location.hostname}${window.location.pathname}`,
+      ...getTrafficSource(),
       tenant: this.optableInstance?.dcn?.node ?? "unknown",
       // eslint-disable-next-line no-undef
       optableWrapperVersion: SDK_WRAPPER_VERSION || "unknown",
