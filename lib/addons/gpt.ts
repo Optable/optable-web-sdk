@@ -1,6 +1,7 @@
 import type { ContextualTargetingKeyValuesOptions } from "../edge/contextual_segments";
 import type { WitnessProperties } from "../edge/witness";
-import type { SecureSignal } from "../core/secure-signals";
+import { secureSignalsFromEids } from "../core/secure-signals";
+import type { SecureSignal, SecureSignalEid, SecureSignalsFilter } from "../core/secure-signals";
 import { debugLog } from "../core/log";
 import OptableSDK from "../sdk";
 
@@ -8,6 +9,7 @@ declare module "../sdk" {
   export interface OptableSDK {
     installGPTEventListeners: () => void;
     installGPTSecureSignals: (...signals: SecureSignal[]) => void;
+    installGPTSecureSignalsFromEids: (options?: SecureSignalsFromEidsOptions) => void;
   }
 }
 
@@ -84,6 +86,12 @@ OptableSDK.prototype.installGPTEventListeners = function (eventSpec?: GptEventSp
   });
 };
 
+type SecureSignalsFromEidsOptions = {
+  filter?: SecureSignalsFilter;
+  // Defaults to the EIDs in the last cached targeting response.
+  eids?: SecureSignalEid[];
+};
+
 /*
  * Pass user-defined signals to GAM Secure Signals
  */
@@ -101,6 +109,13 @@ OptableSDK.prototype.installGPTSecureSignals = function (...signals: SecureSigna
       });
     });
   }
+};
+
+// Installs secure signals built from EIDs, defaulting to the cached targeting
+// response. A first visit installs none until targeting() has resolved once.
+OptableSDK.prototype.installGPTSecureSignalsFromEids = function (options: SecureSignalsFromEidsOptions = {}) {
+  const eids = options.eids ?? this.targetingFromCache()?.ortb2?.user?.eids ?? [];
+  this.installGPTSecureSignals(...secureSignalsFromEids(eids, options.filter ?? {}));
 };
 
 // Fetches the page's contextual segments and pushes the resulting key-values
@@ -140,3 +155,5 @@ export async function setContextualTargetingInGAM(
     }
   });
 }
+
+export type { SecureSignalsFromEidsOptions };
