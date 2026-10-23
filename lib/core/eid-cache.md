@@ -29,6 +29,17 @@ So anything read back out of storage is ready to merge as-is, and anything comin
 - Each EID keeps at most `maxUidsPerEid` UIDs (default 2).
 - `ortb2.user.data` comes from the new response, falling back to the cached one.
 - The inputs are never mutated. The merged cache is built from copies.
+
+## Non-overriding matchers
+
+`nonOverridingMatchers` lists matcher values that lose a contested source. An EID whose `eid.matcher` is listed will not displace one already cached on that source from a matcher that is not, revocation included: a listed matcher sending the source with no uids leaves the cached EID alone. Anything else still wins, so a call keeps refreshing and revoking its own entries, and the kept EID keeps its refs. An EID with no matcher is never listed, so it always wins.
+
+```typescript
+const { merged } = mergeCache(replaceCache(response), cached, { nonOverridingMatchers: ["acme.com"] });
+```
+
+Listing a publisher's own domains is what lets a targeting call resolved with `skip_matchers: ["1p"]` run alongside a tokenize call: the two fill the same sources, and whichever lands second no longer overwrites the other. The decision is made on the label rather than on arrival order, so the calls can go out in parallel instead of tokenize waiting for targeting to come back empty. Leave it unset and every new EID wins its source, as before.
+
 - Cached EIDs are wire EIDs: refresh material never sits on them, so every consumer — RTD, `pubProvidedId`, anything else — can hand them to bidding as-is, with nothing to strip.
 
 ## UID2 refresh material

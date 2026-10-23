@@ -9,6 +9,18 @@ import * as Bowser from "bowser";
 
 declare const SDK_WRAPPER_VERSION: string;
 
+// Competitor EIDs, matched on the tags each vendor leaves in the bid request.
+// Publisher wrappers can strip inserter, so each rule also checks matcher or source.
+// Same rules as the V1 add-on (lib/addons/prototypes/analytics.js).
+const COMPETITOR_EIDS: Record<string, (e: any) => boolean> = {
+  liveintent: (e) =>
+    e.source === "liveintent.com" || e.uids?.some((u: any) => u.ext?.provider === "liveintent.com") === true,
+  intentiq: (e) => e.matcher === "intentiq.com" || e.source === "intentiq.com",
+  growthcode: (e) => e.inserter === "growthcode.io" || e.matcher === "growthcode.io" || e.source === "growthcode.io",
+  transunion: (e) => e.source === "neustar.biz",
+};
+const sourcesOf = (eids: any[]): string[] => [...new Set(eids.map((e) => e.source).filter(Boolean))] as string[];
+
 declare global {
   interface Window {
     pbjs?: any;
@@ -54,6 +66,7 @@ class OptablePrebidAnalytics {
   private missedAuctionIds = new Set<string>();
   private pendingTimeoutBids = new Map<string, any[]>();
   private prebidInstance: any;
+  private pageConfigSent = false;
 
   /**
    * Create a new OptablePrebidAnalytics instance.
@@ -364,6 +377,26 @@ class OptablePrebidAnalytics {
    * Clear all stored analytics data (useful for tests).
    * @returns void
    */
+  /**
+   * Page configuration, sent on the first auction payload of the page only.
+   * @returns RTD presence and auction delays, or undefined when Prebid exposes no getConfig.
+   */
+  pageConfig(): Record<string, unknown> | undefined {
+    if (typeof this.prebidInstance?.getConfig !== "function") return undefined;
+    try {
+      const rtd = this.prebidInstance.getConfig("realTimeData") || {};
+      const userSync = this.prebidInstance.getConfig("userSync") || {};
+      return {
+        optableRTDInstalled: (this.prebidInstance.installedModules || []).includes("optableRtdProvider") ? 1 : 0,
+        optableRTDConfigured: (rtd.dataProviders || []).some((p: { name?: string }) => p?.name === "optable") ? 1 : 0,
+        rtdDelay: rtd.auctionDelay,
+        udDelay: userSync.auctionDelay,
+      };
+    } catch (e) {
+      return undefined;
+    }
+  }
+
   clearData() {
     this.auctions.clear();
     this.missedAuctionIds.clear();
@@ -385,6 +418,9 @@ class OptablePrebidAnalytics {
     const oMatchersSet = new Set();
     const oSourcesSet = new Set();
     const lSourcesSet = new Set();
+    const iSourcesSet = new Set();
+    const gSourcesSet = new Set();
+    const tSourcesSet = new Set();
     let adUnitCode: string = "unknown";
     let totalBids = 0;
     let device = null;
@@ -394,17 +430,19 @@ class OptablePrebidAnalytics {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
       const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
-      // Deduplicate EIDs by source
-      const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
+      // Deduplicate EIDs by source and inserter, so another inserter's EID can't hide Optable's
+      const eids = Array.from(new Map(allEids.map((eid: any) => [`${eid.source}|${eid.inserter}`, eid])).values());
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
       const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
       const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
 
-      // LiveIntent EIDs, matched before the dedupe so a same-source EID can't hide them
-      const liveintentEIDS = allEids.filter((e: any) => e.uids?.some((u: any) => u.ext?.provider === "liveintent.com"));
-      const liSources = [...new Set(liveintentEIDS.map((e: any) => e.source).filter(Boolean))];
+      // Competitor EIDs, matched before the dedupe so a same-source EID can't hide them
+      const liSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.liveintent));
+      const iiqSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.intentiq));
+      const gcSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.growthcode));
+      const tuSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.transunion));
 
       device = br.ortb2.device;
 
@@ -415,8 +453,11 @@ class OptablePrebidAnalytics {
         optableTargetingDone: optableEIDS.length > 0,
         optableMatchers,
         optableSources,
-        hasLiEids: liveintentEIDS.length > 0,
+        hasLiEids: liSources.length > 0,
         liSources,
+        iiqSources,
+        gcSources,
+        tuSources,
         status: STATUS.REQUESTED,
         bids: bids.map(
           (b: {
@@ -448,8 +489,10 @@ class OptablePrebidAnalytics {
 
     requests.forEach((request: any) => {
       request.bids.forEach((bid: any) => {
+        if (adUnitCode === "unknown" && bid.adUnitCode) adUnitCode = bid.adUnitCode;
         const bidReceived = bidsReceivedMap.get(bid.bidId);
         if (bidReceived) {
+          if (bidReceived.cpm != null) totalBids += 1;
           bid.status = STATUS.RECEIVED;
           bid.cpm = bidReceived.cpm;
           bid.size = `${bidReceived.width}x${bidReceived.height}`;
@@ -474,12 +517,16 @@ class OptablePrebidAnalytics {
         br.optableMatchers.forEach((m: unknown) => oMatchersSet.add(m));
         br.optableSources.forEach((s: unknown) => oSourcesSet.add(s));
         br.liSources.forEach((s: unknown) => lSourcesSet.add(s));
+        br.iiqSources.forEach((s: unknown) => iSourcesSet.add(s));
+        br.gcSources.forEach((s: unknown) => gSourcesSet.add(s));
+        br.tuSources.forEach((s: unknown) => tSourcesSet.add(s));
 
         return br;
       }),
       auctionId,
       adUnitCode,
       totalRequests: bidderRequests.length,
+      totalBids,
       optableSampling: this.config.samplingRate || 1,
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
@@ -488,12 +535,15 @@ class OptablePrebidAnalytics {
       optableMatchers: Array.from(oMatchersSet),
       optableSources: Array.from(oSourcesSet),
       liveintentEIDs: Array.from(lSourcesSet),
+      intentiqEIDs: Array.from(iSourcesSet),
+      growthcodeEIDs: Array.from(gSourcesSet),
+      transunionEIDs: Array.from(tSourcesSet),
       bidWon: bidWonEvents.map((e) => ({
         bidderCode: e.bidderCode,
         adUnitCode: e.adUnitCode,
         cpm: e.cpm,
       })),
-      missed,
+      missed: missed && oSourcesSet.size === 0,
       url: `${window.location.hostname}${window.location.pathname}`,
       ...getTrafficSource(),
       tenant: this.optableInstance?.dcn?.node ?? "unknown",
@@ -506,6 +556,16 @@ class OptablePrebidAnalytics {
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
       originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };
+
+    // Page configuration, sent once per page. A flag instead of pageAuctionsCount === 1 because
+    // payloads are built after bidWinTimeout, when later auctions may already have bumped the count.
+    if (!this.pageConfigSent) {
+      const page = this.pageConfig();
+      if (page) {
+        witnessData.page = page;
+        this.pageConfigSent = true;
+      }
+    }
 
     // Log summary with bid counts
     this.log(
