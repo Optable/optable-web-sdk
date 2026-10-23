@@ -489,6 +489,67 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.liveintentEIDs).toEqual(["uidapi.com"]);
     });
 
+    it("catches LiveIntent's main ID by source when it carries no ext.provider", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([{ eids: [{ source: "liveintent.com", uids: [{ id: "li" }] }] }]),
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({ hasLiEids: true, liSources: ["liveintent.com"] });
+      expect(result.liveintentEIDs).toEqual(["liveintent.com"]);
+    });
+
+    it("reports IntentIQ, GrowthCode and TransUnion EIDs per bidder and at the top level", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([
+          {
+            eids: [
+              { inserter: "freestar.com", matcher: "intentiq.com", source: "adsrvr.org", uids: [{ id: "a" }] },
+              { source: "intentiq.com", uids: [{ id: "b" }] },
+              { inserter: "growthcode.io", source: "acxiom.com", uids: [{ id: "c" }] },
+              { source: "neustar.biz", uids: [{ id: "d" }] },
+            ],
+          },
+          {
+            eids: [
+              { matcher: "growthcode.io", source: "id5-sync.com", uids: [{ id: "e" }] },
+              { source: "growthcode.io", uids: [{ id: "f" }] },
+            ],
+          },
+        ]),
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({
+        iiqSources: ["adsrvr.org", "intentiq.com"],
+        gcSources: ["acxiom.com"],
+        tuSources: ["neustar.biz"],
+        hasLiEids: false,
+      });
+      expect(result.bidderRequests[1]).toMatchObject({
+        iiqSources: [],
+        gcSources: ["id5-sync.com", "growthcode.io"],
+        tuSources: [],
+      });
+      expect(result.intentiqEIDs).toEqual(["adsrvr.org", "intentiq.com"]);
+      expect(result.growthcodeEIDs).toEqual(["acxiom.com", "id5-sync.com", "growthcode.io"]);
+      expect(result.transunionEIDs).toEqual(["neustar.biz"]);
+    });
+
+    it("does not count Optable's own EIDs as a competitor's", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([
+          { eids: [{ inserter: "optable.co", matcher: "uid2", source: "uidapi.com", uids: [{ id: "o" }] }] },
+        ]),
+        []
+      );
+
+      expect(result.liveintentEIDs).toEqual([]);
+      expect(result.intentiqEIDs).toEqual([]);
+      expect(result.growthcodeEIDs).toEqual([]);
+      expect(result.transunionEIDs).toEqual([]);
+    });
+
     it("keeps an Optable EID when a later non-Optable EID shares its source", async () => {
       const result = await analytics.toWitness(
         {
