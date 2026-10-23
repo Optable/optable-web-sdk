@@ -154,6 +154,63 @@ describe("OptablePrebidAnalytics", () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
+    describe("page config", () => {
+      const emptyAuction = { auctionId: "page-auction", bidderRequests: [] };
+
+      it("is sent on the first payload of the page only", async () => {
+        (analytics as any).prebidInstance = {
+          installedModules: ["rtdModule", "optableRtdProvider"],
+          getConfig: (k: string) =>
+            (
+              ({
+                realTimeData: { auctionDelay: 150, dataProviders: [{ name: "other" }, { name: "optable" }] },
+                userSync: { auctionDelay: 250 },
+              }) as Record<string, unknown>
+            )[k],
+        };
+
+        const first = await analytics.toWitness(emptyAuction, []);
+        expect(first.page).toEqual({ optableRTDInstalled: 1, optableRTDConfigured: 1, rtdDelay: 150, udDelay: 250 });
+
+        const second = await analytics.toWitness(emptyAuction, []);
+        expect(second.page).toBeUndefined();
+      });
+
+      it("reports the RTD module installed but not configured", async () => {
+        (analytics as any).prebidInstance = {
+          installedModules: ["optableRtdProvider"],
+          getConfig: () => undefined,
+        };
+
+        const result = await analytics.toWitness(emptyAuction, []);
+        expect(result.page).toMatchObject({ optableRTDInstalled: 1, optableRTDConfigured: 0 });
+      });
+
+      it("reports the RTD module not installed when installedModules is missing", async () => {
+        (analytics as any).prebidInstance = {
+          getConfig: (k: string) => (k === "realTimeData" ? { dataProviders: [{ name: "optable" }] } : undefined),
+        };
+
+        const result = await analytics.toWitness(emptyAuction, []);
+        expect(result.page).toMatchObject({ optableRTDInstalled: 0, optableRTDConfigured: 1 });
+      });
+
+      it("is omitted, and retried on the next payload, when Prebid exposes no getConfig", async () => {
+        (analytics as any).prebidInstance = {};
+        const first = await analytics.toWitness(emptyAuction, []);
+        expect(first.page).toBeUndefined();
+
+        (analytics as any).prebidInstance = { getConfig: () => undefined };
+        const second = await analytics.toWitness(emptyAuction, []);
+        expect(second.page).toEqual({
+          optableRTDInstalled: 0,
+          optableRTDConfigured: 0,
+          rtdDelay: undefined,
+          udDelay: undefined,
+        });
+      });
+    });
+
     it("should transform auction and bid won events to witness format", async () => {
       const auctionEndEvent = {
         auctionId: "auction-123",
@@ -194,7 +251,7 @@ describe("OptablePrebidAnalytics", () => {
 
       expect(result).toMatchObject({
         auctionId: "auction-123",
-        adUnitCode: "unknown",
+        adUnitCode: "ad-unit-1",
         totalRequests: 1,
         optableMatchers: ["matcher1"],
         optableSources: ["source1"],
@@ -432,6 +489,67 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.liveintentEIDs).toEqual(["uidapi.com"]);
     });
 
+    it("catches LiveIntent's main ID by source when it carries no ext.provider", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([{ eids: [{ source: "liveintent.com", uids: [{ id: "li" }] }] }]),
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({ hasLiEids: true, liSources: ["liveintent.com"] });
+      expect(result.liveintentEIDs).toEqual(["liveintent.com"]);
+    });
+
+    it("reports IntentIQ, GrowthCode and TransUnion EIDs per bidder and at the top level", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([
+          {
+            eids: [
+              { inserter: "freestar.com", matcher: "intentiq.com", source: "adsrvr.org", uids: [{ id: "a" }] },
+              { source: "intentiq.com", uids: [{ id: "b" }] },
+              { inserter: "growthcode.io", source: "acxiom.com", uids: [{ id: "c" }] },
+              { source: "neustar.biz", uids: [{ id: "d" }] },
+            ],
+          },
+          {
+            eids: [
+              { matcher: "growthcode.io", source: "id5-sync.com", uids: [{ id: "e" }] },
+              { source: "growthcode.io", uids: [{ id: "f" }] },
+            ],
+          },
+        ]),
+        []
+      );
+
+      expect(result.bidderRequests[0]).toMatchObject({
+        iiqSources: ["adsrvr.org", "intentiq.com"],
+        gcSources: ["acxiom.com"],
+        tuSources: ["neustar.biz"],
+        hasLiEids: false,
+      });
+      expect(result.bidderRequests[1]).toMatchObject({
+        iiqSources: [],
+        gcSources: ["id5-sync.com", "growthcode.io"],
+        tuSources: [],
+      });
+      expect(result.intentiqEIDs).toEqual(["adsrvr.org", "intentiq.com"]);
+      expect(result.growthcodeEIDs).toEqual(["acxiom.com", "id5-sync.com", "growthcode.io"]);
+      expect(result.transunionEIDs).toEqual(["neustar.biz"]);
+    });
+
+    it("does not count Optable's own EIDs as a competitor's", async () => {
+      const result = await analytics.toWitness(
+        liveintentAuction([
+          { eids: [{ inserter: "optable.co", matcher: "uid2", source: "uidapi.com", uids: [{ id: "o" }] }] },
+        ]),
+        []
+      );
+
+      expect(result.liveintentEIDs).toEqual([]);
+      expect(result.intentiqEIDs).toEqual([]);
+      expect(result.growthcodeEIDs).toEqual([]);
+      expect(result.transunionEIDs).toEqual([]);
+    });
+
     it("keeps an Optable EID when a later non-Optable EID shares its source", async () => {
       const result = await analytics.toWitness(
         {
@@ -642,6 +760,40 @@ describe("OptablePrebidAnalytics", () => {
         "optable.prebid.auction",
         expect.objectContaining({
           missed: true,
+          optableLoaded: false,
+        })
+      );
+    });
+
+    it("should report not missed but not loaded when a replayed auction carries Optable sources", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-cache-read",
+        timeout: 3000,
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+        timeoutBids: [],
+      };
+
+      await analytics.trackAuctionEnd(auctionEndEvent, true);
+      await jest.runAllTimersAsync();
+
+      expect(mockOptableInstance.witness).toHaveBeenCalledWith(
+        "optable.prebid.auction",
+        expect.objectContaining({
+          missed: false,
           optableLoaded: false,
         })
       );
@@ -1051,6 +1203,67 @@ describe("OptablePrebidAnalytics", () => {
       expect(payload.bidderRequests[0].status).toBe("RECEIVED");
     });
 
+    const bidCountAuction = (bidsPerRequest: (string | undefined)[][], bidsReceived: any[]) => ({
+      auctionId: "auction-bid-count",
+      bidderRequests: bidsPerRequest.map((adUnits, i) => ({
+        bidderCode: `bidder${i + 1}`,
+        bidderRequestId: `req-${i + 1}`,
+        ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+        bids: adUnits.map((adUnitCode, j) => ({ bidId: `bid-${i + 1}-${j + 1}`, adUnitCode })),
+      })),
+      bidsReceived,
+      noBids: [],
+      timeoutBids: [],
+    });
+
+    it("reports totalBids: 0 when no bids are received", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([["ad-unit-1"], ["ad-unit-1"]], []), []);
+      expect(payload.totalBids).toBe(0);
+    });
+
+    it("reports totalBids: 1 for a single received bid", async () => {
+      const payload = await analytics.toWitness(
+        bidCountAuction([["ad-unit-1"], ["ad-unit-1"]], [{ requestId: "bid-2-1", cpm: 1.2 }]),
+        []
+      );
+      expect(payload.totalBids).toBe(1);
+    });
+
+    it("counts received bids with a cpm across bidder requests", async () => {
+      const payload = await analytics.toWitness(
+        bidCountAuction(
+          [
+            ["ad-unit-1", "ad-unit-2"],
+            ["ad-unit-1", "ad-unit-2"],
+          ],
+          [
+            { requestId: "bid-1-1", cpm: 1.2 },
+            { requestId: "bid-1-2", cpm: 0 },
+            { requestId: "bid-2-1", cpm: 0.8 },
+            { requestId: "bid-2-2", cpm: null },
+            { requestId: "bid-unrequested", cpm: 3 },
+          ]
+        ),
+        []
+      );
+      expect(payload.totalBids).toBe(3);
+    });
+
+    it("sets the top-level adUnitCode to the first bid's ad unit", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([["ad-unit-1", "ad-unit-2"], ["ad-unit-3"]], []), []);
+      expect(payload.adUnitCode).toBe("ad-unit-1");
+    });
+
+    it("skips bids without an ad unit when setting the top-level adUnitCode", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([[undefined], [undefined, "ad-unit-2"]], []), []);
+      expect(payload.adUnitCode).toBe("ad-unit-2");
+    });
+
+    it("falls back to an 'unknown' adUnitCode when there are no bids", async () => {
+      const payload = await analytics.toWitness(bidCountAuction([[], []], []), []);
+      expect(payload.adUnitCode).toBe("unknown");
+    });
+
     it("should extract splitTestAssignment from bidsReceived", async () => {
       const event = {
         auctionId: "auction-split-test",
@@ -1234,6 +1447,51 @@ describe("OptablePrebidAnalytics", () => {
   describe("toWitness - advanced scenarios", () => {
     beforeEach(() => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
+    });
+
+    it("should not mark a replayed auction as missed when Optable sources are present", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-with-cache",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: {
+              site: { domain: "example.com" },
+              user: {
+                eids: [{ inserter: "optable.co", matcher: "matcher1", source: "source1" }],
+              },
+            },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, [], true);
+
+      expect(result.missed).toBe(false);
+    });
+
+    it("should keep a replayed auction as missed when no Optable sources are present", async () => {
+      const auctionEndEvent = {
+        auctionId: "auction-replayed-no-cache",
+        bidderRequests: [
+          {
+            bidderCode: "bidder1",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" } },
+            bids: [],
+          },
+        ],
+        bidsReceived: [],
+        noBids: [],
+      };
+
+      const result = await analytics.toWitness(auctionEndEvent, [], true);
+
+      expect(result.missed).toBe(true);
     });
 
     it("should handle multiple bidder requests", async () => {

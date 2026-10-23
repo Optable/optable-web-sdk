@@ -942,7 +942,7 @@ With the SDK loaded from a script tag:
 </script>
 ```
 
-`secureSignalsFromEids(eids, filter?)` is also exported from `@optable/web-sdk/lib/dist/core/secure-signals` for callers that want the `{ provider, id }` pairs without installing them.
+`secureSignalsFromEids(eids, filter?)` is also exported from `@optable/web-sdk/lib/dist/core/secure-signals`, and available as `optable.utils.secureSignalsFromEids` on script-tag pages, for callers that want the `{ provider, id }` pairs without installing them.
 
 You can verify the signal was correctly passed to GAM by searching for its value cached in `localStorage` under the key `_GESPSK-<provider_name>`.
 
