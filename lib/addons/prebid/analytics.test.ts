@@ -154,6 +154,63 @@ describe("OptablePrebidAnalytics", () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
+    describe("page config", () => {
+      const emptyAuction = { auctionId: "page-auction", bidderRequests: [] };
+
+      it("is sent on the first payload of the page only", async () => {
+        (analytics as any).prebidInstance = {
+          installedModules: ["rtdModule", "optableRtdProvider"],
+          getConfig: (k: string) =>
+            (
+              ({
+                realTimeData: { auctionDelay: 150, dataProviders: [{ name: "other" }, { name: "optable" }] },
+                userSync: { auctionDelay: 250 },
+              }) as Record<string, unknown>
+            )[k],
+        };
+
+        const first = await analytics.toWitness(emptyAuction, []);
+        expect(first.page).toEqual({ optableRTDInstalled: 1, optableRTDConfigured: 1, rtdDelay: 150, udDelay: 250 });
+
+        const second = await analytics.toWitness(emptyAuction, []);
+        expect(second.page).toBeUndefined();
+      });
+
+      it("reports the RTD module installed but not configured", async () => {
+        (analytics as any).prebidInstance = {
+          installedModules: ["optableRtdProvider"],
+          getConfig: () => undefined,
+        };
+
+        const result = await analytics.toWitness(emptyAuction, []);
+        expect(result.page).toMatchObject({ optableRTDInstalled: 1, optableRTDConfigured: 0 });
+      });
+
+      it("reports the RTD module not installed when installedModules is missing", async () => {
+        (analytics as any).prebidInstance = {
+          getConfig: (k: string) => (k === "realTimeData" ? { dataProviders: [{ name: "optable" }] } : undefined),
+        };
+
+        const result = await analytics.toWitness(emptyAuction, []);
+        expect(result.page).toMatchObject({ optableRTDInstalled: 0, optableRTDConfigured: 1 });
+      });
+
+      it("is omitted, and retried on the next payload, when Prebid exposes no getConfig", async () => {
+        (analytics as any).prebidInstance = {};
+        const first = await analytics.toWitness(emptyAuction, []);
+        expect(first.page).toBeUndefined();
+
+        (analytics as any).prebidInstance = { getConfig: () => undefined };
+        const second = await analytics.toWitness(emptyAuction, []);
+        expect(second.page).toEqual({
+          optableRTDInstalled: 0,
+          optableRTDConfigured: 0,
+          rtdDelay: undefined,
+          udDelay: undefined,
+        });
+      });
+    });
+
     it("should transform auction and bid won events to witness format", async () => {
       const auctionEndEvent = {
         auctionId: "auction-123",

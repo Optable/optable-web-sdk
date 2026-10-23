@@ -133,3 +133,11 @@ Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `adUnitCode` (first bid's ad unit), `totalBids` (received bids with a `cpm`),
 `url`, `tenant`, `prebidjsVersion`, `sessionDepth`, `pageAuctionsCount`,
 `originSlug`, and the parsed `userAgent`/`device`.
+
+The first payload of each page also carries `page`:
+`{ optableRTDInstalled, optableRTDConfigured, rtdDelay, udDelay }`.
+`optableRTDInstalled` is `1` when `optableRtdProvider` is in `pbjs.installedModules`
+(compiled into the Prebid build). `optableRTDConfigured` is `1` when
+`realTimeData.dataProviders` contains a provider named `optable`. `rtdDelay` and
+`udDelay` are `realTimeData.auctionDelay` and `userSync.auctionDelay`. Same shape
+as the V1 add-on.
