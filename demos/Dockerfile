@@ -1,4 +1,4 @@
-FROM nginx:1.20
+FROM nginx:1.30
 WORKDIR /usr/share/nginx/html/
 
 COPY --chmod=0444 ./vanilla/targeting/gam360.html ./vanilla/targeting/gam360.html

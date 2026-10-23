@@ -65,6 +65,7 @@ class OptablePrebidAnalytics {
   private missedAuctionIds = new Set<string>();
   private pendingTimeoutBids = new Map<string, any[]>();
   private prebidInstance: any;
+  private pageConfigSent = false;
 
   /**
    * Create a new OptablePrebidAnalytics instance.
@@ -375,6 +376,26 @@ class OptablePrebidAnalytics {
    * Clear all stored analytics data (useful for tests).
    * @returns void
    */
+  /**
+   * Page configuration, sent on the first auction payload of the page only.
+   * @returns RTD presence and auction delays, or undefined when Prebid exposes no getConfig.
+   */
+  pageConfig(): Record<string, unknown> | undefined {
+    if (typeof this.prebidInstance?.getConfig !== "function") return undefined;
+    try {
+      const rtd = this.prebidInstance.getConfig("realTimeData") || {};
+      const userSync = this.prebidInstance.getConfig("userSync") || {};
+      return {
+        optableRTDInstalled: (this.prebidInstance.installedModules || []).includes("optableRtdProvider") ? 1 : 0,
+        optableRTDConfigured: (rtd.dataProviders || []).some((p: { name?: string }) => p?.name === "optable") ? 1 : 0,
+        rtdDelay: rtd.auctionDelay,
+        udDelay: userSync.auctionDelay,
+      };
+    } catch (e) {
+      return undefined;
+    }
+  }
+
   clearData() {
     this.auctions.clear();
     this.missedAuctionIds.clear();
@@ -408,8 +429,8 @@ class OptablePrebidAnalytics {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
       const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
-      // Deduplicate EIDs by source
-      const eids = Array.from(new Map(allEids.map((eid: any) => [eid.source, eid])).values());
+      // Deduplicate EIDs by source and inserter, so another inserter's EID can't hide Optable's
+      const eids = Array.from(new Map(allEids.map((eid: any) => [`${eid.source}|${eid.inserter}`, eid])).values());
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
@@ -467,8 +488,10 @@ class OptablePrebidAnalytics {
 
     requests.forEach((request: any) => {
       request.bids.forEach((bid: any) => {
+        if (adUnitCode === "unknown" && bid.adUnitCode) adUnitCode = bid.adUnitCode;
         const bidReceived = bidsReceivedMap.get(bid.bidId);
         if (bidReceived) {
+          if (bidReceived.cpm != null) totalBids += 1;
           bid.status = STATUS.RECEIVED;
           bid.cpm = bidReceived.cpm;
           bid.size = `${bidReceived.width}x${bidReceived.height}`;
@@ -502,6 +525,7 @@ class OptablePrebidAnalytics {
       auctionId,
       adUnitCode,
       totalRequests: bidderRequests.length,
+      totalBids,
       optableSampling: this.config.samplingRate || 1,
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
@@ -518,7 +542,7 @@ class OptablePrebidAnalytics {
         adUnitCode: e.adUnitCode,
         cpm: e.cpm,
       })),
-      missed,
+      missed: missed && oSourcesSet.size === 0,
       url: `${window.location.hostname}${window.location.pathname}`,
       tenant: this.optableInstance?.dcn?.node ?? "unknown",
       // eslint-disable-next-line no-undef
@@ -530,6 +554,16 @@ class OptablePrebidAnalytics {
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
       originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };
+
+    // Page configuration, sent once per page. A flag instead of pageAuctionsCount === 1 because
+    // payloads are built after bidWinTimeout, when later auctions may already have bumped the count.
+    if (!this.pageConfigSent) {
+      const page = this.pageConfig();
+      if (page) {
+        witnessData.page = page;
+        this.pageConfigSent = true;
+      }
+    }
 
     // Log summary with bid counts
     this.log(
