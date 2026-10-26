@@ -16,8 +16,11 @@ const baseConfig = {
 
 const storageKey = generateOISKeys(baseConfig).write[0];
 
-const HEADER_PATHS = ["/identify", "/uid2/token", "/profile", "/v2/targeting"];
-const NON_HEADER_PATHS = ["/config", "/witness", "/targeting", "/v1/resolve", "/v2/tokenize"];
+const DERIVE_PATHS = ["/identify", "/uid2/token", "/profile", "/v2/targeting", "/v2/tokenize"];
+const REPLAY_ONLY_PATHS = ["/witness"];
+const REPLAY_PATHS = [...DERIVE_PATHS, ...REPLAY_ONLY_PATHS];
+const NON_HEADER_PATHS = ["/config", "/targeting", "/v1/resolve"];
+const NON_DERIVE_PATHS = [...NON_HEADER_PATHS, ...REPLAY_ONLY_PATHS];
 
 function withHeader(id?: string): Headers {
   const headers = new Headers();
@@ -44,19 +47,19 @@ describe("readOISHeader", () => {
     expect(getOISID(baseConfig)).toBe("ois-id-1");
   });
 
-  it.each(HEADER_PATHS)("stores on %s", (path) => {
+  it.each(DERIVE_PATHS)("stores on %s", (path) => {
     readOISHeader(baseConfig, path, withHeader("ois-id-1"));
 
     expect(stored()).toBe("ois-id-1");
   });
 
-  it.each(NON_HEADER_PATHS)("ignores a header returned on %s", (path) => {
+  it.each(NON_DERIVE_PATHS)("ignores a header returned on %s", (path) => {
     readOISHeader(baseConfig, path, withHeader("unexpected"));
 
     expect(stored()).toBeNull();
   });
 
-  it.each(NON_HEADER_PATHS)("leaves a stored id alone on %s", (path) => {
+  it.each(NON_DERIVE_PATHS)("leaves a stored id alone on %s", (path) => {
     readOISHeader(baseConfig, "/identify", withHeader("keep-me"));
 
     readOISHeader(baseConfig, path, withHeader("unexpected"));
@@ -116,7 +119,7 @@ describe("readOISHeader", () => {
 describe("oisRequestID", () => {
   beforeEach(() => window.localStorage.setItem(storageKey, "stored-id"));
 
-  it.each(HEADER_PATHS)("replays on %s", (path) => {
+  it.each(REPLAY_PATHS)("replays on %s", (path) => {
     expect(oisRequestID(baseConfig, path)).toBe("stored-id");
   });
 
@@ -132,7 +135,7 @@ describe("oisRequestID", () => {
 });
 
 describe("buildRequest", () => {
-  it.each(HEADER_PATHS)("sends the stored id on %s", (path) => {
+  it.each(REPLAY_PATHS)("sends the stored id on %s", (path) => {
     window.localStorage.setItem(storageKey, "send-me");
 
     const request = buildRequest(path, baseConfig, { method: "POST" });

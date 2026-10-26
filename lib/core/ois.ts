@@ -5,12 +5,20 @@ const oisHeaderName = "X-Optable-OID";
 
 const oisChangeEventName = "optable-ois:change";
 
+// Endpoints where the node derives an id, and so the only ones that return one.
+const DERIVE_PATHS = new Set(["/identify", "/uid2/token", "/profile", "/v2/targeting", "/v2/tokenize"]);
+
 // A custom header makes a request non-simple, so sending it where the node
-// derives no id buys a CORS preflight for nothing.
-const HEADER_PATHS = new Set(["/identify", "/uid2/token", "/profile", "/v2/targeting"]);
+// ignores it buys a CORS preflight for nothing. /witness derives no id but
+// attributes its event to the replayed one.
+const REPLAY_PATHS = new Set([...DERIVE_PATHS, "/witness"]);
 
 function derivesOISID(pathname: string): boolean {
-  return HEADER_PATHS.has(pathname);
+  return DERIVE_PATHS.has(pathname);
+}
+
+function replaysOISID(pathname: string): boolean {
+  return REPLAY_PATHS.has(pathname);
 }
 
 type OISState = {
@@ -48,7 +56,7 @@ function readOISHeader(config: ResolvedConfig, pathname: string, headers: Header
 }
 
 function oisRequestID(config: ResolvedConfig, pathname: string): string | null {
-  if (!derivesOISID(pathname) || !config.consent.deviceAccess) {
+  if (!replaysOISID(pathname) || !config.consent.deviceAccess) {
     return null;
   }
 
