@@ -16,11 +16,7 @@ const baseConfig = {
 
 const storageKey = generateOISKeys(baseConfig).write[0];
 
-const DERIVE_PATHS = ["/identify", "/uid2/token", "/profile", "/v2/targeting", "/v2/tokenize"];
-const REPLAY_ONLY_PATHS = ["/witness"];
-const REPLAY_PATHS = [...DERIVE_PATHS, ...REPLAY_ONLY_PATHS];
-const NON_HEADER_PATHS = ["/config", "/targeting", "/v1/resolve"];
-const NON_DERIVE_PATHS = [...NON_HEADER_PATHS, ...REPLAY_ONLY_PATHS];
+const PATHS = ["/config", "/identify", "/profile", "/v2/targeting", "/v2/tokenize", "/witness"];
 
 function withHeader(id?: string): Headers {
   const headers = new Headers();
@@ -41,36 +37,16 @@ beforeEach(() => {
 
 describe("readOISHeader", () => {
   it("stores the id the node returned", () => {
-    readOISHeader(baseConfig, "/identify", withHeader("ois-id-1"));
+    readOISHeader(baseConfig, withHeader("ois-id-1"));
 
     expect(stored()).toBe("ois-id-1");
     expect(getOISID(baseConfig)).toBe("ois-id-1");
   });
 
-  it.each(DERIVE_PATHS)("stores on %s", (path) => {
-    readOISHeader(baseConfig, path, withHeader("ois-id-1"));
-
-    expect(stored()).toBe("ois-id-1");
-  });
-
-  it.each(NON_DERIVE_PATHS)("ignores a header returned on %s", (path) => {
-    readOISHeader(baseConfig, path, withHeader("unexpected"));
-
-    expect(stored()).toBeNull();
-  });
-
-  it.each(NON_DERIVE_PATHS)("leaves a stored id alone on %s", (path) => {
-    readOISHeader(baseConfig, "/identify", withHeader("keep-me"));
-
-    readOISHeader(baseConfig, path, withHeader("unexpected"));
-
-    expect(stored()).toBe("keep-me");
-  });
-
   // The node returns the id derived for the current request, not the one replayed.
   it("overwrites an existing id", () => {
-    readOISHeader(baseConfig, "/identify", withHeader("ois-id-1"));
-    readOISHeader(baseConfig, "/identify", withHeader("ois-id-2"));
+    readOISHeader(baseConfig, withHeader("ois-id-1"));
+    readOISHeader(baseConfig, withHeader("ois-id-2"));
 
     expect(stored()).toBe("ois-id-2");
   });
@@ -79,18 +55,18 @@ describe("readOISHeader", () => {
     ["absent", undefined],
     ["empty", ""],
   ])("leaves the stored id alone when the header is %s", (_label, value) => {
-    readOISHeader(baseConfig, "/identify", withHeader("keep-me"));
+    readOISHeader(baseConfig, withHeader("keep-me"));
 
-    readOISHeader(baseConfig, "/identify", withHeader(value as string | undefined));
+    readOISHeader(baseConfig, withHeader(value as string | undefined));
 
     expect(stored()).toBe("keep-me");
   });
 
   it("does not rewrite storage when the id is unchanged", () => {
-    readOISHeader(baseConfig, "/identify", withHeader("same-id"));
+    readOISHeader(baseConfig, withHeader("same-id"));
     jest.clearAllMocks();
 
-    readOISHeader(baseConfig, "/identify", withHeader("same-id"));
+    readOISHeader(baseConfig, withHeader("same-id"));
 
     expect(window.localStorage.setItem).not.toHaveBeenCalled();
   });
@@ -98,7 +74,7 @@ describe("readOISHeader", () => {
   it("stores nothing without device access consent", () => {
     const config = { ...baseConfig, consent: { deviceAccess: false } } as ResolvedConfig;
 
-    readOISHeader(config, "/identify", withHeader("no-consent"));
+    readOISHeader(config, withHeader("no-consent"));
 
     expect(stored()).toBeNull();
   });
@@ -107,7 +83,7 @@ describe("readOISHeader", () => {
     const listener = jest.fn();
     window.addEventListener("optable-ois:change", listener);
 
-    readOISHeader(baseConfig, "/identify", withHeader("ois-id-1"));
+    readOISHeader(baseConfig, withHeader("ois-id-1"));
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener.mock.calls[0][0].detail).toMatchObject({ id: "ois-id-1", storageKey });
@@ -119,36 +95,24 @@ describe("readOISHeader", () => {
 describe("oisRequestID", () => {
   beforeEach(() => window.localStorage.setItem(storageKey, "stored-id"));
 
-  it.each(REPLAY_PATHS)("replays on %s", (path) => {
-    expect(oisRequestID(baseConfig, path)).toBe("stored-id");
-  });
-
-  it.each(NON_HEADER_PATHS)("does not replay on %s", (path) => {
-    expect(oisRequestID(baseConfig, path)).toBeNull();
+  it("returns the stored id", () => {
+    expect(oisRequestID(baseConfig)).toBe("stored-id");
   });
 
   it("returns null when nothing is stored", () => {
     window.localStorage.clear();
 
-    expect(oisRequestID(baseConfig, "/identify")).toBeNull();
+    expect(oisRequestID(baseConfig)).toBeNull();
   });
 });
 
 describe("buildRequest", () => {
-  it.each(REPLAY_PATHS)("sends the stored id on %s", (path) => {
+  it.each(PATHS)("sends the stored id on %s", (path) => {
     window.localStorage.setItem(storageKey, "send-me");
 
     const request = buildRequest(path, baseConfig, { method: "POST" });
 
     expect(request.headers.get(oisHeaderName)).toBe("send-me");
-  });
-
-  it.each(NON_HEADER_PATHS)("does not send on %s", (path) => {
-    window.localStorage.setItem(storageKey, "send-me");
-
-    const request = buildRequest(path, baseConfig, { method: "GET" });
-
-    expect(request.headers.get(oisHeaderName)).toBeNull();
   });
 
   it.each([
@@ -213,12 +177,12 @@ describe("fetch", () => {
     expect(stored()).toBe("keep-me");
   });
 
-  it("ignores a header returned on an endpoint that derives no id", async () => {
-    replyWith("/witness", "unexpected");
+  it.each(PATHS)("stores an id returned on %s", async (path) => {
+    replyWith(path, "from-fetch");
 
-    await sdkFetch("/witness", baseConfig, { method: "POST" });
+    await sdkFetch(path, baseConfig, { method: "POST" });
 
-    expect(stored()).toBeNull();
+    expect(stored()).toBe("from-fetch");
   });
 
   it("does not read the header when not opted in", async () => {

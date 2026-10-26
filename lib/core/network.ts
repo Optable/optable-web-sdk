@@ -65,7 +65,7 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   }
 
   if (config.ois) {
-    const oisID = oisRequestID(config, url.pathname);
+    const oisID = oisRequestID(config);
     if (oisID) {
       try {
         headers.set(oisHeaderName, oisID);
@@ -86,7 +86,7 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
 
   // Ahead of the error throw below: a non-2xx can still carry a derived id.
   if (config.ois) {
-    readOISHeader(config, new URL(request.url).pathname, response.headers);
+    readOISHeader(config, response.headers);
   }
 
   const contentType = response.headers.get("Content-Type");
