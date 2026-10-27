@@ -28,6 +28,8 @@ import {
   ContextualRiskTier,
   ContextualSegments,
   ContextualSegmentsResponse,
+  ContextualSentiment,
+  ContextualSentimentOf,
   ContextualTargetingKeyValues,
   ContextualTargetingKeyValuesOptions,
 } from "./edge/contextual_segments";
@@ -238,6 +240,12 @@ class OptableSDK {
   // gate that must tell those apart reads ctxBrandSafety().assessed too.
   ctxMaxRiskLevel(): ContextualRiskTier | null {
     return ContextualMaxRiskLevel(this.contextualResponse);
+  }
+
+  // Sentiment from the cached ctxSegments() response. Check `scored` before
+  // reading the label or score: when false there is no sentiment for the page.
+  ctxSentiment(): ContextualSentiment {
+    return ContextualSentimentOf(this.contextualResponse);
   }
 
   async tokenize(id: string): Promise<TokenizeResponse> {

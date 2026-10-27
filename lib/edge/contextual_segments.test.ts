@@ -1,8 +1,14 @@
-import { ContextualBrandSafetyOf, ContextualMaxRiskLevel, ContextualTargetingKeyValues } from "./contextual_segments";
+import {
+  ContextualBrandSafetyOf,
+  ContextualMaxRiskLevel,
+  ContextualSentimentOf,
+  ContextualTargetingKeyValues,
+} from "./contextual_segments";
 import type {
   ContextualBrandSafety,
   ContextualBrandSafetyCategory,
   ContextualSegmentsResponse,
+  ContextualSentiment,
 } from "./contextual_segments";
 
 // Helper to build a response with the given classifications. Accepts a partial
@@ -301,5 +307,81 @@ describe("ContextualTargetingKeyValues brand-safety emission", () => {
     expect(
       ContextualTargetingKeyValues(flagged, { iab_ct_3_1: "ctx_iab" }, { keywordKey: "", brandSafetyKey: "bs" })
     ).toEqual({ ctx_iab: ["53"], bs: ["medium"] });
+  });
+});
+
+describe("ContextualSentimentOf", () => {
+  test("returns the sentiment as served when the page was scored", () => {
+    const scored = response({
+      categories: [],
+      sentiment: { scored: true, id: "negative", name: "Negative", score: -0.6 },
+    });
+    expect(ContextualSentimentOf(scored)).toEqual({ scored: true, id: "negative", name: "Negative", score: -0.6 });
+  });
+
+  // A scored 0 is neutral, so it must survive as served rather than read as
+  // missing.
+  test("keeps a scored zero", () => {
+    const neutral = response({ categories: [], sentiment: { scored: true, id: "neutral", name: "Neutral", score: 0 } });
+    expect(ContextualSentimentOf(neutral)).toEqual({ scored: true, id: "neutral", name: "Neutral", score: 0 });
+  });
+
+  // A DCN on an edge build predating sentiment serving omits the field, the
+  // same answer it gives for a node not running the classifier.
+  test("folds an unscored, missing or null response into scored false", () => {
+    expect(ContextualSentimentOf(response({ categories: [], sentiment: { scored: false } }))).toEqual({
+      scored: false,
+    });
+    expect(ContextualSentimentOf(response({ categories: [] }))).toEqual({ scored: false });
+    expect(ContextualSentimentOf(null)).toEqual({ scored: false });
+  });
+});
+
+describe("ContextualTargetingKeyValues sentiment emission", () => {
+  function sentiment(s: ContextualSentiment | undefined): ContextualSegmentsResponse {
+    return response({
+      categories: [{ id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" }],
+      keywords: [],
+      sentiment: s,
+    });
+  }
+
+  test("emits the label by default under ctx_sentiment, never the score", () => {
+    const positive = sentiment({ scored: true, id: "positive", name: "Positive", score: 0.7 });
+
+    expect(ContextualTargetingKeyValues(positive, undefined, { brandSafetyKey: "" })).toEqual({
+      iab_ct_3_1: ["53"],
+      ctx_sentiment: ["positive"],
+    });
+  });
+
+  // The label is taken as served: edge owns the thresholds, so a score the SDK
+  // would bucket differently does not change the value.
+  test("emits the label as served rather than deriving it from the score", () => {
+    const served = sentiment({ scored: true, id: "neutral", name: "Neutral", score: 0.9 });
+
+    expect(ContextualTargetingKeyValues(served, undefined, { brandSafetyKey: "" }).ctx_sentiment).toEqual(["neutral"]);
+  });
+
+  test("omits the key when the page has no sentiment", () => {
+    const options = { brandSafetyKey: "" };
+
+    expect(ContextualTargetingKeyValues(sentiment({ scored: false }), undefined, options)).toEqual({
+      iab_ct_3_1: ["53"],
+    });
+    expect(ContextualTargetingKeyValues(sentiment(undefined), undefined, options)).toEqual({ iab_ct_3_1: ["53"] });
+    expect(ContextualTargetingKeyValues(null, undefined, options)).toEqual({});
+  });
+
+  test("emits under a caller-provided key, and opts out on an empty key", () => {
+    const negative = sentiment({ scored: true, id: "negative", name: "Negative", score: -0.5 });
+
+    expect(ContextualTargetingKeyValues(negative, undefined, { brandSafetyKey: "", sentimentKey: "mood" })).toEqual({
+      iab_ct_3_1: ["53"],
+      mood: ["negative"],
+    });
+    expect(ContextualTargetingKeyValues(negative, undefined, { brandSafetyKey: "", sentimentKey: "" })).toEqual({
+      iab_ct_3_1: ["53"],
+    });
   });
 });

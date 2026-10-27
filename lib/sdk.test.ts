@@ -114,6 +114,10 @@ describe("Breaking change detection: if typescript complains or a test fails it'
     new OptableSDK({ ...defaultConfig }).ctxMaxRiskLevel();
   });
 
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: ctxSentiment", () => {
+    new OptableSDK({ ...defaultConfig }).ctxSentiment();
+  });
+
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: profile", async () => {
     await new OptableSDK({ ...defaultConfig }).profile({
       propString: "",
@@ -549,6 +553,47 @@ describe("behavior testing of", () => {
     expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "ctx_bs_max" })).toEqual({
       ctx_bs_max: ["floor"],
     });
+  });
+
+  test("ctxSentiment reads the sentiment cached by ctxSegments", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json(
+          {
+            classifications: {
+              categories: [],
+              keywords: [],
+              sentiment: { scored: true, id: "positive", name: "Positive", score: 0.6 },
+            },
+          },
+          { status: 200 }
+        );
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxSentiment()).toEqual({ scored: true, id: "positive", name: "Positive", score: 0.6 });
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({
+      ctx_sentiment: ["positive"],
+    });
+  });
+
+  test("ctxSentiment reports scored false when the DCN serves no sentiment", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: { categories: [], keywords: [] } }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    expect(sdk.ctxSentiment()).toEqual({ scored: false });
+
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxSentiment()).toEqual({ scored: false });
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({});
   });
 
   // A DCN on an edge build predating brand-safety serving omits the field, the

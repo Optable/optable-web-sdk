@@ -28,7 +28,7 @@ Arguments after the SDK instance are optional. `taxonomyKeys` and `options` are 
 
 ### Keys
 
-Category ids are grouped under their taxonomy name, so a response classified under `iab_ct_3_1` produces that key unless `taxonomyKeys` renames it. Page keywords are emitted under `ctx_kw`, capped at ten and sanitized to GAM's value rules; `options.keywordKey` renames that key and an empty string opts out. See [contextual targeting key-values](../../README.md#contextual-targeting-key-values) for the full conversion rules.
+Category ids are grouped under their taxonomy name, so a response classified under `iab_ct_3_1` produces that key unless `taxonomyKeys` renames it. Page keywords are emitted under `ctx_kw`, capped at ten and sanitized to GAM's value rules; `options.keywordKey` renames that key and an empty string opts out. The page's sentiment label (`positive`, `neutral` or `negative`) is emitted under `ctx_sentiment`, omitted when the page has no sentiment; `options.sentimentKey` renames that key and an empty string opts out. See [contextual targeting key-values](../../README.md#contextual-targeting-key-values) for the full conversion rules.
 
 ### Behaviour
 
