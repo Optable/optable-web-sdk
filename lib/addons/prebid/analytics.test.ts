@@ -913,7 +913,7 @@ describe("OptablePrebidAnalytics", () => {
     };
 
     beforeEach(() => {
-      jest.useFakeTimers();
+      jest.useFakeTimers({ doNotFake: ["performance"] });
       localStorage.clear();
       analytics = new OptablePrebidAnalytics(mockOptableInstance, { analytics: true });
     });
