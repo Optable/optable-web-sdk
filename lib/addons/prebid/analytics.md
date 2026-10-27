@@ -136,6 +136,11 @@ bids with a `cpm`), `url`, `referrer`, `trafficSource`, `tenant`,
 `prebidjsVersion`, `sessionDepth`, `pageAuctionsCount`, `originSlug`, and the
 parsed `userAgent`/`device`.
 
+Received bids are matched to request bids on `requestId`. Prebid Server
+responses can carry a `requestId` that matches no client bid; those go to the
+first bid of the same bidder and ad unit still without a response. Bids that fit
+nowhere are counted in `unmatchedBids`, omitted when 0.
+
 `referrer` is the referring hostname only, never the full referring URL.
 `trafficSource` classifies it as one of `direct`, `internal`, `paid`,
 `campaign`, `email`, `organic_search`, `social` or `referral`. Both are

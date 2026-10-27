@@ -483,7 +483,25 @@ class OptablePrebidAnalytics {
       };
     });
 
-    const bidsReceivedMap = new Map<string, any>(bidsReceived.map((b: any) => [b.requestId, b]));
+    const requestBidIds = new Set<string>(requests.flatMap((r: any) => r.bids.map((b: any) => b.bidId)));
+    const bidsReceivedMap = new Map<string, any>();
+    const unresolvedBids: any[] = [];
+    bidsReceived.forEach((b: any) => {
+      if (requestBidIds.has(b.requestId)) bidsReceivedMap.set(b.requestId, b);
+      else unresolvedBids.push(b);
+    });
+    // Prebid Server responses can carry a requestId that matches no client bidId.
+    // Fall back to the same bidder and ad unit, first bid still waiting for a response.
+    let unmatchedBids = 0;
+    unresolvedBids.forEach((b: any) => {
+      const bidderCode = b.bidderCode || b.bidder;
+      const match = requests
+        .filter((r: any) => r.bidderCode === bidderCode)
+        .flatMap((r: any) => r.bids)
+        .find((bid: any) => bid.adUnitCode === b.adUnitCode && !bidsReceivedMap.has(bid.bidId));
+      if (match) bidsReceivedMap.set(match.bidId, b);
+      else unmatchedBids += 1;
+    });
     const noBidRequestIds = new Set<string>(noBids.map((nb: any) => nb.bidderRequestId));
     const timedOutRequestIds = new Set<string>(timeoutBids.map((tb: any) => tb.bidderRequestId));
 
@@ -556,6 +574,7 @@ class OptablePrebidAnalytics {
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
       originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };
+    if (unmatchedBids) witnessData.unmatchedBids = unmatchedBids;
 
     // Page configuration, sent once per page. A flag instead of pageAuctionsCount === 1 because
     // payloads are built after bidWinTimeout, when later auctions may already have bumped the count.
