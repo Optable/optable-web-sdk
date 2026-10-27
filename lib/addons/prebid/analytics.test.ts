@@ -2400,10 +2400,9 @@ describe("OptablePrebidAnalytics", () => {
 
       const result = await analytics.toWitness(auctionEndEvent, []);
 
-      // Should only have one source since they have the same source value
+      // One source, but both matchers that resolved it
       expect(result.optableSources).toEqual(["optable.co"]);
-      // The last occurrence (from eids, not ext.eids) should win due to deduplication
-      expect(result.optableMatchers).toEqual(["matcher2"]);
+      expect(result.optableMatchers).toEqual(["matcher1", "matcher2"]);
     });
 
     it("should preserve EIDs with different sources from ext.eids and eids", async () => {
@@ -2560,9 +2559,8 @@ describe("OptablePrebidAnalytics", () => {
 
       const result = await analytics.toWitness(auctionEndEvent, []);
 
-      // Should only have one optable source and matcher due to deduplication
       expect(result.optableSources).toEqual(["optable.co"]);
-      expect(result.optableMatchers).toEqual(["matcher2"]);
+      expect(result.optableMatchers).toEqual(["matcher1", "matcher2"]);
       // Non-optable EIDs should be filtered out
       expect(result.optableMatchers).not.toContain("other1");
       expect(result.optableMatchers).not.toContain("other2");
@@ -2599,10 +2597,8 @@ describe("OptablePrebidAnalytics", () => {
       expect(storedAuction).toBeDefined();
 
       const payload = await analytics.toWitness(storedAuction.auctionEnd, []);
-      // Should only have one source after deduplication
       expect(payload.optableSources).toEqual(["optable.co"]);
-      // The last matcher should win
-      expect(payload.optableMatchers).toEqual(["matcher2"]);
+      expect(payload.optableMatchers).toEqual(["matcher1", "matcher2"]);
     });
   });
 
