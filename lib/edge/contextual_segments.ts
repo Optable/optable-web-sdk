@@ -50,10 +50,23 @@ type ContextualBrandSafety = {
   categories: ContextualBrandSafetyCategory[];
 };
 
+type ContextualSentimentLabel = "positive" | "neutral" | "negative";
+
+// The page's polarity. `id` is the label, derived by the DCN from the score
+// under its own thresholds, so it is never recomputed here.
+//
+// `scored` false means there is no sentiment: the page was not classified yet,
+// the DCN does not run the classifier, or the page had nothing to score. The
+// DCN then serves `{ scored: false }` alone, so no zero score reads as neutral.
+type ContextualSentiment =
+  | { scored: false }
+  | { scored: true; id: ContextualSentimentLabel; name: string; score: number };
+
 type ContextualClassifications = {
   categories: ContextualCategory[];
   keywords: ContextualKeyword[];
   brandSafety: ContextualBrandSafety;
+  sentiment: ContextualSentiment;
 };
 
 type ContextualSegmentsResponse = {
@@ -135,12 +148,23 @@ function ContextualMaxRiskLevel(response: ContextualSegmentsResponse | null): Co
   return maxLevel;
 }
 
+// Reads the sentiment off a contextual segments response. A DCN on a build
+// predating sentiment serving omits the field, which folds into scored false
+// like a node that does not run the classifier.
+function ContextualSentimentOf(response: ContextualSegmentsResponse | null): ContextualSentiment {
+  const sentiment = response?.classifications?.sentiment;
+  if (!sentiment?.scored) {
+    return { scored: false };
+  }
+  return sentiment;
+}
+
 // Targeting key-values derived from a contextual segments response, suitable for
 // passing to ad servers such as GAM via googletag.pubads().setTargeting(key, values).
 type ContextualTargetingKeyValues = Record<string, string[]>;
 
-// Options for including keyword and brand-safety classifications in the
-// targeting key-values.
+// Options for including keyword, brand-safety and sentiment classifications in
+// the targeting key-values.
 type ContextualTargetingKeyValuesOptions = {
   // GAM key under which keyword classifications are emitted. Defaults to
   // DEFAULT_KEYWORD_KEY when omitted, so keywords are emitted by default. Pass
@@ -158,6 +182,10 @@ type ContextualTargetingKeyValuesOptions = {
   // emitted for every state once the key is in play, BRAND_SAFETY_NOT_ASSESSED
   // included. The key is therefore always present unless explicitly disabled.
   brandSafetyKey?: string;
+  // GAM key under which the page's sentiment label is emitted. Defaults to
+  // DEFAULT_SENTIMENT_KEY when omitted. Pass an empty string to opt out. Like
+  // keywords, the key is dropped when the page has no sentiment.
+  sentimentKey?: string;
 };
 
 // Default GAM key under which keyword values are emitted.
@@ -168,6 +196,9 @@ const DEFAULT_MAX_KEYWORDS = 10;
 
 // Default GAM key under which the brand-safety tier is emitted.
 const DEFAULT_BRAND_SAFETY_KEY = "ctx_bs_max";
+
+// Default GAM key under which the sentiment label is emitted.
+const DEFAULT_SENTIMENT_KEY = "ctx_sentiment";
 
 // Brand-safety value emitted when no assessment backs the page: it was never
 // classified, the read failed, or the DCN does not run the classifier.
@@ -300,6 +331,14 @@ function ContextualTargetingKeyValues(
     result[brandSafetyKey] = [brandSafetyTargetingValue(response)];
   }
 
+  // The label only: GAM matches values exactly, so a raw score could not be
+  // range-targeted.
+  const sentimentKey = options?.sentimentKey ?? DEFAULT_SENTIMENT_KEY;
+  const sentiment = ContextualSentimentOf(response);
+  if (sentimentKey && sentiment.scored) {
+    result[sentimentKey] = [sentiment.id];
+  }
+
   return result;
 }
 
@@ -317,7 +356,13 @@ function brandSafetyTargetingValue(response: ContextualSegmentsResponse | null):
   return ContextualMaxRiskLevel(response) ?? BRAND_SAFETY_NO_FLAGS;
 }
 
-export { ContextualSegments, ContextualTargetingKeyValues, ContextualBrandSafetyOf, ContextualMaxRiskLevel };
+export {
+  ContextualSegments,
+  ContextualTargetingKeyValues,
+  ContextualBrandSafetyOf,
+  ContextualMaxRiskLevel,
+  ContextualSentimentOf,
+};
 export default ContextualSegments;
 export type {
   ContextualCategory,
@@ -326,6 +371,8 @@ export type {
   ContextualRiskLevel,
   ContextualBrandSafetyCategory,
   ContextualBrandSafety,
+  ContextualSentimentLabel,
+  ContextualSentiment,
   ContextualClassifications,
   ContextualSegmentsResponse,
   ContextualTargetingKeyValuesOptions,

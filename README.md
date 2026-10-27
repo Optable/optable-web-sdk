@@ -442,15 +442,18 @@ type ContextualSegmentsResponse = {
       assessed: boolean;
       categories: { name: string; riskLevel: "low" | "medium" | "high" | "floor" | "not_assessed" | "" }[];
     };
+    sentiment:
+      | { scored: false }
+      | { scored: true; id: "positive" | "neutral" | "negative"; name: string; score: number };
   };
 };
 ```
 
-`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page; `brandSafety` is the page's brand-safety assessment, described [below](#brand-safety). A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
+`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page; `brandSafety` is the page's brand-safety assessment, described [below](#brand-safety); `sentiment` is the page's polarity, described [below](#sentiment). A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
 
 Each call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
 
-> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays, and `brandSafety.assessed` will be `false`.
+> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays, `brandSafety.assessed` will be `false`, and `sentiment.scored` will be `false`.
 
 #### Brand safety
 
@@ -481,6 +484,21 @@ if (sdk.ctxMaxRiskLevel() === "floor") {
 ```
 
 `null` comes back in two different situations: an assessment ran and flagged nothing, and nothing is known about the page at all. A gate that must tell those apart reads `ctxBrandSafety().assessed` as well.
+
+#### Sentiment
+
+`ctxSentiment()` reads the page's sentiment off the cached `ctxSegments()` response:
+
+```javascript
+const sentiment = sdk.ctxSentiment();
+if (sentiment.scored) {
+  // sentiment.id is "positive", "neutral" or "negative"; sentiment.score is from -1.0 to 1.0.
+}
+```
+
+**Read `scored` first.** When it is `false` there is no sentiment for the page: the DCN never classified it, does not run the sentiment classifier, or found nothing to score. `id`, `name` and `score` are then absent, so a missing score is never mistaken for a neutral one.
+
+The label in `id` is derived by the DCN from the score. Use it as served rather than bucketing `score` yourself, so your targeting follows the DCN's thresholds.
 
 #### Contextual targeting key-values
 
@@ -539,6 +557,16 @@ The two sentinels exist so a line item can tell them apart. If the key were simp
 `not_assessed` is spelled the same as the `riskLevel` a category carries when the assessment did not cover it. That is deliberate: one word for one idea, "nothing is known here", at two scopes. The scopes cannot be confused, because `ctx_bs_max` only ever carries a page-level answer.
 
 One difference from `keywordKey` is worth knowing before you ship: keywords are dropped when the DCN produced none, whereas `ctx_bs_max` is always present unless you disable it. A DCN that does not run the brand-safety classifier therefore adds `ctx_bs_max=not_assessed` to every ad request. That is the intended behavior, since it is a state a line item may want to target, but if you do not use brand safety at all, pass an empty `brandSafetyKey` to keep it out of the request.
+
+The page's [sentiment](#sentiment) label is emitted by default under `ctx_sentiment`, as `positive`, `neutral` or `negative`. Like keywords, the key is omitted when the page has no sentiment. The score is never emitted: GAM matches values exactly, so a raw score cannot be range-targeted. Use `sentimentKey` to rename the key, or pass an empty `sentimentKey` to opt out:
+
+```javascript
+sdk.ctxTargetingKeyValues(undefined, { sentimentKey: "mood" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "mood": ["positive"] }
+
+sdk.ctxTargetingKeyValues(undefined, { sentimentKey: "" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"] }
+```
 
 A typical Google Ad Manager activation uses a `loadGAM()` helper:
 

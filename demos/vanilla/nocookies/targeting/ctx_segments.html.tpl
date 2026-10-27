@@ -119,6 +119,10 @@
                     <a href="#classifications-brand-safety"><code>brandSafety</code>: brand-safety assessment of the page</a>
                     <span class="toc-note">Risk tier per flagged category, assessed from the page's text only.</span>
                   </li>
+                  <li>
+                    <a href="#classifications-sentiment"><code>sentiment</code>: polarity of the page</a>
+                    <span class="toc-note">Positive, neutral or negative label, with the score it was derived from.</span>
+                  </li>
                 </ul>
               </li>
               <li>
@@ -142,8 +146,8 @@
             returns for it: taxonomy categories (e.g. against the
             <a href="https://iabtechlab.com/standards/content-taxonomy/">IAB Content Taxonomy</a>), free-form keywords,
             and/or a brand-safety assessment (against the
-            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>), depending on which classifiers the DCN has
-            enabled.
+            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>), and/or the page's sentiment, depending on which
+            classifiers the DCN has enabled.
           </p>
           <pre><code>// Classify the URL of the current page (defaults to window.location.href):
 optable.instance.ctxSegments();
@@ -156,11 +160,12 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
     categories: [{ id, name, score, taxonomy }],
     keywords: [{ keyword, prominence }],
     brandSafety: { assessed, categories: [{ name, riskLevel }] },
+    sentiment: { scored, id, name, score },
   },
 }</code></pre>
           <p>
             The <code>classifications</code> object groups results by classification method, and the DCN includes only
-            the methods it has enabled. Three methods exist today:
+            the methods it has enabled. Four methods exist today:
           </p>
           <h6 id="classifications-categories"><code>categories</code>: taxonomy category ids scored for the page</h6>
           <table class="u-full-width">
@@ -275,6 +280,38 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
             the taxonomy enumerates risks, so the classifier can report that a page matches one but never that it is
             free of them.
           </p>
+          <h6 id="classifications-sentiment"><code>sentiment</code>: polarity of the page</h6>
+          <table class="u-full-width">
+            <thead>
+              <tr><th>Field</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>scored</code></td>
+                <td>
+                  Whether the page has a sentiment. When <code>false</code>, the DCN never classified the page, does
+                  not run the sentiment classifier, or found nothing to score, and the other fields are absent.
+                </td>
+              </tr>
+              <tr>
+                <td><code>id</code></td>
+                <td>
+                  Stable label: <code>positive</code>, <code>neutral</code> or <code>negative</code>. Derived by the DCN
+                  from the score, so use it as served rather than bucketing the score yourself.
+                </td>
+              </tr>
+              <tr><td><code>name</code></td><td>Human-readable label (e.g. <code>Positive</code>).</td></tr>
+              <tr><td><code>score</code></td><td>Polarity from -1.0 (negative) to 1.0 (positive).</td></tr>
+            </tbody>
+          </table>
+          <p>
+            <code>ctxSentiment()</code> reads it off the cached response. Check <code>scored</code> first, so a missing
+            score is never mistaken for a neutral one:
+          </p>
+          <pre><code>var sentiment = optable.instance.ctxSentiment();
+if (sentiment.scored && sentiment.id === "negative") {
+  // Skip campaigns that should not run next to negative content.
+}</code></pre>
           <p>
             Alternatively, configure the SDK with <code>initContextual</code> set to a callback. The SDK will
             automatically call <code>ctxSegments()</code> for the URL of the current page on initialization, and
@@ -299,7 +336,8 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
             <strong>Note:</strong> the URL requested must have been classified by the DCN. For the demo DCN used by
             this page, the URL <code>https://optable.co/</code> should have been classified, so you can try that. A
             URL the DCN holds no classification for comes back with empty <code>categories</code> and
-            <code>keywords</code> arrays, and <code>brandSafety.assessed</code> set to <code>false</code>.
+            <code>keywords</code> arrays, <code>brandSafety.assessed</code> set to <code>false</code>, and
+            <code>sentiment.scored</code> set to <code>false</code>.
           </p>
         </div>
       </div>
@@ -356,14 +394,15 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
           <pre><code>loadGAM(optable.instance.ctxTargetingKeyValues());</code></pre>
           <p>
             By default the returned map has one key per taxonomy the DCN classified into (keyed by the raw taxonomy
-            value), the page's keywords under <code>ctx_kw</code>, and its brand-safety tier under
-            <code>ctx_bs_max</code>. For example,
+            value), the page's keywords under <code>ctx_kw</code>, its brand-safety tier under
+            <code>ctx_bs_max</code>, and its sentiment label under <code>ctx_sentiment</code>. For example,
             <code>ctxTargetingKeyValues()</code> might return:
           </p>
           <pre><code>{
   "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
   "ctx_kw": ["advertising", "programmatic", "ad tech"],
-  "ctx_bs_max": ["no_flags"]
+  "ctx_bs_max": ["no_flags"],
+  "ctx_sentiment": ["positive"]
 }</code></pre>
           <p>
             If you want <code>loadGAM()</code> to run as soon as the contextual segments arrive — without making a
@@ -461,6 +500,18 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" }
             does not run the brand-safety classifier therefore adds <code>ctx_bs_max=not_assessed</code> to every ad
             request. If you do not use brand safety at all, pass an empty <code>brandSafetyKey</code> to keep it out.
           </p>
+          <p>
+            The page's <a href="#classifications-sentiment">sentiment</a> label is emitted by default under
+            <code>ctx_sentiment</code>, as <code>positive</code>, <code>neutral</code> or <code>negative</code>. Like
+            keywords, the key is omitted when the page has no sentiment. The score is never emitted: GAM matches values
+            exactly, so a raw score cannot be range-targeted. Use <code>sentimentKey</code> to rename the key, or pass
+            an empty <code>sentimentKey</code> to opt out:
+          </p>
+          <pre><code>// Rename the sentiment key:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { sentimentKey: "mood" }));
+
+// Opt out of the sentiment key-value:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { sentimentKey: "" }));</code></pre>
           <div class="twelve column code-result" id="kv-result">—</div>
         </div>
       </div>
@@ -501,8 +552,11 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" }
         // the same answer as assessed false: nothing is known about this page.
         var brandSafety = (classifications && classifications.brandSafety) || { assessed: false, categories: [] };
         var brandSafetyCategories = Array.isArray(brandSafety.categories) ? brandSafety.categories : [];
+        // ctxSegments() has cached the response by now, so the helper reads it
+        // synchronously off the instance. Missing and unscored both read scored false.
+        var sentiment = optable.instance.ctxSentiment();
 
-        if (categories.length === 0 && keywords.length === 0 && !brandSafety.assessed) {
+        if (categories.length === 0 && keywords.length === 0 && !brandSafety.assessed && !sentiment.scored) {
           return "<p><em>No contextual classifications were returned for this URL.</em></p>";
         }
 
@@ -610,6 +664,19 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" }
             "<p>Most severe tier flagged (<code>ctxMaxRiskLevel()</code>): <code>" +
             escapeHtml(maxRiskLevel === null ? "null" : maxRiskLevel) +
             "</code></p>";
+        }
+
+        if (sentiment.scored) {
+          html +=
+            "<h6>Sentiment</h6>" +
+            '<table class="u-full-width"><thead><tr><th>Label</th><th>Name</th><th>Score</th></tr></thead><tbody>' +
+            "<tr><td><code>" +
+            escapeHtml(sentiment.id) +
+            "</code></td><td>" +
+            escapeHtml(sentiment.name) +
+            "</td><td>" +
+            escapeHtml(typeof sentiment.score === "number" ? sentiment.score.toFixed(2) : "n/a") +
+            "</td></tr></tbody></table>";
         }
 
         return html;
