@@ -27,7 +27,7 @@ const TWO_PART_SUFFIXES = ["co.uk", "com.au", "co.jp", "co.in", "com.br", "co.nz
 type TrafficSource = "direct" | "internal" | "paid" | "campaign" | "email" | "organic_search" | "social" | "referral";
 
 type TrafficSourceProperties = {
-  referrer: string;
+  referrer?: string;
   trafficSource: TrafficSource;
 };
 
@@ -85,9 +85,17 @@ function classify(host: string): TrafficSource {
  * classification in the same tab replaces it.
  *
  * Only the referring hostname is reported, never the full referring URL, which
- * can carry query strings with personal data.
+ * can carry query strings with personal data. With no referring hostname,
+ * `referrer` is omitted rather than sent empty: the edge rejects an empty
+ * witness property value with a 400 and drops the whole event.
  */
 function getTrafficSource(): TrafficSourceProperties {
+  const properties = resolveTrafficSource();
+  // Also covers a `referrer: ""` cached by an SDK version that sent it.
+  return properties.referrer ? properties : { trafficSource: properties.trafficSource };
+}
+
+function resolveTrafficSource(): TrafficSourceProperties {
   let cached: TrafficSourceProperties | null = null;
   try {
     const stored = window.sessionStorage?.getItem(TRAFFIC_SOURCE_KEY);
