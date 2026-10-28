@@ -1474,6 +1474,67 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.missed).toBe(false);
     });
 
+    describe("Prebid Server responses", () => {
+      const s2sAuction = (bidsReceived: any[]) => ({
+        auctionId: "auction-s2s",
+        bidderRequests: [
+          {
+            bidderCode: "bidderA",
+            bidderRequestId: "req-a",
+            ortb2: { site: { domain: "example.com" } },
+            bids: [
+              { bidId: "bid-a1", adUnitCode: "slot-1" },
+              { bidId: "bid-a2", adUnitCode: "slot-1" },
+            ],
+          },
+        ],
+        bidsReceived,
+        noBids: [],
+      });
+
+      it("matches a bid by bidder and ad unit when its requestId matches no client bid", async () => {
+        const result = await analytics.toWitness(
+          s2sAuction([{ requestId: "s2s-xyz", bidderCode: "bidderA", adUnitCode: "slot-1", cpm: 1.5 }]),
+          []
+        );
+
+        const [bid1, bid2] = (result.bidderRequests as any[])[0].bids;
+        expect(bid1.cpm).toBe(1.5);
+        expect(bid1.status).toBe("RECEIVED");
+        expect(bid2.cpm).toBeUndefined();
+        expect(result.totalBids).toBe(1);
+        expect(result.unmatchedBids).toBeUndefined();
+      });
+
+      it("skips bids already matched by requestId when falling back", async () => {
+        const result = await analytics.toWitness(
+          s2sAuction([
+            { requestId: "s2s-xyz", bidder: "bidderA", adUnitCode: "slot-1", cpm: 1.5 },
+            { requestId: "bid-a1", bidderCode: "bidderA", adUnitCode: "slot-1", cpm: 2 },
+          ]),
+          []
+        );
+
+        const [bid1, bid2] = (result.bidderRequests as any[])[0].bids;
+        expect(bid1.cpm).toBe(2);
+        expect(bid2.cpm).toBe(1.5);
+        expect(result.totalBids).toBe(2);
+      });
+
+      it("counts a bid as unmatched when no bidder and ad unit fit", async () => {
+        const result = await analytics.toWitness(
+          s2sAuction([
+            { requestId: "s2s-1", bidderCode: "other", adUnitCode: "slot-1", cpm: 1 },
+            { requestId: "s2s-2", bidderCode: "bidderA", adUnitCode: "slot-9", cpm: 1 },
+          ]),
+          []
+        );
+
+        expect(result.unmatchedBids).toBe(2);
+        expect(result.totalBids).toBe(0);
+      });
+    });
+
     it("should keep a replayed auction as missed when no Optable sources are present", async () => {
       const auctionEndEvent = {
         auctionId: "auction-replayed-no-cache",
