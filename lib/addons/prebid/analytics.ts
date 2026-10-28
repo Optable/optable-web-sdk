@@ -429,20 +429,18 @@ class OptablePrebidAnalytics {
     const requests = bidderRequests.map((br: any) => {
       const { bidderCode, bidderRequestId, bids = [] } = br;
       const domain = br.ortb2.site?.domain ?? "unknown";
-      const allEids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
-      // Deduplicate EIDs by source and inserter, so another inserter's EID can't hide Optable's
-      const eids = Array.from(new Map(allEids.map((eid: any) => [`${eid.source}|${eid.inserter}`, eid])).values());
+      const eids = [...(br.ortb2.user?.ext?.eids ?? []), ...(br.ortb2.user?.eids ?? [])];
 
       // Optable EIDs
       const optableEIDS = eids.filter((e: { inserter: string }) => e.inserter === "optable.co");
       const optableMatchers = [...new Set(optableEIDS.map((e: any) => e.matcher).filter(Boolean))];
       const optableSources = [...new Set(optableEIDS.map((e: any) => e.source).filter(Boolean))];
 
-      // Competitor EIDs, matched before the dedupe so a same-source EID can't hide them
-      const liSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.liveintent));
-      const iiqSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.intentiq));
-      const gcSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.growthcode));
-      const tuSources = sourcesOf(allEids.filter(COMPETITOR_EIDS.transunion));
+      // Competitor EIDs
+      const liSources = sourcesOf(eids.filter(COMPETITOR_EIDS.liveintent));
+      const iiqSources = sourcesOf(eids.filter(COMPETITOR_EIDS.intentiq));
+      const gcSources = sourcesOf(eids.filter(COMPETITOR_EIDS.growthcode));
+      const tuSources = sourcesOf(eids.filter(COMPETITOR_EIDS.transunion));
 
       device = br.ortb2.device;
 
