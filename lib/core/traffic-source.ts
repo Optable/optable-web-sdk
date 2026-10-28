@@ -86,8 +86,8 @@ function classify(host: string): TrafficSource {
  *
  * Only the referring hostname is reported, never the full referring URL, which
  * can carry query strings with personal data. With no referring hostname,
- * `referrer` is omitted rather than sent empty: the edge rejects an empty
- * witness property value with a 400 and drops the whole event.
+ * `referrer` is omitted rather than sent empty: a witness event with an empty
+ * property value is rejected with a 400 and dropped whole.
  */
 function getTrafficSource(): TrafficSourceProperties {
   const properties = resolveTrafficSource();
