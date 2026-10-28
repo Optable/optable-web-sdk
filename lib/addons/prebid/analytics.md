@@ -154,7 +154,9 @@ are captured when the auction ends, since the payload is only built after
 | `idsMs`    | Set when the targeting cache was written during this page view: ms from page start to the write.                                                                                                                                                                |
 | `om`       | Per bidder request, a bitmask over `optableSources` (bit i = `optableSources[i]`). Omitted when the bidder received every source.                                                                                                                               |
 
-`referrer` is the referring hostname only, never the full referring URL.
+`referrer` is the referring hostname only, never the full referring URL, and is
+omitted when there is none (a witness event with an empty property value is
+rejected with a 400).
 `trafficSource` classifies it as one of `direct`, `internal`, `paid`,
 `campaign`, `email`, `organic_search`, `social` or `referral`. Both are
 first-touch per tab: the first non-internal result is cached in `sessionStorage`

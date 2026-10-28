@@ -15,14 +15,19 @@ beforeEach(() => {
 });
 
 describe("getTrafficSource - classification", () => {
-  it("reports direct when there is no referrer", () => {
+  it("reports direct without a referrer key when there is no referrer", () => {
     visit("https://www.site.com/");
-    expect(getTrafficSource()).toEqual({ referrer: "", trafficSource: "direct" });
+    expect(getTrafficSource()).toStrictEqual({ trafficSource: "direct" });
   });
 
-  it("reports direct when the referrer is not a valid URL", () => {
+  it("reports direct without a referrer key when the referrer is not a valid URL", () => {
     visit("https://www.site.com/", "not a url");
-    expect(getTrafficSource()).toEqual({ referrer: "", trafficSource: "direct" });
+    expect(getTrafficSource()).toStrictEqual({ trafficSource: "direct" });
+  });
+
+  it("omits referrer for a paid visit without a referrer", () => {
+    visit("https://www.site.com/?gclid=abc");
+    expect(getTrafficSource()).toStrictEqual({ trafficSource: "paid" });
   });
 
   it("reports internal for the same host", () => {
@@ -109,7 +114,13 @@ describe("getTrafficSource - session caching", () => {
     getTrafficSource();
 
     visit("https://www.site.com/b", "https://www.site.com/a");
-    expect(getTrafficSource()).toEqual({ referrer: "", trafficSource: "direct" });
+    expect(getTrafficSource()).toStrictEqual({ trafficSource: "direct" });
+  });
+
+  it("omits an empty referrer cached by an earlier SDK version", () => {
+    sessionStorage.setItem(TRAFFIC_SOURCE_KEY, JSON.stringify({ referrer: "", trafficSource: "paid" }));
+    visit("https://www.site.com/b", "https://www.site.com/a");
+    expect(getTrafficSource()).toStrictEqual({ trafficSource: "paid" });
   });
 
   it("replaces a cached direct with a later external source", () => {
