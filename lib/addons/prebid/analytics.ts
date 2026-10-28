@@ -455,11 +455,12 @@ class OptablePrebidAnalytics {
   /**
    * State of this SDK's targeting cache. cacheAge is seconds since the cache was written, -1 when
    * there is no cache, and absent when the cache predates the write timestamp. idsMs is set when the
-   * cache was written during this page view: ms from page start to our IDs landing.
+   * cache was written during this page view: ms from page start to our IDs landing. Absent without
+   * device access consent, like the SDK's own storage reads.
    */
   private cacheState(): Record<string, number> {
     const { dcn } = this.optableInstance;
-    if (!dcn) return {};
+    if (!dcn?.consent?.deviceAccess) return {};
     try {
       const [key] = generateTargetingKeys(dcn).read;
       if (!localStorage.getItem(key)) return { cacheAge: -1 };
@@ -653,6 +654,7 @@ class OptablePrebidAnalytics {
 
     // Per-bidder delivery as a bitmask over optableSources (bit i = optableSources[i]).
     // Omitted when the bidder received every source, so the usual case adds nothing.
+    // Capped at 30 sources so the mask stays a positive 32-bit integer for bitwise reads downstream.
     const auctionSources = witnessData.optableSources as string[];
     const fullMask = auctionSources.length && auctionSources.length <= 30 ? 2 ** auctionSources.length - 1 : 0;
     if (fullMask) {

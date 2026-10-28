@@ -145,14 +145,14 @@ Troubleshooting fields, same meaning as in the V1 add-on. The page-dependent one
 are captured when the auction ends, since the payload is only built after
 `bidWinTimeout`:
 
-| Field      | Meaning                                                                                                                                            |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `slotSeq`  | Earlier auctions of the same ad unit on this page (0 for the first).                                                                               |
-| `t0`       | Auction start, in ms from page start.                                                                                                              |
-| `consent`  | Bitmask: 1 GDPR applies, 2 Global Privacy Control, 4 US privacy opt-out, 8 GPP string present, 16 TCF blocked storage for some module on the page. |
-| `cacheAge` | Seconds since this SDK's targeting cache was written; `-1` when there is no cache; absent when the cache predates the write timestamp.             |
-| `idsMs`    | Set when the targeting cache was written during this page view: ms from page start to the write.                                                   |
-| `om`       | Per bidder request, a bitmask over `optableSources` (bit i = `optableSources[i]`). Omitted when the bidder received every source.                  |
+| Field      | Meaning                                                                                                                                                                                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slotSeq`  | Earlier auctions on this page whose first ad unit is this auction's first ad unit (0 for the first). Other ad units in the auction aren't counted.                                                                                                              |
+| `t0`       | Auction start, in ms from page start.                                                                                                                                                                                                                           |
+| `consent`  | Bitmask: 1 GDPR applies, 2 Global Privacy Control, 4 US privacy opt-out, 8 GPP string present, 16 TCF blocked storage for some module on the page. Bits 1, 4 and 8 come from the first bidder request, so an auction without bidder requests reports them as 0. |
+| `cacheAge` | Seconds since this SDK's targeting cache was written; `-1` when there is no cache; absent when the cache predates the write timestamp or without device access consent.                                                                                         |
+| `idsMs`    | Set when the targeting cache was written during this page view: ms from page start to the write.                                                                                                                                                                |
+| `om`       | Per bidder request, a bitmask over `optableSources` (bit i = `optableSources[i]`). Omitted when the bidder received every source.                                                                                                                               |
 
 `referrer` is the referring hostname only, never the full referring URL.
 `trafficSource` classifies it as one of `direct`, `internal`, `paid`,

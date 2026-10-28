@@ -960,7 +960,7 @@ describe("OptablePrebidAnalytics", () => {
     });
 
     it("reads the SDK's own targeting cache for cacheAge", () => {
-      const dcn = { host: "dcn.example.com", node: "node1" } as any;
+      const dcn = { host: "dcn.example.com", node: "node1", consent: { deviceAccess: true } } as any;
       analytics = new OptablePrebidAnalytics({ ...mockOptableInstance, dcn } as any, { analytics: true });
       const [key] = generateTargetingKeys(dcn).read;
 
@@ -971,6 +971,9 @@ describe("OptablePrebidAnalytics", () => {
 
       localStorage.setItem(`${key}:ts`, String(Date.now() - 5000));
       expect(captureOf({ bidderRequests: [] }).cacheAge).toBe(5);
+
+      dcn.consent.deviceAccess = false;
+      expect(captureOf({ bidderRequests: [] }).cacheAge).toBeUndefined();
     });
 
     it("sends the values captured at auction end, not at send time", async () => {
