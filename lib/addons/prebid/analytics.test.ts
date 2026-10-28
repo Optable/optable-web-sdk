@@ -466,7 +466,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.liveintentEIDs).toEqual([]);
     });
 
-    it("reports LiveIntent and Optable EIDs side by side, before the source dedupe", async () => {
+    it("reports LiveIntent and Optable EIDs side by side", async () => {
       const result = await analytics.toWitness(
         liveintentAuction([
           {
@@ -2369,12 +2369,12 @@ describe("OptablePrebidAnalytics", () => {
     });
   });
 
-  describe("EID deduplication", () => {
+  describe("EID sources and matchers across ext.eids and eids", () => {
     beforeEach(() => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
-    it("should deduplicate EIDs by source when both ext.eids and eids contain same source", async () => {
+    it("dedupes sources but keeps every Optable matcher when ext.eids and eids share a source", async () => {
       const auctionEndEvent = {
         auctionId: "auction-dedup",
         bidderRequests: [
@@ -2527,7 +2527,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.optableMatchers).toEqual(["matcher1"]);
     });
 
-    it("should deduplicate multiple EIDs with same source across different locations", async () => {
+    it("dedupes sources but keeps every Optable matcher across several shared sources", async () => {
       const auctionEndEvent = {
         auctionId: "auction-multi-dedup",
         bidderRequests: [
@@ -2566,7 +2566,7 @@ describe("OptablePrebidAnalytics", () => {
       expect(result.optableMatchers).not.toContain("other2");
     });
 
-    it("should handle trackAuctionEnd with duplicate EIDs in ext.eids and eids", async () => {
+    it("keeps every Optable matcher through trackAuctionEnd when ext.eids and eids share a source", async () => {
       const event = {
         auctionId: "auction-track-dedup",
         timeout: 3000,
