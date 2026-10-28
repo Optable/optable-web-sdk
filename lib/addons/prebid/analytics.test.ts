@@ -1,5 +1,6 @@
 import OptablePrebidAnalytics, { initPrebidAnalytics } from "./analytics";
 import type OptableSDK from "../../sdk";
+import { generateTargetingKeys } from "../../core/storage-keys";
 
 // Mock the SDK_WRAPPER_VERSION global
 declare global {
@@ -893,6 +894,139 @@ describe("OptablePrebidAnalytics", () => {
     });
   });
 
+  describe("troubleshooting fields", () => {
+    const bidderRequest = (bidderCode: string, sources: string[], extra: Record<string, unknown> = {}) => ({
+      bidderCode,
+      bidderRequestId: `br-${bidderCode}`,
+      ortb2: {
+        site: { domain: "example.com" },
+        user: { eids: sources.map((source) => ({ source, inserter: "optable.co", matcher: "m" })) },
+      },
+      bids: [{ bidId: `bid-${bidderCode}`, adUnitCode: "slot-1" }],
+      ...extra,
+    });
+    let seq = 0;
+    const captureOf = (event: Record<string, unknown>) => {
+      const auctionId = `auction-capture-${(seq += 1)}`;
+      analytics.trackAuctionEnd({ auctionId, ...event });
+      return analytics["auctions"].get(auctionId).capture;
+    };
+
+    beforeEach(() => {
+      jest.useFakeTimers({ doNotFake: ["performance"] });
+      localStorage.clear();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { analytics: true });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      delete (navigator as any).globalPrivacyControl;
+    });
+
+    it("counts earlier auctions of the same ad unit on the page in slotSeq", () => {
+      const event = { bidderRequests: [bidderRequest("a", [])] };
+      expect(captureOf(event).slotSeq).toBe(0);
+      expect(captureOf(event).slotSeq).toBe(1);
+      expect(captureOf({ adUnitCodes: ["slot-2"] }).slotSeq).toBe(0);
+    });
+
+    it("reports t0 as the auction start relative to page start", () => {
+      const capture = captureOf({ timestamp: performance.timeOrigin + 1234, bidderRequests: [] });
+      expect(capture.t0).toBe(1234);
+    });
+
+    it("encodes GDPR, GPC, US privacy opt-out, GPP and TCF-blocked storage in consent", () => {
+      Object.defineProperty(navigator, "globalPrivacyControl", { value: true, configurable: true });
+      analytics.setHooks({
+        onEvent: jest.fn(),
+        getEvents: () => [{ eventType: "tcf2Enforcement", args: { storageBlocked: ["someModule"] } }],
+      });
+
+      const capture = captureOf({
+        bidderRequests: [
+          bidderRequest("a", [], {
+            gdprConsent: { gdprApplies: true },
+            uspConsent: "1YYN",
+            gppConsent: { gppString: "DBABM~" },
+          }),
+        ],
+      });
+
+      expect(capture.consent).toBe(1 | 2 | 4 | 8 | 16);
+    });
+
+    it("reports consent 0 when nothing applies", () => {
+      expect(captureOf({ bidderRequests: [bidderRequest("a", [], { uspConsent: "1YNN" })] }).consent).toBe(0);
+    });
+
+    it("reads the SDK's own targeting cache for cacheAge", () => {
+      const dcn = { host: "dcn.example.com", node: "node1", consent: { deviceAccess: true } } as any;
+      analytics = new OptablePrebidAnalytics({ ...mockOptableInstance, dcn } as any, { analytics: true });
+      const [key] = generateTargetingKeys(dcn).read;
+
+      expect(captureOf({ bidderRequests: [] }).cacheAge).toBe(-1);
+
+      localStorage.setItem(key, "{}");
+      expect(captureOf({ bidderRequests: [] }).cacheAge).toBeUndefined();
+
+      localStorage.setItem(`${key}:ts`, String(Date.now() - 5000));
+      expect(captureOf({ bidderRequests: [] }).cacheAge).toBe(5);
+
+      dcn.consent.deviceAccess = false;
+      expect(captureOf({ bidderRequests: [] }).cacheAge).toBeUndefined();
+    });
+
+    it("sends the values captured at auction end, not at send time", async () => {
+      analytics.trackAuctionEnd({ auctionId: "auction-first", bidderRequests: [bidderRequest("a", [])] });
+      analytics.trackAuctionEnd({ auctionId: "auction-second", bidderRequests: [bidderRequest("a", [])] });
+      await jest.runAllTimersAsync();
+
+      expect(mockOptableInstance.witness).toHaveBeenCalledWith(
+        "optable.prebid.auction",
+        expect.objectContaining({ auctionId: "auction-first", slotSeq: 0, consent: 0 })
+      );
+      expect(mockOptableInstance.witness).toHaveBeenCalledWith(
+        "optable.prebid.auction",
+        expect.objectContaining({ auctionId: "auction-second", slotSeq: 1 })
+      );
+    });
+
+    it("omits om when every bidder received every Optable source", async () => {
+      const result = await analytics.toWitness(
+        {
+          auctionId: "auction-om-full",
+          bidderRequests: [
+            bidderRequest("a", ["uidapi.com", "criteo.com"]),
+            bidderRequest("b", ["uidapi.com", "criteo.com"]),
+          ],
+        },
+        []
+      );
+
+      (result.bidderRequests as any[]).forEach((br) => expect(br.om).toBeUndefined());
+    });
+
+    it("sends om as a bitmask over optableSources when a bidder missed some", async () => {
+      const result = await analytics.toWitness(
+        {
+          auctionId: "auction-om-partial",
+          bidderRequests: [
+            bidderRequest("a", ["uidapi.com", "criteo.com"]),
+            bidderRequest("b", ["criteo.com"]),
+            bidderRequest("c", []),
+          ],
+        },
+        []
+      );
+
+      const byCode = Object.fromEntries((result.bidderRequests as any[]).map((br) => [br.bidderCode, br]));
+      expect(result.optableSources).toEqual(["uidapi.com", "criteo.com"]);
+      expect(byCode.a.om).toBeUndefined();
+      expect(byCode.b.om).toBe(2);
+      expect(byCode.c.om).toBe(0);
+    });
+  });
+
   describe("log", () => {
     it("should not log when debug is false", () => {
       const consoleSpy = jest.spyOn(console, "log");
@@ -1127,7 +1261,8 @@ describe("OptablePrebidAnalytics", () => {
       const result = analytics.hookIntoPrebid(mockPbjs as any);
 
       expect(result).toBe(true);
-      expect(mockPbjs.onEvent).toHaveBeenCalledTimes(3);
+      expect(mockPbjs.onEvent).toHaveBeenCalledTimes(4);
+      expect(mockPbjs.onEvent).toHaveBeenCalledWith("tcf2Enforcement", expect.any(Function));
       expect(mockPbjs.onEvent).toHaveBeenCalledWith("bidTimeout", expect.any(Function));
       expect(mockPbjs.onEvent).toHaveBeenCalledWith("auctionEnd", expect.any(Function));
       expect(mockPbjs.onEvent).toHaveBeenCalledWith("bidWon", expect.any(Function));

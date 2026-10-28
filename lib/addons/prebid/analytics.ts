@@ -4,6 +4,7 @@ import type { WitnessProperties } from "../../edge/witness";
 import type OptableSDK from "../../sdk";
 import { buildRequest } from "../../core/network";
 import { getTrafficSource } from "../../core/traffic-source";
+import { generateTargetingKeys } from "../../core/storage-keys";
 
 import * as Bowser from "bowser";
 
@@ -54,6 +55,7 @@ interface AuctionItem {
   bidWonEvents: any[];
   timeoutBids: any[];
   sampled: boolean;
+  capture: Record<string, number>;
 }
 
 class OptablePrebidAnalytics {
@@ -67,6 +69,8 @@ class OptablePrebidAnalytics {
   private pendingTimeoutBids = new Map<string, any[]>();
   private prebidInstance: any;
   private pageConfigSent = false;
+  private slotAuctionCounts: Record<string, number> = {};
+  private storageBlocked = false;
 
   /**
    * Create a new OptablePrebidAnalytics instance.
@@ -123,6 +127,7 @@ class OptablePrebidAnalytics {
             ? new Date(Math.min(...auction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
             : null;
         payload["optableLoaded"] = !auction.missed;
+        Object.assign(payload, auction.capture);
 
         navigator.sendBeacon(
           witnessUrl,
@@ -209,7 +214,9 @@ class OptablePrebidAnalytics {
   setHooks(pbjs: any) {
     this.log("Processing past events");
     pbjs.getEvents().forEach((event: any) => {
-      if (event.eventType === "auctionInit") {
+      if (event.eventType === "tcf2Enforcement") {
+        this.noteTcfEnforcement(event.args);
+      } else if (event.eventType === "auctionInit") {
         this.missedAuctionIds.add(event.args.auctionId);
       } else if (event.eventType === "bidTimeout") {
         (event.args as any[]).forEach((bid: any) => {
@@ -232,6 +239,7 @@ class OptablePrebidAnalytics {
     });
 
     this.log("Hooking into Prebid.js events");
+    pbjs.onEvent("tcf2Enforcement", (event: any) => this.noteTcfEnforcement(event));
     pbjs.onEvent("bidTimeout", (timedOutBids: any[]) => {
       this.log("bidTimeout event received", timedOutBids);
       timedOutBids.forEach((bid: any) => {
@@ -317,6 +325,7 @@ class OptablePrebidAnalytics {
           ? new Date(Math.min(...storedAuction.bidWonEvents.map((e: any) => e._receivedAt.getTime()))).toISOString()
           : null;
       payload["optableLoaded"] = !effectiveMissed;
+      Object.assign(payload, storedAuction.capture);
       this.sendToWitnessAPI("optable.prebid.auction", payload);
       this.auctions.delete(auctionId);
     }, this.config.bidWinTimeout);
@@ -330,6 +339,7 @@ class OptablePrebidAnalytics {
       bidWonEvents: [],
       timeoutBids,
       sampled,
+      capture: this.captureAtAuctionEnd(event),
     });
     this.pendingTimeoutBids.delete(auctionId);
 
@@ -394,6 +404,74 @@ class OptablePrebidAnalytics {
       };
     } catch (e) {
       return undefined;
+    }
+  }
+
+  /**
+   * Troubleshooting fields that depend on page state. Read when the auction ends, because the
+   * payload is only built after bidWinTimeout.
+   * @param event - The raw Prebid auctionEnd event object.
+   * @returns slotSeq, t0, consent and the targeting cache state.
+   */
+  private captureAtAuctionEnd(event: any): Record<string, number> {
+    const { timestamp, bidderRequests = [] } = event;
+    const capture: Record<string, number> = {};
+
+    const slotKey =
+      bidderRequests.flatMap((br: any) => br.bids ?? []).find((b: any) => b.adUnitCode)?.adUnitCode ||
+      event.adUnitCodes?.[0];
+    if (slotKey) {
+      capture.slotSeq = this.slotAuctionCounts[slotKey] || 0;
+      this.slotAuctionCounts[slotKey] = capture.slotSeq + 1;
+    }
+    const origin = typeof performance !== "undefined" ? performance.timeOrigin : undefined;
+    if (typeof timestamp === "number" && origin) capture.t0 = Math.round(timestamp - origin);
+    capture.consent = this.consentFlags(bidderRequests[0]);
+
+    return Object.assign(capture, this.cacheState());
+  }
+
+  private noteTcfEnforcement(args: any) {
+    if (args?.storageBlocked?.length) {
+      this.storageBlocked = true;
+    }
+  }
+
+  /**
+   * Consent state at this auction, as a bitmask:
+   * 1 GDPR applies, 2 Global Privacy Control, 4 US privacy opt-out,
+   * 8 GPP string present, 16 TCF blocked storage for some module on this page.
+   */
+  private consentFlags(bidderRequest: any): number {
+    let flags = 0;
+    if (bidderRequest?.gdprConsent?.gdprApplies) flags |= 1;
+    if (typeof navigator !== "undefined" && (navigator as any).globalPrivacyControl === true) flags |= 2;
+    if (typeof bidderRequest?.uspConsent === "string" && bidderRequest.uspConsent.charAt(2) === "Y") flags |= 4;
+    if (bidderRequest?.gppConsent?.gppString) flags |= 8;
+    if (this.storageBlocked) flags |= 16;
+    return flags;
+  }
+
+  /**
+   * State of this SDK's targeting cache. cacheAge is seconds since the cache was written, -1 when
+   * there is no cache, and absent when the cache predates the write timestamp. idsMs is set when the
+   * cache was written during this page view: ms from page start to our IDs landing. Absent without
+   * device access consent, like the SDK's own storage reads.
+   */
+  private cacheState(): Record<string, number> {
+    const { dcn } = this.optableInstance;
+    if (!dcn?.consent?.deviceAccess) return {};
+    try {
+      const [key] = generateTargetingKeys(dcn).read;
+      if (!localStorage.getItem(key)) return { cacheAge: -1 };
+      const ts = Number(localStorage.getItem(`${key}:ts`));
+      if (!ts) return {};
+      const state: Record<string, number> = { cacheAge: Math.max(0, Math.round((Date.now() - ts) / 1000)) };
+      const origin = typeof performance !== "undefined" ? performance.timeOrigin : undefined;
+      if (origin && ts >= origin) state.idsMs = Math.round(ts - origin);
+      return state;
+    } catch (e) {
+      return {};
     }
   }
 
@@ -573,6 +651,18 @@ class OptablePrebidAnalytics {
       originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };
     if (unmatchedBids) witnessData.unmatchedBids = unmatchedBids;
+
+    // Per-bidder delivery as a bitmask over optableSources (bit i = optableSources[i]).
+    // Omitted when the bidder received every source, so the usual case adds nothing.
+    // Capped at 30 sources so the mask stays a positive 32-bit integer for bitwise reads downstream.
+    const auctionSources = witnessData.optableSources as string[];
+    const fullMask = auctionSources.length && auctionSources.length <= 30 ? 2 ** auctionSources.length - 1 : 0;
+    if (fullMask) {
+      (witnessData.bidderRequests as any[]).forEach((br) => {
+        const mask = auctionSources.reduce((m, s, i) => (br.optableSources.includes(s) ? m + 2 ** i : m), 0);
+        if (mask !== fullMask) br.om = mask;
+      });
+    }
 
     // Page configuration, sent once per page. A flag instead of pageAuctionsCount === 1 because
     // payloads are built after bidWinTimeout, when later auctions may already have bumped the count.
