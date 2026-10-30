@@ -2,7 +2,7 @@ import OptableSDK from "../sdk";
 
 declare module "../sdk" {
   export interface OptableSDK {
-    tryIdentifyFromParams: () => void;
+    tryIdentifyFromParams: (key?: string, prefix?: string) => void;
   }
 }
 
