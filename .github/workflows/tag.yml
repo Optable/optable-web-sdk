@@ -15,10 +15,10 @@ on:
         description: "Which part of the version to increment"
         type: choice
         options:
-          - patch
           - minor
           - major
-        default: patch
+          - patch
+        default: minor
 
 permissions:
   contents: read
