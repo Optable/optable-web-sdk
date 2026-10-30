@@ -6,7 +6,7 @@ import OptableSDK from "../sdk";
 
 declare module "../sdk" {
   export interface OptableSDK {
-    installGPTEventListeners: () => void;
+    installGPTEventListeners: (eventSpec?: GptEventSpec) => void;
     installGPTSecureSignals: (...signals: SecureSignal[]) => void;
   }
 }
