@@ -464,4 +464,41 @@ describe("refreshStaleUid2sFromCache", () => {
     await expect(refreshStaleUid2sFromCache(config)).resolves.toBeUndefined();
     expect(calls).toBe(0);
   });
+
+  it("refreshes a token held only by the public copy", async () => {
+    // What identifyAndTokenize leaves behind: it writes the merged cache to
+    // OPTABLE_RESOLVED only, and that copy is what prebid serves.
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] }] } },
+        refs: { "uidapi.com": REF },
+      })
+    );
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(1);
+    const stored = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string);
+    expect(stored.ortb2.user.eids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    expect(stored.refs).toEqual({ "uidapi.com": BODY });
+  });
+
+  it("skips a copy that cannot be parsed", async () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "not json");
+
+    await expect(refreshStaleUid2sFromCache(config)).resolves.toBeUndefined();
+    expect(calls).toBe(0);
+  });
+
+  it("does nothing when the cache cannot be read", async () => {
+    const spy = jest.spyOn(LocalStorage.prototype, "getTargetingCopies").mockImplementation(() => {
+      throw new Error("storage unavailable");
+    });
+
+    await expect(refreshStaleUid2sFromCache(config)).resolves.toBeUndefined();
+    expect(calls).toBe(0);
+
+    spy.mockRestore();
+  });
 });

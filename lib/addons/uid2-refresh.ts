@@ -153,19 +153,20 @@ async function refreshStaleUid2s(config: ResolvedConfig, stale: StaleUid2[]): Pr
  * there, so there is no mergeCache result to take staleUid2s from.
  */
 async function refreshStaleUid2sFromCache(config: ResolvedConfig): Promise<void> {
-  let cached: ResolvedCache | null = null;
+  let ref: Uid2RefData | null = null;
   try {
-    cached = new LocalStorage(config).getTargeting() as ResolvedCache | null;
+    // Every copy, not just the private one: a UID2 resolved by
+    // identifyAndTokenize lands only in the public copy, which is the one
+    // prebid serves. applyUid2Refresh writes the outcome back to all of them.
+    ref =
+      (new LocalStorage(config).getTargetingCopies() as ResolvedCache[])
+        .map((cached) => (isUid2Stale(cached) ? getRefData(cached, UID2_SOURCE) : null))
+        .find((found) => found !== null) ?? null;
   } catch (e) {
     debugLog("error", "UID2: could not read the targeting cache", e);
     return;
   }
 
-  if (!isUid2Stale(cached)) {
-    return;
-  }
-
-  const ref = getRefData(cached, UID2_SOURCE);
   if (!ref) {
     return;
   }

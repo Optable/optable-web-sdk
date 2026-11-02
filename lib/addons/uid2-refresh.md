@@ -53,6 +53,8 @@ import { refreshStaleUid2sFromCache } from "@optable/web-sdk/lib/dist/addons/uid
 await refreshStaleUid2sFromCache(sdk.dcn);
 ```
 
-Reads the targeting cache, and if the UID2 it holds is past its `refresh_from`, refreshes it through `refreshStaleUid2s`. Use this on a page that served targeting from cache: only `mergeCache` produces a `staleUid2s` list, and it runs when a response is merged, so a page that never calls the edge has nothing to pass to `refreshStaleUid2s`. That is also the page where the cached token has had time to age.
+Reads every stored copy of the targeting cache, and if any holds a UID2 past its `refresh_from`, refreshes it through `refreshStaleUid2s`. Use this on a page that served targeting from cache: only `mergeCache` produces a `staleUid2s` list, and it runs when a response is merged, so a page that never calls the edge has nothing to pass to `refreshStaleUid2s`. That is also the page where the cached token has had time to age.
 
-A missing cache, an unreadable one, a cache without refresh material, and a token not yet due are all no-ops that make no request.
+Both copies are checked, the private `OPTABLE_TARGETING_<key>` one and the public `optableCacheTargeting` one, because they can differ: `identifyAndTokenize` writes its merged cache only to its own `cacheKey` (`OPTABLE_RESOLVED` by default), which is also where prebid RTD and `pubProvidedId` read from. For a tokenize-resolved UID2 to be refreshable, that key and `optableCacheTargeting` have to name the same thing. `applyUid2Refresh` then writes the outcome back to every copy.
+
+A missing cache, an unparseable copy, a cache without refresh material, and a token not yet due are all no-ops that make no request.
