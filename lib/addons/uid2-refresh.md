@@ -44,3 +44,15 @@ await refreshStaleUid2s(config, staleUid2s);
 ```
 
 The ready-made loop over `mergeCache`'s `staleUid2s`: refreshes each source's token against the operator and applies the outcome to the cache. Entries run sequentially, since every apply is a read-modify-write of the same cache copies. Entries without valid refresh material are skipped, failures are logged through the `optableDebug`-gated `debugLog`, and a failed entry does not stop the rest — nothing throws into the host page.
+
+## refreshStaleUid2sFromCache
+
+```js
+import { refreshStaleUid2sFromCache } from "@optable/web-sdk/lib/dist/addons/uid2-refresh";
+
+await refreshStaleUid2sFromCache(sdk.dcn);
+```
+
+Reads the targeting cache, and if the UID2 it holds is past its `refresh_from`, refreshes it through `refreshStaleUid2s`. Use this on a page that served targeting from cache: only `mergeCache` produces a `staleUid2s` list, and it runs when a response is merged, so a page that never calls the edge has nothing to pass to `refreshStaleUid2s`. That is also the page where the cached token has had time to age.
+
+A missing cache, an unreadable one, a cache without refresh material, and a token not yet due are all no-ops that make no request.

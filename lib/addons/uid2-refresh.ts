@@ -1,7 +1,7 @@
 import { AgentType } from "iab-adcom";
 import type { ResolvedConfig } from "../config";
-import { isUid2RefData } from "../core/eid-cache";
-import type { StaleUid2, Uid2RefData } from "../core/eid-cache";
+import { getRefData, isUid2RefData, isUid2Stale, UID2_SOURCE } from "../core/eid-cache";
+import type { ResolvedCache, StaleUid2, Uid2RefData } from "../core/eid-cache";
 import { LocalStorage } from "../core/storage";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
 import { debugLog } from "../core/log";
@@ -147,5 +147,31 @@ async function refreshStaleUid2s(config: ResolvedConfig, stale: StaleUid2[]): Pr
   }
 }
 
-export { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, UID2_REFRESH_ENDPOINT };
+/**
+ * Refreshes the cached UID2 if it is past its refresh point. The entry point
+ * for a page that served targeting from cache: nothing merges a response
+ * there, so there is no mergeCache result to take staleUid2s from.
+ */
+async function refreshStaleUid2sFromCache(config: ResolvedConfig): Promise<void> {
+  let cached: ResolvedCache | null = null;
+  try {
+    cached = new LocalStorage(config).getTargeting() as ResolvedCache | null;
+  } catch (e) {
+    debugLog("error", "UID2: could not read the targeting cache", e);
+    return;
+  }
+
+  if (!isUid2Stale(cached)) {
+    return;
+  }
+
+  const ref = getRefData(cached, UID2_SOURCE);
+  if (!ref) {
+    return;
+  }
+
+  await refreshStaleUid2s(config, [{ source: UID2_SOURCE, ref }]);
+}
+
+export { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, refreshStaleUid2sFromCache, UID2_REFRESH_ENDPOINT };
 export type { Uid2RefData, Uid2RefreshResult };

@@ -2,7 +2,13 @@ import { webcrypto } from "node:crypto";
 import { TextDecoder } from "node:util";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/server";
-import { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, UID2_REFRESH_ENDPOINT } from "./uid2-refresh";
+import {
+  refreshUid2Token,
+  applyUid2Refresh,
+  refreshStaleUid2s,
+  refreshStaleUid2sFromCache,
+  UID2_REFRESH_ENDPOINT,
+} from "./uid2-refresh";
 import type { StaleUid2, Uid2RefData } from "../core/eid-cache";
 import { DCN_DEFAULTS } from "../config";
 import type { ResolvedConfig } from "../config";
@@ -379,5 +385,83 @@ describe("refreshStaleUid2s", () => {
   it("is a no-op for an empty list", async () => {
     await expect(refreshStaleUid2s(config, [])).resolves.toBeUndefined();
     expect(events).toHaveLength(0);
+  });
+});
+
+describe("refreshStaleUid2sFromCache", () => {
+  const config = {
+    host: "uid2-from-cache-host.com",
+    site: "site",
+    consent: DCN_DEFAULTS.consent,
+    optableCacheTargeting: "OPTABLE_RESOLVED",
+  } as ResolvedConfig;
+
+  const REF: Uid2RefData = {
+    advertising_token: "OLD_TOKEN",
+    refresh_token: "REFRESH_TOKEN",
+    refresh_response_key: KEY_B64,
+    refresh_from: 1,
+    refresh_expires: 2734462312780,
+    identity_expires: 1734459312780,
+  };
+
+  function seed(refs: Record<string, unknown>): void {
+    const targeting = {
+      ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] }] } },
+      refs,
+    } as unknown as TargetingResponse;
+    new LocalStorage(config).setTargeting(targeting);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function cachedEids(): any[] {
+    return (new LocalStorage(config).getTargeting()?.ortb2?.user?.eids as any[]) ?? [];
+  }
+
+  let calls = 0;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    calls = 0;
+    const encrypted = await encryptResponse({ status: "success", body: BODY });
+    server.use(
+      http.post(UID2_REFRESH_ENDPOINT, () => {
+        calls++;
+        return new HttpResponse(encrypted, { status: 200 });
+      })
+    );
+  });
+
+  it("refreshes a token the cache holds past its refresh point", async () => {
+    seed({ "uidapi.com": REF });
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(1);
+    expect(cachedEids()[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    expect(new LocalStorage(config).getTargeting()?.refs).toEqual({ "uidapi.com": BODY });
+  });
+
+  it("leaves a token that is not due for refresh yet", async () => {
+    seed({ "uidapi.com": { ...REF, refresh_from: Date.now() + 60_000 } });
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(0);
+    expect(cachedEids()[0].uids).toEqual([{ atype: 3, id: "OLD_TOKEN" }]);
+  });
+
+  it("does nothing when the cache holds no refresh material", async () => {
+    seed({});
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(0);
+    expect(cachedEids()[0].uids).toEqual([{ atype: 3, id: "OLD_TOKEN" }]);
+  });
+
+  it("does nothing when there is no cache", async () => {
+    await expect(refreshStaleUid2sFromCache(config)).resolves.toBeUndefined();
+    expect(calls).toBe(0);
   });
 });
