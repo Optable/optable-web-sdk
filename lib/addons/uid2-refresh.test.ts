@@ -466,8 +466,7 @@ describe("refreshStaleUid2sFromCache", () => {
   });
 
   it("refreshes a token held only by the public copy", async () => {
-    // What identifyAndTokenize leaves behind: it writes the merged cache to
-    // OPTABLE_RESOLVED only, and that copy is what prebid serves.
+    // identifyAndTokenize writes the merged cache to OPTABLE_RESOLVED only.
     localStorage.setItem(
       "OPTABLE_RESOLVED",
       JSON.stringify({

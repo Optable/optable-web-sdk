@@ -148,16 +148,14 @@ async function refreshStaleUid2s(config: ResolvedConfig, stale: StaleUid2[]): Pr
 }
 
 /**
- * Refreshes the cached UID2 if it is past its refresh point. The entry point
- * for a page that served targeting from cache: nothing merges a response
- * there, so there is no mergeCache result to take staleUid2s from.
+ * A page that serves targeting from cache merges no response, so it has no
+ * mergeCache result to take a staleUid2s list from.
  */
 async function refreshStaleUid2sFromCache(config: ResolvedConfig): Promise<void> {
   let ref: Uid2RefData | null = null;
   try {
-    // Every copy, not just the private one: a UID2 resolved by
-    // identifyAndTokenize lands only in the public copy, which is the one
-    // prebid serves. applyUid2Refresh writes the outcome back to all of them.
+    // identifyAndTokenize writes a resolved UID2 only to the public copy,
+    // which is the one prebid serves.
     ref =
       (new LocalStorage(config).getTargetingCopies() as ResolvedCache[])
         .map((cached) => (isUid2Stale(cached) ? getRefData(cached, UID2_SOURCE) : null))

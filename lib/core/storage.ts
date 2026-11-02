@@ -98,14 +98,13 @@ class LocalStorage {
     this.setPairIDs(targeting);
   }
 
-  // Every key holding a copy of the targeting response: the private one and
-  // the public one, which other consumers read and write directly.
+  // The private key is in both lists, and the public key can be unset.
   private targetingCopyKeys(): string[] {
     return [...new Set([...this.targetingKeys.read, ...this.targetingKeys.write])].filter(Boolean);
   }
 
-  // Every stored copy that parses, in key order. The copies can hold different
-  // representations, so a caller inspecting the cache has to see all of them.
+  // Copies can hold different representations, so a caller that inspects the
+  // cache has to see all of them.
   getTargetingCopies(): TargetingResponse[] {
     const copies: TargetingResponse[] = [];
 
