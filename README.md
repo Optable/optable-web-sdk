@@ -437,7 +437,7 @@ The response has the shape:
 type ContextualSegmentsResponse = {
   classifications: {
     categories: { id: string; name: string; score: number; taxonomy: string }[];
-    keywords: { keyword: string; prominence: number }[];
+    keywords: { keyword: string; prominence: number /* 1 = most prominent */ }[];
     brandSafety: {
       assessed: boolean;
       categories: { name: string; riskLevel: "low" | "medium" | "high" | "floor" | "not_assessed" | "" }[];
@@ -445,15 +445,20 @@ type ContextualSegmentsResponse = {
     sentiment:
       | { scored: false }
       | { scored: true; id: "positive" | "neutral" | "negative"; name: string; score: number };
+    emotions: {
+      id: "joy" | "trust" | "fear" | "surprise" | "sadness" | "disgust" | "anger" | "anticipation";
+      name: string;
+      score: number;
+    }[];
   };
 };
 ```
 
-`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` are taxonomy classifications (each carrying its own `taxonomy`); `keywords` are free-form terms extracted from the page; `brandSafety` is the page's brand-safety assessment, described [below](#brand-safety); `sentiment` is the page's polarity, described [below](#sentiment). A category's `score` is a relevance score from 0 to 1, whereas a keyword's `prominence` is a per-page ordinal rank (1 = most prominent), not a comparable score.
+`classifications` groups results by classification method; the DCN populates only the methods it has enabled.
+
+> **Note:** The requested URL must already have been classified by the DCN.
 
 Each call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
-
-> **Note:** The requested URL must already have been classified by the DCN. If the DCN has no classification for the URL, the response will contain empty `categories` and `keywords` arrays, `brandSafety.assessed` will be `false`, and `sentiment.scored` will be `false`.
 
 #### Brand safety
 
@@ -487,7 +492,7 @@ if (sdk.ctxMaxRiskLevel() === "floor") {
 
 #### Sentiment
 
-`ctxSentiment()` reads the page's sentiment off the cached `ctxSegments()` response:
+`ctxSentiment()` reads the page's sentiment (its polarity) off the cached `ctxSegments()` response:
 
 ```javascript
 const sentiment = sdk.ctxSentiment();
@@ -500,16 +505,31 @@ if (sentiment.scored) {
 
 The label in `id` is derived by the DCN from the score. Use it as served rather than bucketing `score` yourself, so your targeting follows the DCN's thresholds.
 
+#### Emotions
+
+`ctxEmotions()` reads the emotions the page evokes off the cached `ctxSegments()` response, as a list of `{ id, name, score }`:
+
+```javascript
+sdk.ctxEmotions();
+// => [{ id: "joy", name: "Joy", score: 0.9 }, { id: "sadness", name: "Sadness", score: 0.7 }]
+```
+
+`id` is one of the eight [Plutchik](https://en.wikipedia.org/wiki/Robert_Plutchik#Plutchik's_wheel_of_emotions) emotions: `joy`, `trust`, `fear`, `surprise`, `sadness`, `disgust`, `anger` or `anticipation`. `score` is from 0.0 to 1.0, and the list is ordered highest score first. It is multi-label: a page can evoke several emotions at once, opposites included (a bittersweet story can carry both `joy` and `sadness`).
+
+The list is empty when the page has no emotion: the DCN never classified it, does not run the emotion classifier, or nothing reached its cutoff. The DCN applies that cutoff before serving, so use the list as served rather than filtering on `score` yourself.
+
 #### Contextual targeting key-values
 
-`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under `ctx_kw` and its brand-safety tier under `ctx_bs_max`:
+`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under `ctx_kw`, its brand-safety tier under `ctx_bs_max`, its sentiment label under `ctx_sentiment` and its emotions under `ctx_emotion`:
 
 ```javascript
 sdk.ctxTargetingKeyValues();
 // => {
 //   "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
 //   "ctx_kw": ["advertising", "programmatic", "ad tech"],
-//   "ctx_bs_max": ["no_flags"]
+//   "ctx_bs_max": ["no_flags"],
+//   "ctx_sentiment": ["positive"],
+//   "ctx_emotion": ["joy", "anticipation"]
 // }
 ```
 
@@ -565,6 +585,16 @@ sdk.ctxTargetingKeyValues(undefined, { sentimentKey: "mood" });
 // => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "mood": ["positive"] }
 
 sdk.ctxTargetingKeyValues(undefined, { sentimentKey: "" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"] }
+```
+
+Every one of the page's [emotions](#emotions) is emitted by default under `ctx_emotion`, as a multi-value key (e.g. `ctx_emotion=[joy,sadness]`). Like keywords, the key is omitted when the page has no emotion, and scores are never emitted. Use `emotionKey` to rename the key, or pass an empty `emotionKey` to opt out:
+
+```javascript
+sdk.ctxTargetingKeyValues(undefined, { emotionKey: "feel" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "feel": ["joy", "sadness"] }
+
+sdk.ctxTargetingKeyValues(undefined, { emotionKey: "" });
 // => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"] }
 ```
 

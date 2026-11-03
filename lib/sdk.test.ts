@@ -118,6 +118,10 @@ describe("Breaking change detection: if typescript complains or a test fails it'
     new OptableSDK({ ...defaultConfig }).ctxSentiment();
   });
 
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: ctxEmotions", () => {
+    new OptableSDK({ ...defaultConfig }).ctxEmotions();
+  });
+
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: profile", async () => {
     await new OptableSDK({ ...defaultConfig }).profile({
       propString: "",
@@ -593,6 +597,42 @@ describe("behavior testing of", () => {
     await sdk.ctxSegments("https://example.com/article");
 
     expect(sdk.ctxSentiment()).toEqual({ scored: false });
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({});
+  });
+
+  test("ctxEmotions reads the emotions cached by ctxSegments", async () => {
+    const emotions = [
+      { id: "joy", name: "Joy", score: 0.9 },
+      { id: "sadness", name: "Sadness", score: 0.7 },
+    ];
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: { categories: [], keywords: [], emotions } }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxEmotions()).toEqual(emotions);
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({
+      ctx_emotion: ["joy", "sadness"],
+    });
+  });
+
+  test("ctxEmotions returns an empty list when the DCN serves no emotions", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: { categories: [], keywords: [] } }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    expect(sdk.ctxEmotions()).toEqual([]);
+
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxEmotions()).toEqual([]);
     expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({});
   });
 

@@ -122,6 +122,10 @@
                     <a href="#classifications-sentiment"><code>sentiment</code>: polarity of the page</a>
                     <span class="toc-note">Positive, neutral or negative label, with the score it was derived from.</span>
                   </li>
+                  <li>
+                    <a href="#classifications-emotions"><code>emotions</code>: emotions the page evokes</a>
+                    <span class="toc-note">Every Plutchik emotion that reached the DCN's cutoff, with its score.</span>
+                  </li>
                 </ul>
               </li>
               <li>
@@ -145,8 +149,8 @@
             returns for it: taxonomy categories (e.g. against the
             <a href="https://iabtechlab.com/standards/content-taxonomy/">IAB Content Taxonomy</a>), free-form keywords,
             and/or a brand-safety assessment (against the
-            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>), and/or the page's sentiment, depending on which
-            classifiers the DCN has enabled.
+            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>), and/or the page's sentiment and emotions, depending
+            on which classifiers the DCN has enabled.
           </p>
           <pre><code>// Classify the URL of the current page (defaults to window.location.href):
 optable.instance.ctxSegments();
@@ -160,11 +164,12 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
     keywords: [{ keyword, prominence }],
     brandSafety: { assessed, categories: [{ name, riskLevel }] },
     sentiment: { scored, id, name, score },
+    emotions: [{ id, name, score }],
   },
 }</code></pre>
           <p>
             The <code>classifications</code> object groups results by classification method, and the DCN includes only
-            the methods it has enabled. Four methods exist today:
+            the methods it has enabled. Five methods exist today:
           </p>
           <h6 id="classifications-categories"><code>categories</code>: taxonomy category ids scored for the page</h6>
           <table class="u-full-width">
@@ -311,6 +316,36 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
 if (sentiment.scored && sentiment.id === "negative") {
   // Skip campaigns that should not run next to negative content.
 }</code></pre>
+          <h6 id="classifications-emotions"><code>emotions</code>: emotions the page evokes</h6>
+          <table class="u-full-width">
+            <thead>
+              <tr><th>Field</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>id</code></td>
+                <td>
+                  Stable label, one of the eight
+                  <a href="https://en.wikipedia.org/wiki/Robert_Plutchik#Plutchik's_wheel_of_emotions">Plutchik</a>
+                  emotions: <code>joy</code>, <code>trust</code>, <code>fear</code>, <code>surprise</code>,
+                  <code>sadness</code>, <code>disgust</code>, <code>anger</code> or <code>anticipation</code>.
+                </td>
+              </tr>
+              <tr><td><code>name</code></td><td>Human-readable label (e.g. <code>Joy</code>).</td></tr>
+              <tr><td><code>score</code></td><td>Strength of the emotion from 0.0 to 1.0.</td></tr>
+            </tbody>
+          </table>
+          <p>
+            The list is multi-label and ordered highest score first: a page can evoke several emotions at once,
+            opposites included. It is empty when the DCN never classified the page, does not run the emotion
+            classifier, or nothing reached its cutoff. The DCN applies that cutoff before serving, so use the list as
+            served rather than filtering on the score yourself. <code>ctxEmotions()</code> reads it off the cached
+            response:
+          </p>
+          <pre><code>var emotions = optable.instance.ctxEmotions().map(function (e) { return e.id; });
+if (emotions.indexOf("joy") !== -1) {
+  // Favor campaigns that fit uplifting content.
+}</code></pre>
           <p>
             Alternatively, configure the SDK with <code>initContextual</code> set to a callback. The SDK will
             automatically call <code>ctxSegments()</code> for the URL of the current page on initialization, and
@@ -332,10 +367,7 @@ if (sentiment.scored && sentiment.id === "negative") {
         <div class="twelve column">
           <p>
             <strong>Note:</strong> the URL requested must have been classified by the DCN. For the demo DCN used by
-            this page, the URL <code>https://optable.co/</code> should have been classified, so you can try that. A
-            URL the DCN holds no classification for comes back with empty <code>categories</code> and
-            <code>keywords</code> arrays, <code>brandSafety.assessed</code> set to <code>false</code>, and
-            <code>sentiment.scored</code> set to <code>false</code>.
+            this page, the URL <code>https://optable.co/</code> should have been classified, so you can try that.
           </p>
         </div>
       </div>
@@ -393,14 +425,16 @@ if (sentiment.scored && sentiment.id === "negative") {
           <p>
             By default the returned map has one key per taxonomy the DCN classified into (keyed by the raw taxonomy
             value), the page's keywords under <code>ctx_kw</code>, its brand-safety tier under
-            <code>ctx_bs_max</code>, and its sentiment label under <code>ctx_sentiment</code>. For example,
+            <code>ctx_bs_max</code>, its sentiment label under <code>ctx_sentiment</code>, and its emotions under
+            <code>ctx_emotion</code>. For example,
             <code>ctxTargetingKeyValues()</code> might return:
           </p>
           <pre><code>{
   "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"],
   "ctx_kw": ["advertising", "programmatic", "ad tech"],
   "ctx_bs_max": ["no_flags"],
-  "ctx_sentiment": ["positive"]
+  "ctx_sentiment": ["positive"],
+  "ctx_emotion": ["joy", "anticipation"]
 }</code></pre>
           <p>
             If you want <code>loadGAM()</code> to run as soon as the contextual segments arrive — without making a
@@ -509,6 +543,17 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { sentimentKey: "mood"
 
 // Opt out of the sentiment key-value:
 loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { sentimentKey: "" }));</code></pre>
+          <p>
+            Every one of the page's <a href="#classifications-emotions">emotions</a> is emitted by default under
+            <code>ctx_emotion</code>, as a multi-value key (e.g. <code>ctx_emotion=[joy,sadness]</code>). Like keywords,
+            the key is omitted when the page has no emotion, and scores are never emitted. Use
+            <code>emotionKey</code> to rename the key, or pass an empty <code>emotionKey</code> to opt out:
+          </p>
+          <pre><code>// Rename the emotion key:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { emotionKey: "feel" }));
+
+// Opt out of the emotion key-value:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { emotionKey: "" }));</code></pre>
           <div class="twelve column code-result" id="kv-result">—</div>
         </div>
       </div>
@@ -552,8 +597,15 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { sentimentKey: "" }))
         // ctxSegments() has cached the response by now, so the helper reads it
         // synchronously off the instance. Missing and unscored both read scored false.
         var sentiment = optable.instance.ctxSentiment();
+        var emotions = optable.instance.ctxEmotions();
 
-        if (categories.length === 0 && keywords.length === 0 && !brandSafety.assessed && !sentiment.scored) {
+        if (
+          categories.length === 0 &&
+          keywords.length === 0 &&
+          !brandSafety.assessed &&
+          !sentiment.scored &&
+          emotions.length === 0
+        ) {
           return "<p><em>No contextual classifications were returned for this URL.</em></p>";
         }
 
@@ -674,6 +726,26 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { sentimentKey: "" }))
             "</td><td>" +
             escapeHtml(typeof sentiment.score === "number" ? sentiment.score.toFixed(2) : "n/a") +
             "</td></tr></tbody></table>";
+        }
+
+        if (emotions.length > 0) {
+          html +=
+            "<h6>Emotions</h6>" +
+            '<table class="u-full-width"><thead><tr><th>Label</th><th>Name</th><th>Score</th></tr></thead><tbody>' +
+            emotions
+              .map(function (e) {
+                return (
+                  "<tr><td><code>" +
+                  escapeHtml(e.id) +
+                  "</code></td><td>" +
+                  escapeHtml(e.name) +
+                  "</td><td>" +
+                  escapeHtml(typeof e.score === "number" ? e.score.toFixed(2) : "n/a") +
+                  "</td></tr>"
+                );
+              })
+              .join("") +
+            "</tbody></table>";
         }
 
         return html;

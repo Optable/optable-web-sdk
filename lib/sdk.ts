@@ -24,6 +24,8 @@ import { Profile } from "./edge/profile";
 import {
   ContextualBrandSafety,
   ContextualBrandSafetyOf,
+  ContextualEmotion,
+  ContextualEmotionsOf,
   ContextualMaxRiskLevel,
   ContextualRiskTier,
   ContextualSegments,
@@ -246,6 +248,12 @@ class OptableSDK {
   // reading the label or score: when false there is no sentiment for the page.
   ctxSentiment(): ContextualSentiment {
     return ContextualSentimentOf(this.contextualResponse);
+  }
+
+  // Emotions from the cached ctxSegments() response, highest score first; empty
+  // when the page has none.
+  ctxEmotions(): ContextualEmotion[] {
+    return ContextualEmotionsOf(this.contextualResponse);
   }
 
   async tokenize(id: string): Promise<TokenizeResponse> {
