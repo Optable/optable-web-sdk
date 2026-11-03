@@ -176,7 +176,8 @@ function ContextualSentimentOf(response: ContextualSegmentsResponse | null): Con
 // predating emotion serving omits the field, which folds into an empty list
 // like a node that does not run the classifier.
 function ContextualEmotionsOf(response: ContextualSegmentsResponse | null): ContextualEmotion[] {
-  return response?.classifications?.emotions ?? [];
+  const emotions = response?.classifications?.emotions ?? [];
+  return emotions.filter((emotion) => typeof emotion?.id === "string");
 }
 
 // Targeting key-values derived from a contextual segments response, suitable for
@@ -369,11 +370,8 @@ function ContextualTargetingKeyValues(
   // The ids only, for the same reason as sentiment.
   const emotionKey = options?.emotionKey ?? DEFAULT_EMOTION_KEY;
   const emotions = ContextualEmotionsOf(response);
-  if (emotionKey) {
-    const values = emotions.filter((emotion) => typeof emotion?.id === "string").map((emotion) => emotion.id);
-    if (values.length > 0) {
-      result[emotionKey] = values;
-    }
+  if (emotionKey && emotions.length > 0) {
+    result[emotionKey] = emotions.map((emotion) => emotion.id);
   }
 
   return result;

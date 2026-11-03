@@ -406,6 +406,13 @@ describe("ContextualEmotionsOf", () => {
     expect(ContextualEmotionsOf(response({ categories: [] }))).toEqual([]);
     expect(ContextualEmotionsOf(null)).toEqual([]);
   });
+
+  test("skips entries without a string id", () => {
+    const trust: ContextualEmotion = { id: "trust", name: "Trust", score: 0.6 };
+    const malformed = [null, { name: "Joy" }, trust] as never;
+
+    expect(ContextualEmotionsOf(response({ categories: [], emotions: malformed }))).toEqual([trust]);
+  });
 });
 
 describe("ContextualTargetingKeyValues emotion emission", () => {
