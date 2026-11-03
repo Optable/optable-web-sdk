@@ -62,11 +62,24 @@ type ContextualSentiment =
   | { scored: false }
   | { scored: true; id: ContextualSentimentLabel; name: string; score: number };
 
+// The eight Plutchik emotions, as their API values.
+type ContextualEmotionLabel = "joy" | "trust" | "fear" | "surprise" | "sadness" | "disgust" | "anger" | "anticipation";
+
+// One emotion the page evokes, with the model's score from 0.0 to 1.0. The DCN
+// serves only the emotions that pass its cutoff, so none is filtered here.
+type ContextualEmotion = {
+  id: ContextualEmotionLabel;
+  name: string;
+  score: number;
+};
+
 type ContextualClassifications = {
   categories: ContextualCategory[];
   keywords: ContextualKeyword[];
   brandSafety: ContextualBrandSafety;
   sentiment: ContextualSentiment;
+  // Multi-label, highest score first, opposites included.
+  emotions: ContextualEmotion[];
 };
 
 type ContextualSegmentsResponse = {
@@ -159,12 +172,20 @@ function ContextualSentimentOf(response: ContextualSegmentsResponse | null): Con
   return sentiment;
 }
 
+// Reads the emotions off a contextual segments response. A DCN on a build
+// predating emotion serving omits the field, which folds into an empty list
+// like a node that does not run the classifier.
+function ContextualEmotionsOf(response: ContextualSegmentsResponse | null): ContextualEmotion[] {
+  const emotions = response?.classifications?.emotions ?? [];
+  return emotions.filter((emotion) => typeof emotion?.id === "string");
+}
+
 // Targeting key-values derived from a contextual segments response, suitable for
 // passing to ad servers such as GAM via googletag.pubads().setTargeting(key, values).
 type ContextualTargetingKeyValues = Record<string, string[]>;
 
-// Options for including keyword, brand-safety and sentiment classifications in
-// the targeting key-values.
+// Options for including keyword, brand-safety, sentiment and emotion
+// classifications in the targeting key-values.
 type ContextualTargetingKeyValuesOptions = {
   // GAM key under which keyword classifications are emitted. Defaults to
   // DEFAULT_KEYWORD_KEY when omitted, so keywords are emitted by default. Pass
@@ -186,6 +207,10 @@ type ContextualTargetingKeyValuesOptions = {
   // DEFAULT_SENTIMENT_KEY when omitted. Pass an empty string to opt out. Like
   // keywords, the key is dropped when the page has no sentiment.
   sentimentKey?: string;
+  // GAM key under which the page's emotion ids are emitted, as one multi-value
+  // key. Defaults to DEFAULT_EMOTION_KEY when omitted. Pass an empty string to
+  // opt out. Like keywords, the key is dropped when the page has no emotion.
+  emotionKey?: string;
 };
 
 // Default GAM key under which keyword values are emitted.
@@ -199,6 +224,9 @@ const DEFAULT_BRAND_SAFETY_KEY = "ctx_bs_max";
 
 // Default GAM key under which the sentiment label is emitted.
 const DEFAULT_SENTIMENT_KEY = "ctx_sentiment";
+
+// Default GAM key under which the emotion ids are emitted.
+const DEFAULT_EMOTION_KEY = "ctx_emotion";
 
 // Brand-safety value emitted when no assessment backs the page: it was never
 // classified, the read failed, or the DCN does not run the classifier.
@@ -339,6 +367,13 @@ function ContextualTargetingKeyValues(
     result[sentimentKey] = [sentiment.id];
   }
 
+  // The ids only, for the same reason as sentiment.
+  const emotionKey = options?.emotionKey ?? DEFAULT_EMOTION_KEY;
+  const emotions = ContextualEmotionsOf(response);
+  if (emotionKey && emotions.length > 0) {
+    result[emotionKey] = emotions.map((emotion) => emotion.id);
+  }
+
   return result;
 }
 
@@ -362,6 +397,7 @@ export {
   ContextualBrandSafetyOf,
   ContextualMaxRiskLevel,
   ContextualSentimentOf,
+  ContextualEmotionsOf,
 };
 export default ContextualSegments;
 export type {
@@ -373,6 +409,8 @@ export type {
   ContextualBrandSafety,
   ContextualSentimentLabel,
   ContextualSentiment,
+  ContextualEmotionLabel,
+  ContextualEmotion,
   ContextualClassifications,
   ContextualSegmentsResponse,
   ContextualTargetingKeyValuesOptions,

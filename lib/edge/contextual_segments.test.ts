@@ -1,5 +1,6 @@
 import {
   ContextualBrandSafetyOf,
+  ContextualEmotionsOf,
   ContextualMaxRiskLevel,
   ContextualSentimentOf,
   ContextualTargetingKeyValues,
@@ -7,6 +8,7 @@ import {
 import type {
   ContextualBrandSafety,
   ContextualBrandSafetyCategory,
+  ContextualEmotion,
   ContextualSegmentsResponse,
   ContextualSentiment,
 } from "./contextual_segments";
@@ -381,6 +383,93 @@ describe("ContextualTargetingKeyValues sentiment emission", () => {
       mood: ["negative"],
     });
     expect(ContextualTargetingKeyValues(negative, undefined, { brandSafetyKey: "", sentimentKey: "" })).toEqual({
+      iab_ct_3_1: ["53"],
+    });
+  });
+});
+
+describe("ContextualEmotionsOf", () => {
+  test("returns every emotion as served, opposites included", () => {
+    const served: ContextualEmotion[] = [
+      { id: "joy", name: "Joy", score: 0.9 },
+      { id: "sadness", name: "Sadness", score: 0.7 },
+      { id: "anticipation", name: "Anticipation", score: 0.4 },
+    ];
+
+    expect(ContextualEmotionsOf(response({ categories: [], emotions: served }))).toEqual(served);
+  });
+
+  // A DCN on an edge build predating emotion serving omits the field, the same
+  // answer it gives for a node not running the classifier.
+  test("folds an empty, missing or null response into an empty list", () => {
+    expect(ContextualEmotionsOf(response({ categories: [], emotions: [] }))).toEqual([]);
+    expect(ContextualEmotionsOf(response({ categories: [] }))).toEqual([]);
+    expect(ContextualEmotionsOf(null)).toEqual([]);
+  });
+
+  test("skips entries without a string id", () => {
+    const trust: ContextualEmotion = { id: "trust", name: "Trust", score: 0.6 };
+    const malformed = [null, { name: "Joy" }, trust] as never;
+
+    expect(ContextualEmotionsOf(response({ categories: [], emotions: malformed }))).toEqual([trust]);
+  });
+});
+
+describe("ContextualTargetingKeyValues emotion emission", () => {
+  function emotions(e: ContextualEmotion[] | undefined): ContextualSegmentsResponse {
+    return response({
+      categories: [{ id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" }],
+      keywords: [],
+      emotions: e,
+    });
+  }
+
+  const mixed = emotions([
+    { id: "joy", name: "Joy", score: 0.9 },
+    { id: "sadness", name: "Sadness", score: 0.7 },
+  ]);
+
+  test("emits every id by default under ctx_emotion, never the scores", () => {
+    expect(ContextualTargetingKeyValues(mixed, undefined, { brandSafetyKey: "" })).toEqual({
+      iab_ct_3_1: ["53"],
+      ctx_emotion: ["joy", "sadness"],
+    });
+  });
+
+  // Edge owns the cutoff, so a low score it chose to serve is still emitted.
+  test("emits every served emotion regardless of score", () => {
+    const low = emotions([{ id: "fear", name: "Fear", score: 0.05 }]);
+
+    expect(ContextualTargetingKeyValues(low, undefined, { brandSafetyKey: "" }).ctx_emotion).toEqual(["fear"]);
+  });
+
+  test("omits the key when the page has no emotion", () => {
+    const options = { brandSafetyKey: "" };
+
+    expect(ContextualTargetingKeyValues(emotions([]), undefined, options)).toEqual({ iab_ct_3_1: ["53"] });
+    expect(ContextualTargetingKeyValues(emotions(undefined), undefined, options)).toEqual({ iab_ct_3_1: ["53"] });
+    expect(ContextualTargetingKeyValues(null, undefined, options)).toEqual({});
+  });
+
+  // A throw here would drop every key-value, categories and brand safety included.
+  test("skips entries without a string id", () => {
+    const malformed = emotions([null, { name: "Joy" }, { id: "trust", name: "Trust", score: 0.6 }] as never);
+
+    expect(ContextualTargetingKeyValues(malformed, undefined, { brandSafetyKey: "" })).toEqual({
+      iab_ct_3_1: ["53"],
+      ctx_emotion: ["trust"],
+    });
+    expect(
+      ContextualTargetingKeyValues(emotions([null, { name: "Joy" }] as never), undefined, { brandSafetyKey: "" })
+    ).toEqual({ iab_ct_3_1: ["53"] });
+  });
+
+  test("emits under a caller-provided key, and opts out on an empty key", () => {
+    expect(ContextualTargetingKeyValues(mixed, undefined, { brandSafetyKey: "", emotionKey: "mood" })).toEqual({
+      iab_ct_3_1: ["53"],
+      mood: ["joy", "sadness"],
+    });
+    expect(ContextualTargetingKeyValues(mixed, undefined, { brandSafetyKey: "", emotionKey: "" })).toEqual({
       iab_ct_3_1: ["53"],
     });
   });
