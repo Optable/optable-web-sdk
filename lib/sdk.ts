@@ -250,8 +250,8 @@ class OptableSDK {
     return ContextualSentimentOf(this.contextualResponse);
   }
 
-  // Emotions from the cached ctxSegments() response, highest score first; empty
-  // when the page has none.
+  // Emotions from the cached ctxSegments() response, in the order the DCN serves
+  // them (highest score first); empty when the page has none.
   ctxEmotions(): ContextualEmotion[] {
     return ContextualEmotionsOf(this.contextualResponse);
   }

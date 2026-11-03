@@ -186,6 +186,7 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
               </tr>
             </tbody>
           </table>
+          <p>Empty when the DCN never classified the page or does not run a taxonomy classifier.</p>
           <h6 id="classifications-keywords"><code>keywords</code>: free-form terms extracted from the page</h6>
           <table class="u-full-width">
             <thead>
@@ -202,6 +203,7 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
               </tr>
             </tbody>
           </table>
+          <p>Empty when the DCN never classified the page or does not extract keywords.</p>
           <h6 id="classifications-brand-safety"><code>brandSafety</code>: brand-safety assessment of the page</h6>
           <p>
             The categories and the risk tiers follow the
@@ -336,9 +338,9 @@ if (sentiment.scored && sentiment.id === "negative") {
             </tbody>
           </table>
           <p>
-            The list is multi-label and ordered highest score first: a page can evoke several emotions at once,
-            opposites included. It is empty when the DCN never classified the page, does not run the emotion
-            classifier, or nothing reached its cutoff. The DCN applies that cutoff before serving, so use the list as
+            The list is multi-label, and the DCN serves it highest score first: a page can evoke several emotions
+            at once, opposites included. It is empty when the DCN never classified the page, does not run the
+            emotion classifier, or nothing reached its cutoff. The DCN applies that cutoff before serving, so use the list as
             served rather than filtering on the score yourself. <code>ctxEmotions()</code> reads it off the cached
             response:
           </p>

@@ -444,6 +444,19 @@ describe("ContextualTargetingKeyValues emotion emission", () => {
     expect(ContextualTargetingKeyValues(null, undefined, options)).toEqual({});
   });
 
+  // A throw here would drop every key-value, categories and brand safety included.
+  test("skips entries without a string id", () => {
+    const malformed = emotions([null, { name: "Joy" }, { id: "trust", name: "Trust", score: 0.6 }] as never);
+
+    expect(ContextualTargetingKeyValues(malformed, undefined, { brandSafetyKey: "" })).toEqual({
+      iab_ct_3_1: ["53"],
+      ctx_emotion: ["trust"],
+    });
+    expect(
+      ContextualTargetingKeyValues(emotions([null, { name: "Joy" }] as never), undefined, { brandSafetyKey: "" })
+    ).toEqual({ iab_ct_3_1: ["53"] });
+  });
+
   test("emits under a caller-provided key, and opts out on an empty key", () => {
     expect(ContextualTargetingKeyValues(mixed, undefined, { brandSafetyKey: "", emotionKey: "mood" })).toEqual({
       iab_ct_3_1: ["53"],

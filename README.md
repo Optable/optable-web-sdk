@@ -454,7 +454,7 @@ type ContextualSegmentsResponse = {
 };
 ```
 
-`classifications` groups results by classification method; the DCN populates only the methods it has enabled.
+`classifications` groups results by classification method; the DCN populates only the methods it has enabled. `categories` and `keywords` are empty when the DCN never classified the page or does not run that classifier.
 
 > **Note:** The requested URL must already have been classified by the DCN.
 
@@ -514,7 +514,7 @@ sdk.ctxEmotions();
 // => [{ id: "joy", name: "Joy", score: 0.9 }, { id: "sadness", name: "Sadness", score: 0.7 }]
 ```
 
-`id` is one of the eight [Plutchik](https://en.wikipedia.org/wiki/Robert_Plutchik#Plutchik's_wheel_of_emotions) emotions: `joy`, `trust`, `fear`, `surprise`, `sadness`, `disgust`, `anger` or `anticipation`. `score` is from 0.0 to 1.0, and the list is ordered highest score first. It is multi-label: a page can evoke several emotions at once, opposites included (a bittersweet story can carry both `joy` and `sadness`).
+`id` is one of the eight [Plutchik](https://en.wikipedia.org/wiki/Robert_Plutchik#Plutchik's_wheel_of_emotions) emotions: `joy`, `trust`, `fear`, `surprise`, `sadness`, `disgust`, `anger` or `anticipation`. `score` is from 0.0 to 1.0, and the DCN serves the list highest score first. It is multi-label: a page can evoke several emotions at once, opposites included (a bittersweet story can carry both `joy` and `sadness`).
 
 The list is empty when the page has no emotion: the DCN never classified it, does not run the emotion classifier, or nothing reached its cutoff. The DCN applies that cutoff before serving, so use the list as served rather than filtering on `score` yourself.
 

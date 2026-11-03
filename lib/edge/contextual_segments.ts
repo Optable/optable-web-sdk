@@ -369,8 +369,11 @@ function ContextualTargetingKeyValues(
   // The ids only, for the same reason as sentiment.
   const emotionKey = options?.emotionKey ?? DEFAULT_EMOTION_KEY;
   const emotions = ContextualEmotionsOf(response);
-  if (emotionKey && emotions.length > 0) {
-    result[emotionKey] = emotions.map((emotion) => emotion.id);
+  if (emotionKey) {
+    const values = emotions.filter((emotion) => typeof emotion?.id === "string").map((emotion) => emotion.id);
+    if (values.length > 0) {
+      result[emotionKey] = values;
+    }
   }
 
   return result;
