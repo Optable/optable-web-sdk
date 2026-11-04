@@ -490,6 +490,54 @@ describe("refreshStaleUid2sFromCache", () => {
     expect(calls).toBe(0);
   });
 
+  it("does not read the tokenize cache under the default optableCacheTargeting", async () => {
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] }] } },
+        refs: { "uidapi.com": REF },
+      })
+    );
+
+    await refreshStaleUid2sFromCache({ ...config, optableCacheTargeting: DCN_DEFAULTS.optableCacheTargeting });
+
+    expect(calls).toBe(0);
+  });
+
+  it("applies each refresh only to the copy holding that token", async () => {
+    seed({ "uidapi.com": REF });
+    const privateKey = Object.keys(localStorage).find((k) => k.startsWith("OPTABLE_TARGETING_")) as string;
+
+    const other = { ...REF, advertising_token: "OTHER_TOKEN", refresh_token: "OTHER_REFRESH" };
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OTHER_TOKEN" }] }] } },
+        refs: { "uidapi.com": other },
+      })
+    );
+
+    const encrypted = await encryptResponse({ status: "success", body: BODY });
+    server.use(
+      http.post(UID2_REFRESH_ENDPOINT, async ({ request }) => {
+        calls++;
+        if ((await request.text()) === "OTHER_REFRESH") {
+          return HttpResponse.json({ status: "invalid_token" }, { status: 400 });
+        }
+        return new HttpResponse(encrypted, { status: 200 });
+      })
+    );
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(2);
+    const priv = JSON.parse(localStorage.getItem(privateKey) as string);
+    expect(priv.ortb2.user.eids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    const pub = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string);
+    expect(pub.ortb2.user.eids).toEqual([]);
+    expect(pub.refs).toEqual({});
+  });
+
   it("does nothing when the cache cannot be read", async () => {
     const spy = jest.spyOn(LocalStorage.prototype, "getTargetingCopies").mockImplementation(() => {
       throw new Error("storage unavailable");

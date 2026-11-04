@@ -29,10 +29,12 @@ A response that cannot be decoded or decrypted throws; error policy stays with t
 ```js
 import { applyUid2Refresh } from "@optable/web-sdk/lib/dist/addons/uid2-refresh";
 
-applyUid2Refresh(config, "uidapi.com", result);
+applyUid2Refresh(config, "uidapi.com", result, refreshToken);
 ```
 
-Applies a refresh outcome to the SDK's targeting cache. On `success`, the EID matching `source` gets its `uids` replaced with `[{ atype: 3, id: advertising_token }]` and the cache's `refs` sidecar entry for that source rewritten from the response body. On `optout`, `invalid_token` or `expired_token`, the EID and its refs entry are removed. Any other error leaves the cache untouched — the cached token stays valid until `identity_expires`, and the next page load retries. Each write is followed by the `optable-targeting:change` event so consumers mirroring the cache (e.g. a pubProvidedId merge) can re-read it. A cache without a matching EID is left untouched.
+Applies a refresh outcome to the SDK's targeting cache. On `success`, the EID matching `source` gets its `uids` replaced with `[{ atype: 3, id: advertising_token }]` and the cache's `refs` sidecar entry for that source rewritten from the response body.
+
+The optional fourth argument is the refresh token the outcome belongs to. Given one, a stored copy whose `refs` entry holds a different refresh token is left alone, so an eviction or a replacement never crosses from one identity to another. A copy carrying no refresh material for the source is still updated. Omit it and every copy holding the source is updated, which is what a caller applying a single known identity wants. On `optout`, `invalid_token` or `expired_token`, the EID and its refs entry are removed. Any other error leaves the cache untouched — the cached token stays valid until `identity_expires`, and the next page load retries. Each write is followed by the `optable-targeting:change` event so consumers mirroring the cache (e.g. a pubProvidedId merge) can re-read it. A cache without a matching EID is left untouched.
 
 ## refreshStaleUid2s
 
@@ -53,7 +55,7 @@ import { refreshStaleUid2sFromCache } from "@optable/web-sdk/lib/dist/addons/uid
 await refreshStaleUid2sFromCache(sdk.dcn);
 ```
 
-Reads every stored copy of the targeting cache, and if any holds a UID2 past its `refresh_from`, refreshes it through `refreshStaleUid2s`. Use this on a page that served targeting from cache: only `mergeCache` produces a `staleUid2s` list, and it runs when a response is merged, so a page that never calls the edge has nothing to pass to `refreshStaleUid2s`. That is also the page where the cached token has had time to age.
+Reads every stored copy of the targeting cache and refreshes each distinct UID2 past its `refresh_from` through `refreshStaleUid2s`. Copies can hold different identities, so refreshes are keyed by refresh token: two copies holding the same token make one request, and two holding different ones are refreshed and written back separately. Use this on a page that served targeting from cache: only `mergeCache` produces a `staleUid2s` list, and it runs when a response is merged, so a page that never calls the edge has nothing to pass to `refreshStaleUid2s`. That is also the page where the cached token has had time to age.
 
 Both copies are checked, the private `OPTABLE_TARGETING_<key>` one and the public `optableCacheTargeting` one, because they can differ: `identifyAndTokenize` writes its merged cache only to its own `cacheKey` (`OPTABLE_RESOLVED` by default), which is also where prebid RTD and `pubProvidedId` read from. For a tokenize-resolved UID2 to be refreshable, that key and `optableCacheTargeting` have to name the same thing. `applyUid2Refresh` then writes the outcome back to every copy.
 
