@@ -44,7 +44,7 @@ Listing a publisher's own domains is what lets a targeting call resolved with `s
 
 ## UID2 refresh material
 
-`replaceCache` validates the refresh material a response points at and keys it by EID `source`, dropping the `ext.optable.ref` pointers. `mergeCache` then carries those entries across merges and returns sources past their `refresh_from` as `staleUid2s` (`{ source, ref }` pairs); pass them to the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshStaleUid2s(config, staleUid2s)` to refresh each and apply the outcome to the cache.
+`replaceCache` validates the refresh material a response points at and keys it by EID `source`, dropping the `ext.optable.ref` pointers. `mergeCache` then carries those entries across merges and returns sources past their `refresh_from` as `staleUid2s` (`{ source, ref }` pairs); pass them to the [UID2 refresh addon](../addons/uid2-refresh.md)'s `refreshStaleUid2s(config, staleUid2s)` to refresh each and apply the outcome to the cache. On a page that merges no response, there is no such list; the addon's `refreshStaleUid2sFromCache(config)` reads the stored cache instead and refreshes what it finds.
 
 A source's refs entry follows its EID: replaced when the source is re-resolved, dropped when it is evicted or the new response carries no ref for it.
 
@@ -60,3 +60,4 @@ Caches written by earlier wrappers carried refresh material as `_ref` on the EID
 | `getRefData`    | `(cache, source) => Uid2RefData \| null`               | The source's refs entry when it can drive a refresh.                 |
 | `isUid2Stale`   | `(cache, source?) => boolean`                          | True when the source's ref is past `refresh_from`. Defaults to UID2. |
 | `isUid2RefData` | `(value) => value is Uid2RefData`                      | Shape guard for refresh material.                                    |
+| `UID2_SOURCE`   | `"uidapi.com"`                                         | The EID source UID2 refresh material is keyed under.                 |

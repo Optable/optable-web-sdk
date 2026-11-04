@@ -236,4 +236,5 @@ function stripRefPointer(uid: CachedUid): CachedUid {
   return copy;
 }
 
+export { UID2_SOURCE };
 export type { CachedEid, ResolvedCache, StaleUid2, Uid2RefData };

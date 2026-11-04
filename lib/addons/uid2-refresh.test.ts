@@ -2,7 +2,13 @@ import { webcrypto } from "node:crypto";
 import { TextDecoder } from "node:util";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/server";
-import { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, UID2_REFRESH_ENDPOINT } from "./uid2-refresh";
+import {
+  refreshUid2Token,
+  applyUid2Refresh,
+  refreshStaleUid2s,
+  refreshStaleUid2sFromCache,
+  UID2_REFRESH_ENDPOINT,
+} from "./uid2-refresh";
 import type { StaleUid2, Uid2RefData } from "../core/eid-cache";
 import { DCN_DEFAULTS } from "../config";
 import type { ResolvedConfig } from "../config";
@@ -379,5 +385,167 @@ describe("refreshStaleUid2s", () => {
   it("is a no-op for an empty list", async () => {
     await expect(refreshStaleUid2s(config, [])).resolves.toBeUndefined();
     expect(events).toHaveLength(0);
+  });
+});
+
+describe("refreshStaleUid2sFromCache", () => {
+  const config = {
+    host: "uid2-from-cache-host.com",
+    site: "site",
+    consent: DCN_DEFAULTS.consent,
+    optableCacheTargeting: "OPTABLE_RESOLVED",
+  } as ResolvedConfig;
+
+  const REF: Uid2RefData = {
+    advertising_token: "OLD_TOKEN",
+    refresh_token: "REFRESH_TOKEN",
+    refresh_response_key: KEY_B64,
+    refresh_from: 1,
+    refresh_expires: 2734462312780,
+    identity_expires: 1734459312780,
+  };
+
+  function seed(refs: Record<string, unknown>): void {
+    const targeting = {
+      ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] }] } },
+      refs,
+    } as unknown as TargetingResponse;
+    new LocalStorage(config).setTargeting(targeting);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function cachedEids(): any[] {
+    return (new LocalStorage(config).getTargeting()?.ortb2?.user?.eids as any[]) ?? [];
+  }
+
+  let calls = 0;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    calls = 0;
+    const encrypted = await encryptResponse({ status: "success", body: BODY });
+    server.use(
+      http.post(UID2_REFRESH_ENDPOINT, () => {
+        calls++;
+        return new HttpResponse(encrypted, { status: 200 });
+      })
+    );
+  });
+
+  it("refreshes a token the cache holds past its refresh point", async () => {
+    seed({ "uidapi.com": REF });
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(1);
+    expect(cachedEids()[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    expect(new LocalStorage(config).getTargeting()?.refs).toEqual({ "uidapi.com": BODY });
+  });
+
+  it("leaves a token that is not due for refresh yet", async () => {
+    seed({ "uidapi.com": { ...REF, refresh_from: Date.now() + 60_000 } });
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(0);
+    expect(cachedEids()[0].uids).toEqual([{ atype: 3, id: "OLD_TOKEN" }]);
+  });
+
+  it("does nothing when the cache holds no refresh material", async () => {
+    seed({});
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(0);
+    expect(cachedEids()[0].uids).toEqual([{ atype: 3, id: "OLD_TOKEN" }]);
+  });
+
+  it("does nothing when there is no cache", async () => {
+    await expect(refreshStaleUid2sFromCache(config)).resolves.toBeUndefined();
+    expect(calls).toBe(0);
+  });
+
+  it("refreshes a token held only by the public copy", async () => {
+    // identifyAndTokenize writes the merged cache to OPTABLE_RESOLVED only.
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] }] } },
+        refs: { "uidapi.com": REF },
+      })
+    );
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(1);
+    const stored = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string);
+    expect(stored.ortb2.user.eids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    expect(stored.refs).toEqual({ "uidapi.com": BODY });
+  });
+
+  it("skips a copy that cannot be parsed", async () => {
+    localStorage.setItem("OPTABLE_RESOLVED", "not json");
+
+    await expect(refreshStaleUid2sFromCache(config)).resolves.toBeUndefined();
+    expect(calls).toBe(0);
+  });
+
+  it("does not read the tokenize cache under the default optableCacheTargeting", async () => {
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OLD_TOKEN" }] }] } },
+        refs: { "uidapi.com": REF },
+      })
+    );
+
+    await refreshStaleUid2sFromCache({ ...config, optableCacheTargeting: DCN_DEFAULTS.optableCacheTargeting });
+
+    expect(calls).toBe(0);
+  });
+
+  it("applies each refresh only to the copy holding that token", async () => {
+    seed({ "uidapi.com": REF });
+    const privateKey = Object.keys(localStorage).find((k) => k.startsWith("OPTABLE_TARGETING_")) as string;
+
+    const other = { ...REF, advertising_token: "OTHER_TOKEN", refresh_token: "OTHER_REFRESH" };
+    localStorage.setItem(
+      "OPTABLE_RESOLVED",
+      JSON.stringify({
+        ortb2: { user: { data: [], eids: [{ source: "uidapi.com", uids: [{ atype: 3, id: "OTHER_TOKEN" }] }] } },
+        refs: { "uidapi.com": other },
+      })
+    );
+
+    const encrypted = await encryptResponse({ status: "success", body: BODY });
+    server.use(
+      http.post(UID2_REFRESH_ENDPOINT, async ({ request }) => {
+        calls++;
+        if ((await request.text()) === "OTHER_REFRESH") {
+          return HttpResponse.json({ status: "invalid_token" }, { status: 400 });
+        }
+        return new HttpResponse(encrypted, { status: 200 });
+      })
+    );
+
+    await refreshStaleUid2sFromCache(config);
+
+    expect(calls).toBe(2);
+    const priv = JSON.parse(localStorage.getItem(privateKey) as string);
+    expect(priv.ortb2.user.eids[0].uids).toEqual([{ atype: 3, id: BODY.advertising_token }]);
+    const pub = JSON.parse(localStorage.getItem("OPTABLE_RESOLVED") as string);
+    expect(pub.ortb2.user.eids).toEqual([]);
+    expect(pub.refs).toEqual({});
+  });
+
+  it("does nothing when the cache cannot be read", async () => {
+    const spy = jest.spyOn(LocalStorage.prototype, "getTargetingCopies").mockImplementation(() => {
+      throw new Error("storage unavailable");
+    });
+
+    await expect(refreshStaleUid2sFromCache(config)).resolves.toBeUndefined();
+    expect(calls).toBe(0);
+
+    spy.mockRestore();
   });
 });

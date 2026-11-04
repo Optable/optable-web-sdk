@@ -98,14 +98,39 @@ class LocalStorage {
     this.setPairIDs(targeting);
   }
 
+  // The private key is in both lists, and the public key can be unset.
+  private targetingCopyKeys(): string[] {
+    return [...new Set([...this.targetingKeys.read, ...this.targetingKeys.write])].filter(Boolean);
+  }
+
+  // Copies can hold different representations, so a caller that inspects the
+  // cache has to see all of them.
+  getTargetingCopies(): TargetingResponse[] {
+    const copies: TargetingResponse[] = [];
+
+    for (const key of this.targetingCopyKeys()) {
+      const raw = this.storage.getItem(key);
+      if (!raw) {
+        continue;
+      }
+
+      try {
+        copies.push(JSON.parse(raw));
+      } catch {
+        // Skip an unparseable copy.
+      }
+    }
+
+    return copies;
+  }
+
   // Updates every stored copy of the targeting response independently: the
   // private and public copies can hold different representations, so each is
   // read, updated and written back on its own. Returns the last updated copy.
   updateTargeting(update: (targeting: TargetingResponse) => boolean): TargetingResponse | null {
     let updated: TargetingResponse | null = null;
-    const keys = [...new Set([...this.targetingKeys.read, ...this.targetingKeys.write])].filter(Boolean);
 
-    for (const key of keys) {
+    for (const key of this.targetingCopyKeys()) {
       const raw = this.storage.getItem(key);
       if (!raw) {
         continue;

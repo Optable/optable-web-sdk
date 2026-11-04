@@ -1,7 +1,7 @@
 import { AgentType } from "iab-adcom";
 import type { ResolvedConfig } from "../config";
-import { isUid2RefData } from "../core/eid-cache";
-import type { StaleUid2, Uid2RefData } from "../core/eid-cache";
+import { getRefData, isUid2RefData, isUid2Stale, UID2_SOURCE } from "../core/eid-cache";
+import type { ResolvedCache, StaleUid2, Uid2RefData } from "../core/eid-cache";
 import { LocalStorage } from "../core/storage";
 import { sendTargetingUpdateEvent } from "../core/events/cache-refresh";
 import { debugLog } from "../core/log";
@@ -79,7 +79,12 @@ const EVICTION_REASONS = new Set(["invalid_token", "expired_token"]);
  * evict both, any other error leaves the cache untouched for retry on the
  * next page load. Sends the targeting change event after each write.
  */
-function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2RefreshResult): void {
+function applyUid2Refresh(
+  config: ResolvedConfig,
+  source: string,
+  result: Uid2RefreshResult,
+  refreshToken?: string
+): void {
   if (result.status === "error" && !EVICTION_REASONS.has(result.reason)) {
     return;
   }
@@ -88,6 +93,12 @@ function applyUid2Refresh(config: ResolvedConfig, source: string, result: Uid2Re
     const eids = cached?.ortb2?.user?.eids;
     // If cache does not exist don't try to set.
     if (!eids) {
+      return false;
+    }
+
+    // A copy holding another identity's token is not this outcome's to touch.
+    const held = getRefData(cached as ResolvedCache, source);
+    if (refreshToken !== undefined && held && held.refresh_token !== refreshToken) {
       return false;
     }
 
@@ -140,12 +151,38 @@ async function refreshStaleUid2s(config: ResolvedConfig, stale: StaleUid2[]): Pr
         debugLog("warn", `UID2: ${entry.source} refresh failed (${result.reason})`, result.message);
       }
 
-      applyUid2Refresh(config, entry.source, result);
+      applyUid2Refresh(config, entry.source, result, entry.ref.refresh_token);
     } catch (e) {
       debugLog("error", `UID2: ${entry?.source} refresh error`, e);
     }
   }
 }
 
-export { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, UID2_REFRESH_ENDPOINT };
+/**
+ * A page that serves targeting from cache merges no response, so it has no
+ * mergeCache result to take a staleUid2s list from.
+ */
+async function refreshStaleUid2sFromCache(config: ResolvedConfig): Promise<void> {
+  // identifyAndTokenize writes only to its own cacheKey, so its copy is read
+  // here only when optableCacheTargeting names that same key.
+  const stale = new Map<string, Uid2RefData>();
+  try {
+    for (const cached of new LocalStorage(config).getTargetingCopies() as ResolvedCache[]) {
+      const ref = isUid2Stale(cached) ? getRefData(cached, UID2_SOURCE) : null;
+      if (ref) {
+        stale.set(ref.refresh_token, ref);
+      }
+    }
+  } catch (e) {
+    debugLog("error", "UID2: could not read the targeting cache", e);
+    return;
+  }
+
+  await refreshStaleUid2s(
+    config,
+    [...stale.values()].map((ref) => ({ source: UID2_SOURCE, ref }))
+  );
+}
+
+export { refreshUid2Token, applyUid2Refresh, refreshStaleUid2s, refreshStaleUid2sFromCache, UID2_REFRESH_ENDPOINT };
 export type { Uid2RefData, Uid2RefreshResult };
