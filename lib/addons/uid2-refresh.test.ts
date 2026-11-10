@@ -490,7 +490,7 @@ describe("refreshStaleUid2sFromCache", () => {
     expect(calls).toBe(0);
   });
 
-  it("does not read the tokenize cache under the default optableCacheTargeting", async () => {
+  it("reads the tokenize cache under the default optableCacheTargeting", async () => {
     localStorage.setItem(
       "OPTABLE_RESOLVED",
       JSON.stringify({
@@ -501,7 +501,7 @@ describe("refreshStaleUid2sFromCache", () => {
 
     await refreshStaleUid2sFromCache({ ...config, optableCacheTargeting: DCN_DEFAULTS.optableCacheTargeting });
 
-    expect(calls).toBe(0);
+    expect(calls).toBe(1);
   });
 
   it("applies each refresh only to the copy holding that token", async () => {
