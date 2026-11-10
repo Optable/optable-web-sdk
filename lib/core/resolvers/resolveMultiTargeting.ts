@@ -122,12 +122,13 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
 
   await Promise.allSettled(targetingFnPromises);
 
+  // Priorities below 1 are ignored and must not be selected
   const priority = Array.from(eidsByPriority.keys())
+    .filter((x) => x >= 1 && eidsByPriority.get(x)?.length)
     .sort((a, b) => a - b)
-    .filter((x) => eidsByPriority.get(x)?.length)
     .shift();
 
-  if (priority) {
+  if (priority !== undefined) {
     const sources = sourcesByPriority.get(priority) || [];
     const resolvedIdsArray = resolvedIdsByPriority.get(priority) || [];
     ortb2.user!.eids!.push(...(eidsByPriority.get(priority) || []));

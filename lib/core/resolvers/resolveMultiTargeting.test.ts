@@ -281,6 +281,61 @@ describe("resolveMultiNodeTargeting", () => {
     expect(eidSources).toEqual(new Set<string>([]));
   });
 
+  test("ignored priorities do not discard eids from valid priorities", async () => {
+    const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({
+          eids: [{ inserter: "optable.co", source: "one.com", uids: [{ id: "uid1" }] }],
+          resolved_ids: ["id_one"],
+        })
+      );
+    });
+
+    const mockTargetingFnTwo = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "two.com", uids: [{ id: "uid2" }] }] })
+      );
+    });
+
+    const mockTargetingFnUnset = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "unset.com", uids: [{ id: "uid3" }] }] })
+      );
+    });
+
+    const mockTargetingFnNegative = new Promise<TargetingResponse>((resolve) => {
+      resolve(
+        createTargetingResponse({ eids: [{ inserter: "optable.co", source: "negative.com", uids: [{ id: "uid4" }] }] })
+      );
+    });
+
+    const configs = [
+      { targetingFn: () => mockTargetingFnOne, matcher: "matcher_one", mm: IDMatchMethod.AUTHENTICATED, priority: 1 },
+      { targetingFn: () => mockTargetingFnTwo, matcher: "matcher_two", mm: IDMatchMethod.INFERENCE, priority: 2 },
+      { targetingFn: () => mockTargetingFnUnset, matcher: "matcher_unset", mm: IDMatchMethod.INFERENCE },
+      {
+        targetingFn: () => mockTargetingFnNegative,
+        matcher: "matcher_negative",
+        mm: IDMatchMethod.INFERENCE,
+        priority: -1,
+      },
+    ];
+
+    const { ortb2, eidSources, resolvedIds } = await resolveMultiNodeTargeting(configs);
+
+    expect(ortb2.user!.eids).toEqual([
+      {
+        inserter: "optable.co",
+        matcher: "matcher_one",
+        mm: IDMatchMethod.AUTHENTICATED,
+        source: "one.com",
+        uids: [{ id: "uid1" }],
+      },
+    ]);
+    expect(eidSources).toEqual(new Set<string>(["matcher_one"]));
+    expect(resolvedIds).toEqual(new Set<string>(["id_one"]));
+  });
+
   it("Should use matcher from response if provided on aggregate", async () => {
     const mockTargetingFnOne = new Promise<TargetingResponse>((resolve) => {
       resolve(
