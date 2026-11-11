@@ -73,7 +73,7 @@ type ContextualEmotion = {
   score: number;
 };
 
-type ContextualEntityKind = "person" | "organization" | "brand_product" | "location" | "event" | "work_of_art";
+type ContextualEntityKind = "person" | "organization" | "product" | "location" | "event" | "work_of_art";
 
 // One named entity the page is about, with its salience from 0.0 to 1.0.
 type ContextualEntity = {
@@ -422,7 +422,7 @@ function ContextualTargetingKeyValues(
 // GAM values for the page's entities: highest score first (missing or invalid
 // scores last), sanitized like keywords, deduped and capped to maxEntities.
 function entityTargetingValues(entities: ContextualEntity[], maxEntities: number): string[] {
-  const scoreOf = (e: ContextualEntity): number => (typeof e.score === "number" ? e.score : Number.NEGATIVE_INFINITY);
+  const scoreOf = (e: ContextualEntity): number => (Number.isFinite(e.score) ? e.score : Number.NEGATIVE_INFINITY);
 
   const values: string[] = [];
   const seen = new Set<string>();

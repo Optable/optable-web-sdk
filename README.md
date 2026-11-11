@@ -452,7 +452,7 @@ type ContextualSegmentsResponse = {
     }[];
     entities: {
       name: string;
-      kind: "person" | "organization" | "brand_product" | "location" | "event" | "work_of_art";
+      kind: "person" | "organization" | "product" | "location" | "event" | "work_of_art";
       score: number;
     }[];
   };
@@ -532,7 +532,7 @@ sdk.ctxEntities();
 // => [{ name: "LeBron James", kind: "person", score: 0.9 }, { name: "Los Angeles Lakers", kind: "organization", score: 0.8 }]
 ```
 
-`kind` is one of `person`, `organization`, `brand_product`, `location`, `event` or `work_of_art`. `score` is the entity's salience from 0.0 to 1.0, and the DCN serves the list highest score first. The list is empty when the page has no entity: the DCN never classified it or does not run the entity classifier.
+`kind` is one of `person`, `organization`, `product`, `location`, `event` or `work_of_art`. `score` is the entity's salience from 0.0 to 1.0, and the DCN serves the list highest score first. The list is empty when the page has no entity: the DCN never classified it or does not run the entity classifier.
 
 #### Contextual targeting key-values
 

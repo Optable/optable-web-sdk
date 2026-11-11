@@ -530,9 +530,9 @@ describe("ContextualTargetingKeyValues entity emission", () => {
   test("sanitizes names like keywords", () => {
     const resp = entities([
       { name: "Beyoncé Knowles", kind: "person", score: 0.9 },
-      { name: 'Toys "R" Us', kind: "brand_product", score: 0.8 },
+      { name: 'Toys "R" Us', kind: "product", score: 0.8 },
       { name: "BEYONCÉ  KNOWLES", kind: "person", score: 0.7 },
-      { name: "()", kind: "brand_product", score: 0.6 },
+      { name: "()", kind: "product", score: 0.6 },
     ]);
 
     expect(ContextualTargetingKeyValues(resp, undefined, options).ctx_ent).toEqual(["beyoncé knowles", "toys r us"]);
@@ -548,6 +548,16 @@ describe("ContextualTargetingKeyValues entity emission", () => {
       "entity 10",
     ]);
     expect(ContextualTargetingKeyValues(many, undefined, options).ctx_ent).toHaveLength(10);
+  });
+
+  test("ranks a NaN score last", () => {
+    const resp = entities([
+      { name: "Low", kind: "person", score: 0.1 },
+      { name: "Broken", kind: "person", score: NaN },
+      { name: "High", kind: "person", score: 0.95 },
+    ]);
+
+    expect(ContextualTargetingKeyValues(resp, undefined, { ...options, maxEntities: 1 }).ctx_ent).toEqual(["high"]);
   });
 
   test("omits the key when the page has no entity", () => {

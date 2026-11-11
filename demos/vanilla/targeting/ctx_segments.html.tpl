@@ -128,7 +128,7 @@
                   </li>
                   <li>
                     <a href="#classifications-entities"><code>entities</code>: named entities the page is about</a>
-                    <span class="toc-note">People, organizations, brands, places, events and works, with their salience.</span>
+                    <span class="toc-note">People, organizations, products, places, events and works of art, with their salience.</span>
                   </li>
                 </ul>
               </li>
@@ -363,7 +363,7 @@ if (emotions.indexOf("joy") !== -1) {
               <tr>
                 <td><code>kind</code></td>
                 <td>
-                  One of <code>person</code>, <code>organization</code>, <code>brand_product</code>,
+                  One of <code>person</code>, <code>organization</code>, <code>product</code>,
                   <code>location</code>, <code>event</code> or <code>work_of_art</code>.
                 </td>
               </tr>
