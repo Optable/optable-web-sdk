@@ -122,6 +122,10 @@ describe("Breaking change detection: if typescript complains or a test fails it'
     new OptableSDK({ ...defaultConfig }).ctxEmotions();
   });
 
+  test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: ctxEntities", () => {
+    new OptableSDK({ ...defaultConfig }).ctxEntities();
+  });
+
   test("TEST SHOULD NEVER NEED TO BE UPDATED, UNLESS MAJOR VERSION UPDATE: profile", async () => {
     await new OptableSDK({ ...defaultConfig }).profile({
       propString: "",
@@ -633,6 +637,42 @@ describe("behavior testing of", () => {
     await sdk.ctxSegments("https://example.com/article");
 
     expect(sdk.ctxEmotions()).toEqual([]);
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({});
+  });
+
+  test("ctxEntities reads the entities cached by ctxSegments", async () => {
+    const entities = [
+      { name: "LeBron James", kind: "person", score: 0.9 },
+      { name: "Los Angeles Lakers", kind: "organization", score: 0.8 },
+    ];
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: { categories: [], keywords: [], entities } }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxEntities()).toEqual(entities);
+    expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({
+      ctx_ent: ["lebron james", "los angeles lakers"],
+    });
+  });
+
+  test("ctxEntities returns an empty list when the DCN serves no entities", async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {
+        return HttpResponse.json({ classifications: { categories: [], keywords: [] } }, { status: 200 });
+      })
+    );
+
+    const sdk = new OptableSDK({ ...defaultConfig });
+    expect(sdk.ctxEntities()).toEqual([]);
+
+    await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxEntities()).toEqual([]);
     expect(sdk.ctxTargetingKeyValues(undefined, { keywordKey: "", brandSafetyKey: "" })).toEqual({});
   });
 

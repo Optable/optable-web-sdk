@@ -1,6 +1,7 @@
 import {
   ContextualBrandSafetyOf,
   ContextualEmotionsOf,
+  ContextualEntitiesOf,
   ContextualMaxRiskLevel,
   ContextualSentimentOf,
   ContextualTargetingKeyValues,
@@ -9,6 +10,7 @@ import type {
   ContextualBrandSafety,
   ContextualBrandSafetyCategory,
   ContextualEmotion,
+  ContextualEntity,
   ContextualSegmentsResponse,
   ContextualSentiment,
 } from "./contextual_segments";
@@ -470,6 +472,108 @@ describe("ContextualTargetingKeyValues emotion emission", () => {
       mood: ["joy", "sadness"],
     });
     expect(ContextualTargetingKeyValues(mixed, undefined, { brandSafetyKey: "", emotionKey: "" })).toEqual({
+      iab_ct_3_1: ["53"],
+    });
+  });
+});
+
+describe("ContextualEntitiesOf", () => {
+  test("returns every entity as served", () => {
+    const served: ContextualEntity[] = [
+      { name: "LeBron James", kind: "person", score: 0.9 },
+      { name: "Los Angeles Lakers", kind: "organization", score: 0.8 },
+    ];
+
+    expect(ContextualEntitiesOf(response({ categories: [], entities: served }))).toEqual(served);
+  });
+
+  // A DCN on an edge build predating entity serving omits the field, the same
+  // answer it gives for a node not running the classifier.
+  test("folds an empty, missing or null response into an empty list", () => {
+    expect(ContextualEntitiesOf(response({ categories: [], entities: [] }))).toEqual([]);
+    expect(ContextualEntitiesOf(response({ categories: [] }))).toEqual([]);
+    expect(ContextualEntitiesOf(null)).toEqual([]);
+  });
+
+  test("skips entries without a string name", () => {
+    const lakers: ContextualEntity = { name: "Los Angeles Lakers", kind: "organization", score: 0.8 };
+    const malformed = [null, { kind: "person", score: 0.9 }, lakers] as never;
+
+    expect(ContextualEntitiesOf(response({ categories: [], entities: malformed }))).toEqual([lakers]);
+  });
+});
+
+describe("ContextualTargetingKeyValues entity emission", () => {
+  function entities(e: ContextualEntity[] | undefined): ContextualSegmentsResponse {
+    return response({
+      categories: [{ id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" }],
+      keywords: [],
+      entities: e,
+    });
+  }
+
+  const options = { brandSafetyKey: "" };
+
+  test("emits names by default under ctx_ent, highest score first, never kind or score", () => {
+    const resp = entities([
+      { name: "Los Angeles Lakers", kind: "organization", score: 0.8 },
+      { name: "LeBron James", kind: "person", score: 0.9 },
+      { name: "Crypto.com Arena", kind: "location", score: 0.4 },
+    ]);
+
+    expect(ContextualTargetingKeyValues(resp, undefined, options)).toEqual({
+      iab_ct_3_1: ["53"],
+      ctx_ent: ["lebron james", "los angeles lakers", "crypto.com arena"],
+    });
+  });
+
+  test("sanitizes names like keywords", () => {
+    const resp = entities([
+      { name: "Beyoncé Knowles", kind: "person", score: 0.9 },
+      { name: 'Toys "R" Us', kind: "brand_product", score: 0.8 },
+      { name: "BEYONCÉ  KNOWLES", kind: "person", score: 0.7 },
+      { name: "()", kind: "brand_product", score: 0.6 },
+    ]);
+
+    expect(ContextualTargetingKeyValues(resp, undefined, options).ctx_ent).toEqual(["beyoncé knowles", "toys r us"]);
+  });
+
+  test("caps to maxEntities by score, defaulting to 10", () => {
+    const many = entities(
+      Array.from({ length: 12 }, (_, i) => ({ name: `entity ${i}`, kind: "person" as const, score: i / 12 }))
+    );
+
+    expect(ContextualTargetingKeyValues(many, undefined, { ...options, maxEntities: 2 }).ctx_ent).toEqual([
+      "entity 11",
+      "entity 10",
+    ]);
+    expect(ContextualTargetingKeyValues(many, undefined, options).ctx_ent).toHaveLength(10);
+  });
+
+  test("omits the key when the page has no entity", () => {
+    expect(ContextualTargetingKeyValues(entities([]), undefined, options)).toEqual({ iab_ct_3_1: ["53"] });
+    expect(ContextualTargetingKeyValues(entities(undefined), undefined, options)).toEqual({ iab_ct_3_1: ["53"] });
+    expect(ContextualTargetingKeyValues(null, undefined, options)).toEqual({});
+  });
+
+  // A throw here would drop every key-value, categories and brand safety included.
+  test("skips entries without a string name", () => {
+    const malformed = entities([null, { kind: "person", score: 0.9 }, { name: "NBA", kind: "organization" }] as never);
+
+    expect(ContextualTargetingKeyValues(malformed, undefined, options)).toEqual({
+      iab_ct_3_1: ["53"],
+      ctx_ent: ["nba"],
+    });
+  });
+
+  test("emits under a caller-provided key, and opts out on an empty key", () => {
+    const resp = entities([{ name: "LeBron James", kind: "person", score: 0.9 }]);
+
+    expect(ContextualTargetingKeyValues(resp, undefined, { ...options, entityKey: "who" })).toEqual({
+      iab_ct_3_1: ["53"],
+      who: ["lebron james"],
+    });
+    expect(ContextualTargetingKeyValues(resp, undefined, { ...options, entityKey: "" })).toEqual({
       iab_ct_3_1: ["53"],
     });
   });

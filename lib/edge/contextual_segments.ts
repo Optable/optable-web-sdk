@@ -73,6 +73,15 @@ type ContextualEmotion = {
   score: number;
 };
 
+type ContextualEntityKind = "person" | "organization" | "brand_product" | "location" | "event" | "work_of_art";
+
+// One named entity the page is about, with its salience from 0.0 to 1.0.
+type ContextualEntity = {
+  name: string;
+  kind: ContextualEntityKind;
+  score: number;
+};
+
 type ContextualClassifications = {
   categories: ContextualCategory[];
   keywords: ContextualKeyword[];
@@ -80,6 +89,8 @@ type ContextualClassifications = {
   sentiment: ContextualSentiment;
   // Multi-label, highest score first, opposites included.
   emotions: ContextualEmotion[];
+  // Highest score first.
+  entities: ContextualEntity[];
 };
 
 type ContextualSegmentsResponse = {
@@ -180,11 +191,19 @@ function ContextualEmotionsOf(response: ContextualSegmentsResponse | null): Cont
   return emotions.filter((emotion) => typeof emotion?.id === "string");
 }
 
+// Reads the entities off a contextual segments response. A DCN on a build
+// predating entity serving omits the field, which folds into an empty list
+// like a node that does not run the classifier.
+function ContextualEntitiesOf(response: ContextualSegmentsResponse | null): ContextualEntity[] {
+  const entities = response?.classifications?.entities ?? [];
+  return entities.filter((entity) => typeof entity?.name === "string");
+}
+
 // Targeting key-values derived from a contextual segments response, suitable for
 // passing to ad servers such as GAM via googletag.pubads().setTargeting(key, values).
 type ContextualTargetingKeyValues = Record<string, string[]>;
 
-// Options for including keyword, brand-safety, sentiment and emotion
+// Options for including keyword, brand-safety, sentiment, emotion and entity
 // classifications in the targeting key-values.
 type ContextualTargetingKeyValuesOptions = {
   // GAM key under which keyword classifications are emitted. Defaults to
@@ -211,6 +230,14 @@ type ContextualTargetingKeyValuesOptions = {
   // key. Defaults to DEFAULT_EMOTION_KEY when omitted. Pass an empty string to
   // opt out. Like keywords, the key is dropped when the page has no emotion.
   emotionKey?: string;
+  // GAM key under which the page's entity names are emitted, as one
+  // multi-value key. Defaults to DEFAULT_ENTITY_KEY when omitted. Pass an empty
+  // string to opt out. Like keywords, the key is dropped when the page has no
+  // entity.
+  entityKey?: string;
+  // Maximum number of entity names to emit, keeping the highest scores. Bounded
+  // for the same reason as maxKeywords. Defaults to DEFAULT_MAX_ENTITIES.
+  maxEntities?: number;
 };
 
 // Default GAM key under which keyword values are emitted.
@@ -227,6 +254,12 @@ const DEFAULT_SENTIMENT_KEY = "ctx_sentiment";
 
 // Default GAM key under which the emotion ids are emitted.
 const DEFAULT_EMOTION_KEY = "ctx_emotion";
+
+// Default GAM key under which the entity names are emitted.
+const DEFAULT_ENTITY_KEY = "ctx_ent";
+
+// Default number of entity names emitted when maxEntities is not provided.
+const DEFAULT_MAX_ENTITIES = 10;
 
 // Brand-safety value emitted when no assessment backs the page: it was never
 // classified, the read failed, or the DCN does not run the classifier.
@@ -374,7 +407,37 @@ function ContextualTargetingKeyValues(
     result[emotionKey] = emotions.map((emotion) => emotion.id);
   }
 
+  // The names only, for the same reason as sentiment.
+  const entityKey = options?.entityKey ?? DEFAULT_ENTITY_KEY;
+  if (entityKey) {
+    const values = entityTargetingValues(ContextualEntitiesOf(response), options?.maxEntities ?? DEFAULT_MAX_ENTITIES);
+    if (values.length > 0) {
+      result[entityKey] = values;
+    }
+  }
+
   return result;
+}
+
+// GAM values for the page's entities: highest score first (missing or invalid
+// scores last), sanitized like keywords, deduped and capped to maxEntities.
+function entityTargetingValues(entities: ContextualEntity[], maxEntities: number): string[] {
+  const scoreOf = (e: ContextualEntity): number => (typeof e.score === "number" ? e.score : Number.NEGATIVE_INFINITY);
+
+  const values: string[] = [];
+  const seen = new Set<string>();
+  for (const entity of [...entities].sort((a, b) => scoreOf(b) - scoreOf(a))) {
+    if (values.length >= maxEntities) {
+      break;
+    }
+    const value = sanitizeGamValue(entity.name);
+    if (value.length === 0 || seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    values.push(value);
+  }
+  return values;
 }
 
 // GAM value for the page's most severe brand-safety tier.
@@ -398,6 +461,7 @@ export {
   ContextualMaxRiskLevel,
   ContextualSentimentOf,
   ContextualEmotionsOf,
+  ContextualEntitiesOf,
 };
 export default ContextualSegments;
 export type {
@@ -411,6 +475,8 @@ export type {
   ContextualSentiment,
   ContextualEmotionLabel,
   ContextualEmotion,
+  ContextualEntityKind,
+  ContextualEntity,
   ContextualClassifications,
   ContextualSegmentsResponse,
   ContextualTargetingKeyValuesOptions,

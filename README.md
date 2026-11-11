@@ -450,6 +450,11 @@ type ContextualSegmentsResponse = {
       name: string;
       score: number;
     }[];
+    entities: {
+      name: string;
+      kind: "person" | "organization" | "brand_product" | "location" | "event" | "work_of_art";
+      score: number;
+    }[];
   };
 };
 ```
@@ -518,9 +523,20 @@ sdk.ctxEmotions();
 
 The list is empty when the page has no emotion: the DCN never classified it, does not run the emotion classifier, or nothing reached its cutoff. The DCN applies that cutoff before serving, so use the list as served rather than filtering on `score` yourself.
 
+#### Entities
+
+`ctxEntities()` reads the named entities the page is about off the cached `ctxSegments()` response, as a list of `{ name, kind, score }`:
+
+```javascript
+sdk.ctxEntities();
+// => [{ name: "LeBron James", kind: "person", score: 0.9 }, { name: "Los Angeles Lakers", kind: "organization", score: 0.8 }]
+```
+
+`kind` is one of `person`, `organization`, `brand_product`, `location`, `event` or `work_of_art`. `score` is the entity's salience from 0.0 to 1.0, and the DCN serves the list highest score first. The list is empty when the page has no entity: the DCN never classified it or does not run the entity classifier.
+
 #### Contextual targeting key-values
 
-`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under `ctx_kw`, its brand-safety tier under `ctx_bs_max`, its sentiment label under `ctx_sentiment` and its emotions under `ctx_emotion`:
+`ctxTargetingKeyValues(taxonomyKeys?, options?)` reads the cached `ctxSegments()` response and builds a `Record<string, string[]>`, ready to pass to an ad server such as Google Ad Manager via `googletag.pubads().setTargeting()`. It emits category ids grouped by taxonomy, plus, by default, the page's keywords under `ctx_kw`, its brand-safety tier under `ctx_bs_max`, its sentiment label under `ctx_sentiment`, its emotions under `ctx_emotion` and its entities under `ctx_ent`:
 
 ```javascript
 sdk.ctxTargetingKeyValues();
@@ -529,7 +545,8 @@ sdk.ctxTargetingKeyValues();
 //   "ctx_kw": ["advertising", "programmatic", "ad tech"],
 //   "ctx_bs_max": ["no_flags"],
 //   "ctx_sentiment": ["positive"],
-//   "ctx_emotion": ["joy", "anticipation"]
+//   "ctx_emotion": ["joy", "anticipation"],
+//   "ctx_ent": ["lebron james", "los angeles lakers"]
 // }
 ```
 
@@ -595,6 +612,16 @@ sdk.ctxTargetingKeyValues(undefined, { emotionKey: "feel" });
 // => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "feel": ["joy", "sadness"] }
 
 sdk.ctxTargetingKeyValues(undefined, { emotionKey: "" });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"] }
+```
+
+The names of the page's [entities](#entities) are emitted by default under `ctx_ent`, as a multi-value key ordered by score (highest first), capped to the top 10, and sanitized like keywords (so `Beyoncé Knowles` becomes `beyoncé knowles`). Like keywords, the key is omitted when the page has no entity. Kinds and scores are never emitted. Use `entityKey` to rename the key, `maxEntities` to change the cap, or pass an empty `entityKey` to opt out:
+
+```javascript
+sdk.ctxTargetingKeyValues(undefined, { entityKey: "who", maxEntities: 1 });
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "who": ["lebron james"] }
+
+sdk.ctxTargetingKeyValues(undefined, { entityKey: "" });
 // => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"] }
 ```
 

@@ -126,6 +126,10 @@
                     <a href="#classifications-emotions"><code>emotions</code>: emotions the page evokes</a>
                     <span class="toc-note">Every Plutchik emotion that reached the DCN's cutoff, with its score.</span>
                   </li>
+                  <li>
+                    <a href="#classifications-entities"><code>entities</code>: named entities the page is about</a>
+                    <span class="toc-note">People, organizations, brands, places, events and works, with their salience.</span>
+                  </li>
                 </ul>
               </li>
               <li>
@@ -149,8 +153,8 @@
             returns for it: taxonomy categories (e.g. against the
             <a href="https://iabtechlab.com/standards/content-taxonomy/">IAB Content Taxonomy</a>), free-form keywords,
             and/or a brand-safety assessment (against the
-            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>), and/or the page's sentiment and emotions, depending
-            on which classifiers the DCN has enabled.
+            <a href="https://www.brandsafetyinstitute.com/resources/frameworks/brand-safety-floor-suitability">Brand Safety Floor + Suitability Framework</a>), and/or the page's sentiment, emotions and named
+            entities, depending on which classifiers the DCN has enabled.
           </p>
           <pre><code>// Classify the URL of the current page (defaults to window.location.href):
 optable.instance.ctxSegments();
@@ -165,11 +169,12 @@ optable.instance.ctxSegments("https://optable.co/");</code></pre>
     brandSafety: { assessed, categories: [{ name, riskLevel }] },
     sentiment: { scored, id, name, score },
     emotions: [{ id, name, score }],
+    entities: [{ name, kind, score }],
   },
 }</code></pre>
           <p>
             The <code>classifications</code> object groups results by classification method, and the DCN includes only
-            the methods it has enabled. Five methods exist today:
+            the methods it has enabled. Six methods exist today:
           </p>
           <h6 id="classifications-categories"><code>categories</code>: taxonomy category ids scored for the page</h6>
           <table class="u-full-width">
@@ -348,6 +353,28 @@ if (sentiment.scored && sentiment.id === "negative") {
 if (emotions.indexOf("joy") !== -1) {
   // Favor campaigns that fit uplifting content.
 }</code></pre>
+          <h6 id="classifications-entities"><code>entities</code>: named entities the page is about</h6>
+          <table class="u-full-width">
+            <thead>
+              <tr><th>Field</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>name</code></td><td>Entity name as written on the page (e.g. <code>LeBron James</code>).</td></tr>
+              <tr>
+                <td><code>kind</code></td>
+                <td>
+                  One of <code>person</code>, <code>organization</code>, <code>brand_product</code>,
+                  <code>location</code>, <code>event</code> or <code>work_of_art</code>.
+                </td>
+              </tr>
+              <tr><td><code>score</code></td><td>Salience of the entity on the page from 0.0 to 1.0.</td></tr>
+            </tbody>
+          </table>
+          <p>
+            The DCN serves the list highest score first. It is empty when the DCN never classified the page or does not
+            run the entity classifier. <code>ctxEntities()</code> reads it off the cached response:
+          </p>
+          <pre><code>var people = optable.instance.ctxEntities().filter(function (e) { return e.kind === "person"; });</code></pre>
           <p>
             Alternatively, configure the SDK with <code>initContextual</code> set to a callback. The SDK will
             automatically call <code>ctxSegments()</code> for the URL of the current page on initialization, and
@@ -427,8 +454,8 @@ if (emotions.indexOf("joy") !== -1) {
           <p>
             By default the returned map has one key per taxonomy the DCN classified into (keyed by the raw taxonomy
             value), the page's keywords under <code>ctx_kw</code>, its brand-safety tier under
-            <code>ctx_bs_max</code>, its sentiment label under <code>ctx_sentiment</code>, and its emotions under
-            <code>ctx_emotion</code>. For example,
+            <code>ctx_bs_max</code>, its sentiment label under <code>ctx_sentiment</code>, its emotions under
+            <code>ctx_emotion</code>, and its entities under <code>ctx_ent</code>. For example,
             <code>ctxTargetingKeyValues()</code> might return:
           </p>
           <pre><code>{
@@ -436,7 +463,8 @@ if (emotions.indexOf("joy") !== -1) {
   "ctx_kw": ["advertising", "programmatic", "ad tech"],
   "ctx_bs_max": ["no_flags"],
   "ctx_sentiment": ["positive"],
-  "ctx_emotion": ["joy", "anticipation"]
+  "ctx_emotion": ["joy", "anticipation"],
+  "ctx_ent": ["lebron james", "los angeles lakers"]
 }</code></pre>
           <p>
             If you want <code>loadGAM()</code> to run as soon as the contextual segments arrive — without making a
@@ -556,6 +584,19 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { emotionKey: "feel" }
 
 // Opt out of the emotion key-value:
 loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { emotionKey: "" }));</code></pre>
+          <p>
+            The names of the page's <a href="#classifications-entities">entities</a> are emitted by default under
+            <code>ctx_ent</code>, as a multi-value key ordered by score (highest first), capped to the top 10, and
+            sanitized like keywords (<code>Beyoncé Knowles</code> becomes <code>beyoncé knowles</code>). Like keywords,
+            the key is omitted when the page has no entity, and kinds and scores are never emitted. Use
+            <code>entityKey</code> to rename the key, <code>maxEntities</code> to change the cap, or pass an empty
+            <code>entityKey</code> to opt out:
+          </p>
+          <pre><code>// Rename the entity key and emit only the top 5 entities:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { entityKey: "who", maxEntities: 5 }));
+
+// Opt out of the entity key-value:
+loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { entityKey: "" }));</code></pre>
           <div class="twelve column code-result" id="kv-result">—</div>
         </div>
       </div>
@@ -600,13 +641,15 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { emotionKey: "" }));<
         // synchronously off the instance. Missing and unscored both read scored false.
         var sentiment = optable.instance.ctxSentiment();
         var emotions = optable.instance.ctxEmotions();
+        var entities = optable.instance.ctxEntities();
 
         if (
           categories.length === 0 &&
           keywords.length === 0 &&
           !brandSafety.assessed &&
           !sentiment.scored &&
-          emotions.length === 0
+          emotions.length === 0 &&
+          entities.length === 0
         ) {
           return "<p><em>No contextual classifications were returned for this URL.</em></p>";
         }
@@ -742,6 +785,26 @@ loadGAM(optable.instance.ctxTargetingKeyValues(undefined, { emotionKey: "" }));<
                   "</code></td><td>" +
                   escapeHtml(e.name) +
                   "</td><td>" +
+                  escapeHtml(typeof e.score === "number" ? e.score.toFixed(2) : "n/a") +
+                  "</td></tr>"
+                );
+              })
+              .join("") +
+            "</tbody></table>";
+        }
+
+        if (entities.length > 0) {
+          html +=
+            "<h6>Entities</h6>" +
+            '<table class="u-full-width"><thead><tr><th>Name</th><th>Kind</th><th>Score</th></tr></thead><tbody>' +
+            entities
+              .map(function (e) {
+                return (
+                  "<tr><td>" +
+                  escapeHtml(e.name) +
+                  "</td><td><code>" +
+                  escapeHtml(e.kind) +
+                  "</code></td><td>" +
                   escapeHtml(typeof e.score === "number" ? e.score.toFixed(2) : "n/a") +
                   "</td></tr>"
                 );
