@@ -16,7 +16,8 @@ type NodeTargetingRule = {
   // 0 = unknown, 1 = no_match, 2 = cookie_sync, 3 = authenticated, 4 = observed, 5 = inference.
   mm?: IDMatchMethod;
   // (Optional) If provided we will only pick one resolved Ortb2Response from the most prioritize matcher.
-  // Any values below 1 will be threated as ignore
+  // Any non-zero priority on any rule switches to priority mode, where rules with no priority
+  // or a priority below 1 never supply eids. 0 alone counts as no priority.
   priority?: number;
 };
 
@@ -122,7 +123,9 @@ async function resolvePriorityTargeting(rules: NodeTargetingRule[]): Promise<Mul
 
   await Promise.allSettled(targetingFnPromises);
 
-  // Priorities below 1 are ignored and must not be selected
+  // Only reached in priority mode, i.e. some rule has a non-zero priority (see
+  // resolveMultiNodeTargeting). Here, rules with no priority or a priority below 1
+  // never supply eids, so their bucket must not be selected.
   const priority = Array.from(eidsByPriority.keys())
     .filter((x) => x >= 1 && eidsByPriority.get(x)?.length)
     .sort((a, b) => a - b)
