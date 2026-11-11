@@ -358,14 +358,14 @@ The targeting function accepts the following parameter types:
 // targeting(input?: string | TargetingRequest)
 type TargetingRequest = {
   ids: string[]; // identifiers, sent as `id`
-  hids: string[]; // hashed identifiers (e.g. a SHA-256 hashed email), sent as `hid`
+  hids: string[]; // hint identifiers, sent as `hid`
 };
 
 // Examples:
 sdk.targeting(); // Uses default "__passport__"
 sdk.targeting("some_id"); // Single identifier
 sdk.targeting({ ids: ["id1", "id2"], hids: [] }); // Multiple identifiers
-sdk.targeting({ ids: [], hids: [OptableSDK.sha256("some.email@address.com")] }); // Hashed email
+sdk.targeting({ ids: ["id1"], hids: ["hint1"] }); // Identifiers with hint identifiers
 ```
 
 In TypeScript both `ids` and `hids` are required; pass an empty array for the one you don't use. In JavaScript a missing field defaults to `[]`.
