@@ -7,9 +7,9 @@ fired before the hook attached, tags bidder requests with Optable EID metadata
 
 It exposes two things:
 
-- `initPrebidAnalytics(options)` — a bootstrap helper that creates the analytics
-  SDK instance, constructs the collector, and hooks it into Prebid for you. Use
-  this unless you need to manage those pieces yourself.
+- `initPrebidAnalytics(options)` — a bootstrap helper that takes your SDK
+  instance, constructs the collector around it, and hooks it into Prebid for
+  you. Use this unless you need to manage those pieces yourself.
 - `OptablePrebidAnalytics` — the collector class, for advanced setups.
 
 ## Usage
@@ -18,7 +18,7 @@ It exposes two things:
 
 ```js
 import OptableSDK from "@optable/web-sdk";
-import { initPrebidAnalytics } from "@optable/web-sdk/lib/addons/prebid/analytics";
+import { initPrebidAnalytics } from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
 
 const sdk = new OptableSDK({ host: "us.edge.optable.co", node: "my-tenant", site: "my-site" });
 
@@ -70,7 +70,7 @@ window.optable.customAnalytics = async () => ({ experiment: "floor-v2" });
 ### Advanced: managing the collector directly
 
 ```js
-import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
+import OptablePrebidAnalytics from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
 
 const sdk = new OptableSDK({
   host: "us.edge.optable.co",
@@ -106,15 +106,15 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 
 ### `OptablePrebidAnalyticsConfig`
 
-| Option           | Type                     | Default   | Description                                                                                                         |
-| ---------------- | ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------- |
-| `analytics`      | `boolean`                | —         | Master switch. When falsy, events are logged (in debug) but not sent to Witness. `initPrebidAnalytics` sets `true`. |
-| `debug`          | `boolean`                | `false`   | When true, logs collector activity to the console.                                                                  |
-| `bidWinTimeout`  | `number`                 | `10000`   | Milliseconds to wait after `auctionEnd` before sending, to collect `bidWon` events.                                 |
-| `samplingRate`   | `number`                 | `1`       | Fraction of events/sessions sampled (0–1). `<= 0` sends nothing; `>= 1` sends everything.                           |
-| `samplingVolume` | `"session"` \| `"event"` | `"event"` | `"event"` re-rolls sampling per auction; `"session"` decides once per session.                                      |
-| `samplingSeed`   | `string`                 | —         | Deterministic sampling seed (e.g. a user id) instead of random sampling.                                            |
-| `samplingRateFn` | `() => boolean`          | —         | Custom sampling predicate; overrides the other sampling options when set.                                           |
+| Option           | Type                     | Default   | Description                                                                                                                                  |
+| ---------------- | ------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `analytics`      | `boolean`                | —         | Master switch. When falsy, events are logged (in debug) but not sent to Witness. `initPrebidAnalytics` sets `true`.                          |
+| `debug`          | `boolean`                | `false`   | When true, logs collector activity to the console.                                                                                           |
+| `bidWinTimeout`  | `number`                 | `10000`   | Milliseconds to wait after `auctionEnd` before sending, to collect `bidWon` events.                                                          |
+| `samplingRate`   | `number`                 | `1`       | Fraction of events/sessions sampled (0–1). `<= 0` sends nothing; `>= 1` sends everything.                                                    |
+| `samplingVolume` | `"session"` \| `"event"` | `"event"` | `"event"` re-rolls sampling per auction; `"session"` decides once per session.                                                               |
+| `samplingSeed`   | `string`                 | —         | Deterministic sampling seed (e.g. a user id) instead of random sampling.                                                                     |
+| `samplingRateFn` | `() => boolean`          | —         | Custom sampling predicate; only consulted when `samplingRate` is between 0 and 1 (exclusive), and then overrides the other sampling options. |
 
 ### `OptablePrebidAnalytics` instance
 

@@ -13,7 +13,7 @@ when no Prebid.js instance is provided.
 
 ```ts
 import OptableSDK from "@optable/web-sdk";
-import { initPrebidAnalytics } from "@optable/web-sdk/lib/addons/prebid/analytics";
+import { initPrebidAnalytics } from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
 
 const sdk = new OptableSDK({ host: "us.edge.optable.co", node: "analytics", site: "analytics" });
 
@@ -40,7 +40,7 @@ payload is read from that instance's `node`.
 For full control, construct the collector yourself and hook it into Prebid.js:
 
 ```js
-import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
+import OptablePrebidAnalytics from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
 
 const analytics = new OptablePrebidAnalytics(sdk, {
   analytics: true,
@@ -55,7 +55,7 @@ The payload tenant is read from the SDK instance's `node`.
 ## Usage
 
 - **Sampling**: `samplingRate` (0–1) controls the fraction of events/sessions sent.
-- **Debugging**: set `sessionStorage.optableDebug` to enable debug logging.
+- **Debugging**: pass `debug: true` to enable debug logging. The examples above derive it from `sessionStorage.optableDebug`, so setting that enables it.
 - **Custom fields**: set `window.optable.customAnalytics` to an async function
   returning an object; its keys are merged into every auction payload.
 
