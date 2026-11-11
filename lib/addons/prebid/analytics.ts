@@ -646,7 +646,7 @@ class OptablePrebidAnalytics {
       userAgent: Bowser.parse(window.navigator.userAgent) as unknown as Record<string, any>,
       device,
       prebidjsVersion: this.prebidInstance?.version || "unknown",
-      sessionDepth: sessionStorage?.optableSessionDepth || 1,
+      sessionDepth: Number(sessionStorage?.optableSessionDepth) || 1,
       pageAuctionsCount: (window as any).optable?.pageAuctionsCount || 1,
       originSlug: this.optableInstance?.dcn?.site || (window as any).optable?.site || "unknown",
     };

@@ -155,6 +155,22 @@ describe("OptablePrebidAnalytics", () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance);
     });
 
+    describe("sessionDepth", () => {
+      const emptyAuction = { auctionId: "depth-auction", bidderRequests: [] };
+
+      // sessionStorage stringifies on write, so the stored depth reads back as
+      // a string while the fallback is a number. Consumers see one field.
+      it("is a number whether or not the session has a stored depth", async () => {
+        sessionStorage.removeItem("optableSessionDepth");
+        const unset = await analytics.toWitness(emptyAuction, []);
+        expect(unset.sessionDepth).toBe(1);
+
+        sessionStorage.optableSessionDepth = "4";
+        const stored = await analytics.toWitness(emptyAuction, []);
+        expect(stored.sessionDepth).toBe(4);
+      });
+    });
+
     describe("page config", () => {
       const emptyAuction = { auctionId: "page-auction", bidderRequests: [] };
 
