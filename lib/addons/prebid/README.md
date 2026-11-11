@@ -14,6 +14,7 @@ when no Prebid.js instance is provided.
 ```ts
 import OptableSDK from "@optable/web-sdk";
 import { initPrebidAnalytics } from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
+import { flagEnabled } from "@optable/web-sdk/lib/dist/core/flags";
 
 const sdk = new OptableSDK({ host: "us.edge.optable.co", node: "analytics", site: "analytics" });
 
@@ -25,7 +26,7 @@ initPrebidAnalytics({
   // Forwarded to the OptablePrebidAnalytics constructor
   analytics: {
     samplingRate: 0.1,
-    debug: !!sessionStorage.optableDebug,
+    debug: flagEnabled("optableDebug"),
     // Any OptablePrebidAnalyticsConfig option is forwarded, e.g. samplingVolume.
   },
 });
@@ -41,10 +42,11 @@ For full control, construct the collector yourself and hook it into Prebid.js:
 
 ```js
 import OptablePrebidAnalytics from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
+import { flagEnabled } from "@optable/web-sdk/lib/dist/core/flags";
 
 const analytics = new OptablePrebidAnalytics(sdk, {
   analytics: true,
-  debug: !!sessionStorage.optableDebug,
+  debug: flagEnabled("optableDebug"),
   samplingRate: 0.75,
 });
 analytics.hookIntoPrebid(window.pbjs);
@@ -55,7 +57,7 @@ The payload tenant is read from the SDK instance's `node`.
 ## Usage
 
 - **Sampling**: `samplingRate` (0–1) controls the fraction of events/sessions sent.
-- **Debugging**: pass `debug: true` to enable debug logging. The examples above derive it from `sessionStorage.optableDebug`, so setting that enables it.
+- **Debugging**: pass `debug: true` to log collector activity to the console. The examples above turn it on with the `optableDebug` [QA flag](../../core/flags.md), e.g. by adding `?optableDebug` to the page URL.
 - **Custom fields**: set `window.optable.customAnalytics` to an async function
   returning an object; its keys are merged into every auction payload.
 
