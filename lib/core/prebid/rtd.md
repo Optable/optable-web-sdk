@@ -19,7 +19,7 @@ On each auction, `handleRtd`:
 
 1. Returns null while `isControlGroup()` is true — no EIDs reach bids.
 2. Serves from the cache immediately when it holds EIDs.
-3. Otherwise, with `waitForTargeting` on and a Prebid `auctionDelay` configured, waits for the `optable-targeting:change` event (sent whenever the SDK writes the targeting cache) up to the auction delay, then serves whatever the cache holds. A cache entry without EIDs does not skip the wait: targeting may still be in flight.
+3. Otherwise, with `waitForTargeting` on and a Prebid `auctionDelay` configured, waits for the `optable-targeting:change` event (sent whenever the SDK writes the targeting cache) up to the auction delay, then serves whatever the cache holds. A cache entry without EIDs does not skip the wait: targeting may still be in flight. The delay is read from `window[prebidGlobal]`, so a page running several Prebid instances has to name the one whose `realTimeData` config carries it, or no wait happens and the auction is served unenriched.
 4. Routes each EID to the bidders configured for its source, falling back to `global` for unknown sources or bidders absent from the auction, and merges per the source's strategy.
 
 ## Options
@@ -27,6 +27,7 @@ On each auction, `handleRtd`:
 | Option                  | Default            | Description                                                                                                                             |
 | ----------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `waitForTargeting`      | `false`            | Wait (bounded by Prebid's `auctionDelay`) for a targeting response when the cache has no EIDs.                                          |
+| `prebidGlobal`          | `"pbjs"`           | Name of the Prebid global whose `realTimeData.auctionDelay` bounds that wait.                                                           |
 | `isControlGroup`        | `() => false`      | Split-test gate, evaluated per auction; while true, `handleRtd` serves no EIDs.                                                         |
 | `eidSources`            | built-in routing   | Per-source bidder routes and merge strategy. Pass `{}` to route everything to `global`.                                                 |
 | `mergeStrategy`         | append             | Global merge strategy; `appendMergeStrategy`, `prependMergeStrategy`, `replaceMergeStrategy` and `appendNewMergeStrategy` are exported. |
