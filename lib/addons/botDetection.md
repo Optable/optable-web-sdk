@@ -58,7 +58,7 @@ Two consequences worth knowing:
 
 ## API
 
-| Export                 | Signature                         | Description                                                                                                                  |
-| ---------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `isBot`                | `(userAgent?: string) => boolean` | True when the user agent looks like a known bot. Defaults to `navigator.userAgent`.                                          |
-| `SkipTargetingForBots` | `() => boolean`                   | Exported from `lib/edge/targeting`. Marks targeting done for bots so RTD short-circuits. Returns whether a bot was detected. |
+| Export                 | Signature                         | Description                                                                                                                               |
+| ---------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `isBot`                | `(userAgent?: string) => boolean` | True when the user agent looks like a known bot. Defaults to `navigator.userAgent`.                                                       |
+| `SkipTargetingForBots` | `() => boolean`                   | Exported from `lib/edge/targeting`. Marks targeting done for bots so `TargetingOncePerSession` skips. Returns whether a bot was detected. |

@@ -24,9 +24,14 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
     - [TypeScript Types](#typescript-types)
     - [Caching Targeting Data](#caching-targeting-data)
   - [Witness API](#witness-api)
-    - [Contextual Pageview Tracking](#contextual-pageview-tracking)
-    - [Contextual Segments API](#contextual-segments-api)
-      - [Contextual targeting key-values](#contextual-targeting-key-values)
+  - [Contextual Pageview Tracking](#contextual-pageview-tracking)
+    - [Option 1: Automatic (recommended)](#option-1-automatic-recommended)
+    - [Option 2: Manual](#option-2-manual)
+  - [Contextual Segments API](#contextual-segments-api)
+    - [Brand safety](#brand-safety)
+    - [Sentiment](#sentiment)
+    - [Emotions](#emotions)
+    - [Contextual targeting key-values](#contextual-targeting-key-values)
 - [Using a script tag](#using-a-script-tag)
   - [Option 1: Automatic Initialization](#option-1-automatic-initialization)
   - [Option 2: Manual Initialization with Commands Queue](#option-2-manual-initialization-with-commands-queue)
@@ -39,9 +44,9 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Witnessing ad events](#witnessing-ad-events)
   - [GAM Secure Signals](#gam-secure-signals)
 - [Integrating Prebid](#integrating-prebid)
-  - [Open Pair ID Prebid Module](#open-pair-id-prebid-module)
   - [Seller Defined Audiences](#seller-defined-audiences)
   - [Custom key values](#custom-key-values)
+  - [RTD module](#rtd-module)
 - [Identifying visitors arriving from Email newsletters](#identifying-visitors-arriving-from-email-newsletters)
   - [Insert oeid into your Email newsletter template](#insert-oeid-into-your-email-newsletter-template)
   - [Call tryIdentifyFromParams SDK API](#call-tryidentifyfromparams-sdk-api)
@@ -60,6 +65,17 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
   - [Input Type](#input-type)
 - [Geo-routing](#geo-routing)
 - [Bot detection](#bot-detection)
+- [Command queue](#command-queue)
+- [EID cache merge](#eid-cache-merge)
+- [UID2 refresh](#uid2-refresh)
+- [Prebid pubProvidedId delivery](#prebid-pubprovidedid-delivery)
+- [Static mappings](#static-mappings)
+- [ID5 resolution](#id5-resolution)
+- [Source check](#source-check)
+- [A/B test assignment](#ab-test-assignment)
+- [Traffic source](#traffic-source)
+- [GAM signal enrichment key-value](#gam-signal-enrichment-key-value)
+- [Other SDK methods](#other-sdk-methods)
 - [Demo Pages](#demo-pages)
 
 ## Installing
@@ -156,23 +172,47 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
   If `true`, the SDK will automatically perform a targeting request during initialization and store the response in cache. This ensures the cache is populated with the most up-to-date targeting data as soon as the SDK is loaded.
 
 - **`pageContext` (`PageContextConfig | boolean`, default: `undefined`)**
-  When set, enables page context extraction for contextual intelligence. Set to `true` to use defaults, or pass a `PageContextConfig` object to customize what is extracted (HTML content, content selector, max lengths). Extracted context is automatically attached to the first `witness()` call that uses `{ includeContext: true }`.
+  When set, enables page context extraction for contextual intelligence. Set to `true` to use defaults, or pass a `PageContextConfig` object to customize what is extracted: `includeHtml` (boolean), `contentSelector` (CSS selector for the main content), `maxContentLength` (default `5000`) and `maxHtmlLength` (default `50000`). Extracted context is automatically attached to the first `witness()` call that uses `{ includeContext: true }`.
 
 - **`initContextual` (`boolean | (response: ContextualSegmentsResponse) => void`, default: `false`)**
   If `true`, the SDK will automatically fire a `pageview` witness event with full page context during initialization, and also call `ctxSegments()` to fetch contextual segments for the current page, caching the result on the instance for later use via `ctxTargetingKeyValues()`. This is the recommended way to enable contextual pageview tracking and contextual targeting without writing custom code. Implies `pageContext: true` when no `pageContext` is explicitly configured.
   When set to a callback function, the SDK does everything `true` does **and** invokes the callback with the `ContextualSegmentsResponse` once it resolves — useful for chaining an ad-server load (e.g. GAM) on the contextual response without making a second `ctxSegments()` call. The callback is not invoked if the request fails.
 
 - **`consent` (`InitConsent`)**
-  Defines the consent settings for data collection and processing.
+  Defines the consent settings for data collection and processing: `{ cmpapi?: CMPApiConfig; static?: Consent }`. Pass `cmpapi` to read consent from the page's CMP (TCF/GPP), or `static` to supply consent you already collected; `static` wins if both are set. When omitted, the SDK assumes all-permissive consent with no applicable regulation.
 
 - **`readOnly` (boolean, default: `false`)**
-  When set to `true`, puts the SDK in a read-only mode, preventing any data modifications while still allowing API queries.
+  When set to `true`, adds `ro=true` to every request so the DCN does not modify data while still answering API queries. The SDK itself does not block any calls client-side.
 
 - **`optableCacheTargeting` (string, defaults: `optable-cache:targeting`)**
   Local storage cache key used to store latest targeting response.
 
 - **`ois` (boolean, default: `false`)**
   When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK stores the derived OIS ID the DCN returns on the `X-Optable-OID` response header and replays it on subsequent requests, so the DCN recognizes the browser instead of deriving a new identity each visit. Requires a DCN node with OIS ID derivation enabled and device access consent, so it is a no-op otherwise. The `OPTABLE_OID` cookie identity is separate and needs no configuration.
+
+- **`timeout` (string, default: `undefined`)**
+  Timeout hint sent to the DCN on every request, with a unit (e.g. `"100ms"`, `"2s"`). The server tries to answer within it; targeting may return a partial response.
+
+- **`sessionID` (string, default: random)**
+  Session identifier sent as `sid` on every request. Defaults to a random value generated per SDK instance.
+
+- **`skipEnrichment` (boolean, default: `undefined`)**
+  When `true`, sends `skip_enrichment=true` so the DCN skips enrichment for these requests.
+
+- **`additionalTargetingSignals` (`{ ref?: boolean }`, default: `undefined`)**
+  With `ref: true`, targeting calls also send the current page URL (protocol, host and path, without the query string) as `ref`.
+
+- **`abTests` (`ABTestConfig[]`, default: `undefined`)**
+  Server-side A/B tests for targeting. Each entry is `{ id, trafficPercentage, matcher_override?, skipMatchers?, skipResolvers? }`. On each targeting call one test is picked at random according to `trafficPercentage` (percentages must sum to 100 or less, otherwise no test is applied) and its `id` is sent as `ab_test_id`, along with any matcher overrides and skipped matchers/resolvers. For a sticky, per-visitor split on the client, see `setupAB` in [`lib/addons/abTestAssignment.md`](lib/addons/abTestAssignment.md).
+
+- **`legacyHostCache` (string, default: `undefined`)**
+  The previous DCN host, when migrating hosts. The SDK also reads the passport stored under that host so visitors keep their identity across the switch.
+
+- **`mockedIP` (string, default: `undefined`)**
+  For testing only: sent as the `X-Forwarded-For` header so the DCN treats requests as coming from that IP.
+
+- **`insecure` (boolean, default: `false`)**
+  For local testing only: uses `http` instead of `https`. Do not use in production.
 
 These configurations allow fine-tuned control over how the `OptableSDK` interacts with the Optable DCN, ensuring compatibility with different environments and privacy settings.
 
@@ -199,7 +239,7 @@ To associate a user's browser with an authenticated identifier such as an Email 
 
 ```javascript
 const onSuccess = () => console.log("Identify API success!");
-const onFailure = (err) => console.warn("Identify API error: ${err.message}");
+const onFailure = (err) => console.warn(`Identify API error: ${err.message}`);
 
 const emailID = OptableSDK.eid("some.email@address.com");
 
@@ -225,7 +265,7 @@ To associate key value traits with a user's browser, for eventual audience assem
 
 ```javascript
 const onSuccess = () => console.log("Profile API success!");
-const onFailure = (err) => console.warn("Profile API error: ${err.message}");
+const onFailure = (err) => console.warn(`Profile API error: ${err.message}`);
 
 const visitorTraits = {
   gender: "M",
@@ -252,7 +292,7 @@ The third argument is to provide additional identifier(s) that you want to assoc
 
 ```javascript
 const onSuccess = () => console.log("Profile API success!");
-const onFailure = (err) => console.warn("Profile API error: ${err.message}");
+const onFailure = (err) => console.warn(`Profile API error: ${err.message}`);
 
 const visitorTraits = {
   gender: "M",
@@ -264,7 +304,7 @@ const visitorTraits = {
 const emailID = OptableSDK.eid("some.email@address.com");
 const additionalIDs = [];
 additionalIDs.push(OptableSDK.cid("id1"));
-additionalIDs.push(OptableSDK.cid("id2", "c2"));
+additionalIDs.push(OptableSDK.cid("id2", 2)); // variant 0-19, prefixes the ID with "c2:"
 
 sdk.profile(visitorTraits, emailID, additionalIDs).then(onSuccess).catch(onFailure);
 ```
@@ -277,8 +317,8 @@ To get the targeting information associated by the configured DCN with the user'
 sdk
   .targeting()
   .then((response) => {
-    console.log(`Audience targeting: ${targeting.audience}`);
-    console.log(`User targeting: ${targeting.user}`);
+    console.log("Audience targeting:", response.audience);
+    console.log("User targeting:", response.user);
   })
   .catch((err) => console.warn(`Targeting API Error: ${err.message}`));
 ```
@@ -304,7 +344,7 @@ To target multiple identifiers, use the object parameter format:
 sdk
   .targeting({ ids: ["identifier1", "identifier2", "identifier3"] })
   .then((response) => {
-    console.log(`Multi-targeting response: ${response}`);
+    console.log("Multi-targeting response:", response);
   })
   .catch((err) => console.warn(`Targeting API Error: ${err.message}`));
 ```
@@ -314,13 +354,20 @@ sdk
 The targeting function accepts the following parameter types:
 
 ```typescript
-type TargetingRequest = string | { ids?: string[] };
+// targeting(input?: string | TargetingRequest)
+type TargetingRequest = {
+  ids: string[]; // identifiers, sent as `id`
+  hids: string[]; // hint identifiers, sent as `hid`
+};
 
 // Examples:
 sdk.targeting(); // Uses default "__passport__"
 sdk.targeting("some_id"); // Single identifier
-sdk.targeting({ ids: ["id1", "id2"] }); // Multiple identifiers
+sdk.targeting({ ids: ["id1", "id2"], hids: [] }); // Multiple identifiers
+sdk.targeting({ ids: ["id1"], hids: ["hint1"] }); // Identifiers with hint identifiers
 ```
+
+In TypeScript both `ids` and `hids` are required; pass an empty array for the one you don't use. In JavaScript a missing field defaults to `[]`.
 
 On success, the resulting targeting data is typically sent as part of a subsequent ad call. Therefore we recommend that you either call targeting() before each ad call, or in parallel periodically, caching the resulting targeting data which you then provide in ad calls.
 
@@ -331,8 +378,8 @@ The `targeting` API will automatically cache resulting key value data in client 
 ```javascript
 const cachedTargetingData = sdk.targetingFromCache();
 if (cachedTargetingData) {
-  console.log(`Audience targeting: ${cachedTargetingData.audience}`);
-  console.log(`User targeting: ${cachedTargetingData.user}`);
+  console.log("Audience targeting:", cachedTargetingData.audience);
+  console.log("User targeting:", cachedTargetingData.user);
 }
 ```
 
@@ -350,7 +397,7 @@ To send real-time event data from the user's browser to the DCN for eventual aud
 
 ```javascript
 const onSuccess = () => console.log("Witness API success!");
-const onFailure = (err) => console.warn("Witness API error: ${err.message}");
+const onFailure = (err) => console.warn(`Witness API error: ${err.message}`);
 
 const eventProperties = {
   property_one: "some_value",
@@ -367,7 +414,7 @@ Note that event properties are key value pairs and have type `WitnessProperties`
 
 ```typescript
 type WitnessProperties = {
-  [key: string]: string | number | boolean;
+  [key: string]: string | number | boolean | unknown[] | null | { [key: string]: unknown };
 };
 ```
 
@@ -377,7 +424,7 @@ The SDK can automatically fire a `pageview` witness event with full page context
 
 #### Option 1: Automatic (recommended)
 
-Set `initContextual: true` in your SDK config. The SDK fires the pageview event once after passport initialization, with no additional code required:
+Set `initContextual: true` in your SDK config. The SDK fires the pageview event once during initialization (after the passport is initialized, when `initPassport` is on), with no additional code required:
 
 ```javascript
 const sdk = new OptableSDK({
@@ -403,7 +450,7 @@ const sdk = new OptableSDK({
 
 #### Option 2: Manual
 
-Enable `pageContext` in your config and call `witness()` with `{ includeContext: true }` yourself. Context is attached once per page load (subsequent calls with `includeContext: true` send no context):
+Enable `pageContext` in your config and call `witness()` with `{ includeContext: true }` yourself. Context is attached once per SDK instance (subsequent calls with `includeContext: true` send no context until `resetContext()` is called):
 
 ```javascript
 const sdk = new OptableSDK({
@@ -463,7 +510,7 @@ type ContextualSegmentsResponse = {
 
 > **Note:** The requested URL must already have been classified by the DCN.
 
-Each call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
+Each successful call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache; a failed call leaves the previous response in place). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
 
 #### Brand safety
 
@@ -550,11 +597,13 @@ sdk.ctxTargetingKeyValues();
 // }
 ```
 
+The examples below show only the keys each option affects; `...` stands for the other default keys.
+
 Pass a `taxonomyKeys` map to rename category keys. Only taxonomies present in the map are emitted (filter + rename), which is useful when you only want to set keys you have configured in your ad server:
 
 ```javascript
 sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" });
-// => { "foo": ["53", ...], "ctx_kw": ["advertising", "programmatic", "ad tech"], "ctx_bs_max": ["no_flags"] }
+// => { "foo": ["53", ...], "ctx_kw": ["advertising", "programmatic", "ad tech"], "ctx_bs_max": ["no_flags"], ... }
 ```
 
 Keyword values are ordered by `prominence` (most prominent first), capped to the top 10, and sanitized to GAM's value rules (lowercased, [reserved characters](https://support.google.com/admanager/answer/10020177) stripped, truncated to the 40-character value limit). Use the `options` argument to change the keyword key (`keywordKey`), change the cap (`maxKeywords`), or opt out of keyword key-values by passing an empty `keywordKey`:
@@ -566,7 +615,7 @@ sdk.ctxTargetingKeyValues({ iab_ct_3_1: "foo" }, { keywordKey: "kw", maxKeywords
 
 // Opt out of keyword key-values entirely:
 sdk.ctxTargetingKeyValues(undefined, { keywordKey: "" });
-// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"], "ctx_bs_max": ["no_flags"] }
+// => { "iab_ct_3_1": ["53", "91", "58", "115", "90", "52"], "ctx_bs_max": ["no_flags"], ... }
 ```
 
 Brand safety is emitted by default under `ctx_bs_max`, carrying the page's most severe flagged tier. It is the same text-only assessment described [above](#brand-safety), so a line item keyed on it is gating on the page's words and not on its embedded media. Use `brandSafetyKey` to rename it, or pass an empty `brandSafetyKey` to opt out, exactly as `keywordKey` works:
@@ -574,11 +623,11 @@ Brand safety is emitted by default under `ctx_bs_max`, carrying the page's most 
 ```javascript
 // Rename the brand-safety key:
 sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "bs" });
-// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "bs": ["floor"] }
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "bs": ["floor"], ... }
 
 // Opt out of the brand-safety key-value entirely:
 sdk.ctxTargetingKeyValues(undefined, { brandSafetyKey: "" });
-// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...] }
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], ... }
 ```
 
 A value is emitted for every state rather than the key being dropped when nothing is flagged:
@@ -599,20 +648,20 @@ The page's [sentiment](#sentiment) label is emitted by default under `ctx_sentim
 
 ```javascript
 sdk.ctxTargetingKeyValues(undefined, { sentimentKey: "mood" });
-// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "mood": ["positive"] }
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "mood": ["positive"], ... }
 
 sdk.ctxTargetingKeyValues(undefined, { sentimentKey: "" });
-// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"] }
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], ... }
 ```
 
 Every one of the page's [emotions](#emotions) is emitted by default under `ctx_emotion`, as a multi-value key (e.g. `ctx_emotion=[joy,sadness]`). Like keywords, the key is omitted when the page has no emotion, and scores are never emitted. Use `emotionKey` to rename the key, or pass an empty `emotionKey` to opt out:
 
 ```javascript
 sdk.ctxTargetingKeyValues(undefined, { emotionKey: "feel" });
-// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "feel": ["joy", "sadness"] }
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], "feel": ["joy", "sadness"], ... }
 
 sdk.ctxTargetingKeyValues(undefined, { emotionKey: "" });
-// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"] }
+// => { "iab_ct_3_1": ["53", ...], "ctx_kw": [...], "ctx_bs_max": ["no_flags"], ... }
 ```
 
 The names of the page's [entities](#entities) are emitted by default under `ctx_ent`, as a multi-value key ordered by score (highest first), capped to the top 10, and sanitized like keywords (so `Beyoncé Knowles` becomes `beyoncé knowles`). Like keywords, the key is omitted when the page has no entity. Kinds and scores are never emitted. Use `entityKey` to rename the key, `maxEntities` to change the cap, or pass an empty `entityKey` to opt out:
@@ -664,7 +713,7 @@ If you are not using `initContextual` at all, fetch the segments explicitly and 
 optable.cmd.push(function () {
   optable.instance
     .ctxSegments()
-    .then(loadGAM)
+    .then(() => loadGAM(optable.instance.ctxTargetingKeyValues()))
     .catch((err) => {
       loadGAM();
     });
@@ -753,7 +802,9 @@ You can also manually initialize the SDK using the cmd queue. This approach is u
 
 ## Integrating PrebidJS analytics
 
-The `OptablePrebidAnalytics` addon hooks into [Prebid.js](https://prebid.org/) auction events (`auctionEnd` and `bidWon`) and sends auction analytics to the Optable DCN via the **witness API**. It reports per-bidder EID coverage, bid outcomes, and optional custom key-value pairs, enabling you to measure the impact of Optable targeting on your Prebid auctions.
+The `OptablePrebidAnalytics` addon hooks into [Prebid.js](https://prebid.org/) auction events (`auctionInit`, `auctionEnd`, `bidWon`, `bidTimeout` and `tcf2Enforcement`) and sends auction analytics to the Optable DCN via the **witness API**. It reports per-bidder EID coverage, bid outcomes, and optional custom key-value pairs, enabling you to measure the impact of Optable targeting on your Prebid auctions. Auctions still pending when the page is hidden are flushed with `sendBeacon`.
+
+The tenant reported in the analytics payload is the SDK instance's `node`, so create the instance with `node` set; without it the tenant is reported as `unknown`.
 
 ### Script tag
 
@@ -771,11 +822,10 @@ When the SDK is loaded via a `<script>` tag, `OptablePrebidAnalytics` is availab
   window.pbjs = window.pbjs || { que: [] };
 
   optable.cmd.push(function () {
-    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
+    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site", node: "my-node" });
 
     const analytics = new optable.OptablePrebidAnalytics(optable.instance, {
       analytics: true,
-      tenant: "my_tenant", // Replace with your Optable tenant name
     });
 
     analytics.hookIntoPrebid(window.pbjs);
@@ -789,13 +839,12 @@ When using the SDK as an NPM package, import `OptablePrebidAnalytics` directly f
 
 ```javascript
 import OptableSDK from "@optable/web-sdk";
-import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
+import OptablePrebidAnalytics from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
 
-const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site" });
+const sdk = new OptableSDK({ host: "dcn.customer.com", site: "my-site", node: "my-node" });
 
 const analytics = new OptablePrebidAnalytics(sdk, {
   analytics: true,
-  tenant: "my_tenant", // Replace with your Optable tenant name
 });
 
 analytics.hookIntoPrebid(window.pbjs);
@@ -806,6 +855,12 @@ For extended configuration options such as sampling, debug mode, and custom anal
 ## Integrating GAM360
 
 The Optable Web SDK can fetch targeting data from a DCN and map it to be sent to [Google Ad Manager 360](https://admanager.google.com/home/) ad server account for real-time targeting. It's also capable of intercepting advertising events from the [Google Publisher Tag](https://developers.google.com/doubleclick-gpt/guides/get-started) and logging them to a DCN via the **witness API**.
+
+The GPT methods (`installGPTEventListeners()` and `installGPTSecureSignals()`) are included in the script-tag bundle. With the NPM package, import the addon once so they are added to `OptableSDK`:
+
+```javascript
+import "@optable/web-sdk/lib/dist/addons/gpt";
+```
 
 ### Targeting key values
 
@@ -951,6 +1006,7 @@ To automatically capture GPT [SlotRenderEndedEvent](https://developers.google.co
 <script>
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
+    // Assumes optable.instance was created as in the examples above.
     optable.instance.installGPTEventListeners();
   });
 </script>
@@ -973,15 +1029,15 @@ optable.instance.installGPTEventListeners({
 The value for each event key can be "all" (to include all witness properties) or an array of property names from the set below (as mapped by the SDK):
 
 `advertiser_id`, `campaign_id`, `creative_id`, `is_empty`, `line_item_id`, `service_name`, `size`, `slot_element_id`, `source_agnostic_creative_id`, `source_agnostic_line_item_id`.
-If no argument is provided, the default behavior is unchanged and both slotRenderEnded and impressionViewable are captured with all properties.
+If no argument is provided, both slotRenderEnded and impressionViewable are captured with all properties. Any other GPT event name can be used as a key too, and an empty array means all properties. Events are witnessed as `gpt_events_<event_name>` (for example `gpt_events_slot_render_ended`).
 
-Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance. Each SDK instance can register its own GPT event listeners.
+Note that you can call `installGPTEventListeners()` as many times as you like on an SDK instance, there will only be one set of registered event listeners per instance: calls after the first are ignored, including any options passed to them. Each SDK instance can register its own GPT event listeners.
 
 A working example of both targeting and event witnessing is available in the demo pages.
 
 ### GAM Secure Signals
 
-The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-defined signals to Google Ad Manager (GAM) [Secure Signals](https://support.google.com/admanager/answer/10488752). The method supports an array of objects, each representing a unique signal to pass to GAM, for example:
+The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-defined signals to Google Ad Manager (GAM) [Secure Signals](https://support.google.com/admanager/answer/10488752). The method takes one or more `{ provider, id }` objects as separate arguments, each representing a unique signal to pass to GAM, for example:
 
 ```html
 <!-- Optable SDK async load: -->
@@ -992,11 +1048,12 @@ The Optable Web SDK provides a method `installGPTSecureSignals` to pass user-def
     // Name of the provider
     provider: "uidapi.com",
     // ID to use in the Secure Signal
-    value: "uid2_token_goes_here",
+    id: "uid2_token_goes_here",
   });
   window.optable = window.optable || { cmd: [] };
   optable.cmd.push(function () {
-    optable.instance.installGPTSecureSignals(mySecureSignals);
+    // Assumes optable.instance was created as in the examples above.
+    optable.instance.installGPTSecureSignals(...mySecureSignals);
   });
 </script>
 ```
@@ -1035,81 +1092,15 @@ You can verify the signal was correctly passed to GAM by searching for its value
 
 The Optable Web SDK can integrate with Prebid.js to provide targeting data for real-time bidding. There are three main ways to integrate:
 
-### Open Pair ID Prebid Module
-
-For publishers who only need to transmit Optable's cleanroom PAIR IDs in the bid stream, the [Open Pair ID Prebid module](https://docs.prebid.org/dev-docs/modules/userid-submodules/open-pair) provides a simple integration method.
-This approach is recommended when PAIR ID transmission is your only requirement.
-
-Here's how to integrate it:
-
-```html
-<!-- Optable SDK async load: -->
-<script async src="https://cdn.optable.co/web-sdk/v0/sdk.js"></script>
-
-<!-- Prebid.js lib async load: -->
-<script async src="prebid.js"></script>
-
-<!-- Initialize Optable SDK and cache PAIR identifiers: -->
-<script>
-  window.optable = window.optable || { cmd: [] };
-  // Init Optable SDK via command:
-  optable.cmd.push(function () {
-    optable.instance = new optable.SDK({ host: "dcn.customer.com", site: "my-site" });
-  });
-  // Call targeting() to cache PAIR identifiers
-  optable.cmd.push(function () {
-    optable.instance.targeting().catch((err) => {
-      // Maybe log error
-    });
-  });
-</script>
-
-<!-- Configure Prebid.js to use the cached PAIR identifiers: -->
-<script>
-  window.pbjs = window.pbjs || { que: [] };
-  pbjs.que.push(function () {
-    // Configure the Open Pair Prebid module to look for our cached PAIR identifiers
-    pbjs.mergeConfig({
-      userSync: {
-        userIds: [
-          {
-            name: "openPairId",
-            inserter: "<PUBLISHER DOMAIN>", // Replace with your publisher domain
-            matcher: "optable.co",
-            params: {
-              optable: { storageKey: "_optable_pairId" },
-            },
-          },
-        ],
-      },
-    });
-    // Request bids - the Open Pair module will automatically include the PAIR identifiers
-    pbjs.requestBids({
-      bidsBackHandler: function (bids) {
-        // Handle bids
-      },
-      timeout: 3000,
-    });
-  });
-</script>
-```
-
-Key points about this integration:
-
-- It only transmits PAIR IDs, making it simpler than the full ORTB2 integration
-- The PAIR IDs are automatically picked up from the Optable SDK's local storage
-- No additional configuration is needed beyond this snippet
-- It's compatible with all bidders that support the Open Pair ID module
-
-If you need to transmit additional targeting data or have more control over what information is sent to bidders, you should use the ORTB2 integration method described in the next section.
-
 ### Seller Defined Audiences
 
 The HTML code snippet below shows how `prebidORTB2FromCache()` can be used to retrieve targeting data from the `LocalStorage` administered by the Optable SDK, and write Seller Defined Audiences (SDA) into [prebid.js](https://prebid.org/product-suite/prebid-js/) which is also loaded into the page, using `pbjs.mergeConfig({ ortb2: ortb2 })` as documented in [the prebid.js first party data documentation](https://docs.prebid.org/features/firstPartyData.html#segments-and-taxonomy). The `targeting()` API is also called in order to retrieve and locally store the latest matching activations from `dcn.customer.com/my-site`.
 
 Note that [prebid.js bidder adapters](https://docs.prebid.org/dev-docs/bidders.html) can subsequently retrieve the data from the [global config](https://docs.prebid.org/features/firstPartyData.html#supplying-global-data).
 
-An example of how to install the SDA data through `pbjs` is shown below. The `districtMDMX` bidder adapter is referenced, though the integration would look similar with any SDA compatible bidder adapters.
+> **Deprecated:** `prebidORTB2()` and `prebidORTB2FromCache()` are kept for existing integrations. They build `user.data` from `audience` and put EIDs under the ORTB 2.5 path `user.ext.eids`. For new integrations, prefer the `ortb2` field of the targeting response (EIDs under `user.eids`) or the [RTD module](#rtd-module).
+
+An example of how to install the SDA data through `pbjs` is shown below. The bidder in the example is only a placeholder: replace it and its `params` with your own SDA-compatible bidder adapter.
 
 For a working demo showing a `pbjs` and GAM integrated together, see the [demo pages section](#demo-pages) below.
 
@@ -1161,10 +1152,9 @@ For a working demo showing a `pbjs` and GAM integrated together, see the [demo p
       },
       bids: [
         {
-          bidder: "districtmDMX",
+          bidder: "yourBidder", // Replace with your SDA-compatible bidder adapter
           params: {
-            dmxid: "/22081946781/web-sdk-demo/box-ad",
-            memberid: "102034",
+            // Bidder-specific params
           },
         },
       ],
@@ -1224,7 +1214,8 @@ For bidder adapters that do not support SDA, but that do support targeting priva
        * Note that + above indicates string concatenation.
        *
        * Optable DCNs have K configured to "optable" by default, so the
-       * above would result in a custom key value "optable_audienceKeyword=1"
+       * above would result in a custom key value "optableaudienceKeyword=1"
+       * (use key + "_" + seg below if you want "optable_audienceKeyword=1")
        * being set whenever the visitor is matched to the activated audience
        * specified by audienceKeyword by the DCN.
        */
@@ -1274,6 +1265,12 @@ The above example uses various personalization tags as documented in [Braze's us
 
 ### Call tryIdentifyFromParams SDK API
 
+`tryIdentifyFromParams()` is included in the script-tag bundle. With the NPM package, import the addon once so it is added to `OptableSDK`:
+
+```javascript
+import "@optable/web-sdk/lib/dist/addons/try-identify";
+```
+
 On your website destination page, you can call a helper method provided by the SDK which will attempt to parse and validate a given query string parameter as EID (defaults to **oeid**), when found, it will automatically trigger a call to Optable's **identify** API.
 
 For example:
@@ -1304,7 +1301,7 @@ For example:
 
 ## Identify and tokenize (hashed email)
 
-`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), always calls `identify`, and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It runs once per id per session (`OPTABLE_TOKENIZE_DONE` holds a fingerprint of the id, never the id itself, so signing in as someone else in the same tab resolves them), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
+`identifyAndTokenize(sdk, id, options?)` is the publisher-facing identity entry point: it normalizes a hashed email (bare ids get the `e:` prefix; already-prefixed and `utiq:` ids pass through), calls `identify` (in the control group too), and — outside the control group — tokenizes the id and merges the resulting EIDs into the rolling cache, announcing the write with the `optable-targeting:change` event. It skips repeat calls for the same id in a session, `identify` included (`OPTABLE_TOKENIZE_DONE` holds a fingerprint of the last id, never the id itself, so signing in as someone else in the same tab resolves them; switching back to the first id runs it again), re-runnable with the `optableForceTokenize` flag, and the guard resets on error so a failed tokenize can retry:
 
 ```javascript
 import { identifyAndTokenize } from "@optable/web-sdk/lib/dist/core/identify-tokenize";
@@ -1318,7 +1315,7 @@ window.optable.identifyAndTokenize = (id) => identifyAndTokenize(sdk, id, { isCo
 identifyAndTokenize(sdk, id, { isControlGroup: () => isControlGroup, nonOverridingMatchers: ["mysite.com"] });
 ```
 
-The returned `{ merged, staleUid2s }` (null when skipped) lets the caller chain UID2 refreshes on the merged cache.
+Ids are URI-decoded first, and an id counts as already prefixed when it starts with 1–3 letters or digits and a colon. The returned `{ merged, staleUid2s }` (null when skipped, in the control group, or when tokenize fails) lets the caller chain UID2 refreshes on the merged cache, for example with [`refreshStaleUid2s`](lib/addons/uid2-refresh.md).
 
 ## Passport and Visitor ID
 
@@ -1387,7 +1384,7 @@ const state = sdk.oisState(); // { id, storageKey }
 sdk.oisClear(); // forget it; the DCN returns a fresh derivation on the next call
 ```
 
-The SDK dispatches an `optable-ois:change` event on `window` whenever the stored ID changes, so a page can react without polling:
+The SDK dispatches an `optable-ois:change` event on `window` whenever the stored ID changes, so a page can react without polling. Its `detail` is `{ instance, id, storageKey }`, where `instance` is the SDK's `node`, or its `host` when no node is set:
 
 ```javascript
 window.addEventListener("optable-ois:change", (e) => console.log(e.detail));
@@ -1430,6 +1427,8 @@ const controlGroup = getFlags().optableControlGroup;
 
 Flag values are strings, and `"0"` is truthy in JavaScript, so do not test a raw value for truthiness — `if (getFlags().optableDebug)` is `true` for `?optableDebug=0`. Use `flagEnabled()` instead.
 
+A wrapper with flags of its own can persist them the same way with `persistFlagsFromURL(["optableMyFlag"])`; those are read back from `sessionStorage` directly and do not appear in `getFlags()`.
+
 These are a QA and debugging facility; none of them should be set on production traffic. For the full flag table and resolution order, see the [flags README](lib/core/flags.md).
 
 ## Multi-Node Targeting Resolver
@@ -1460,6 +1459,7 @@ const rules: NodeTargetingRule[] = [
     targetingFn: async () =>
       window.optable.node_sdk_instance_three.targeting({
         ids: ["identifier1", "identifier2"],
+        hids: [],
       }),
     matcher: "another_vendor",
     mm: 5, // inference
@@ -1476,8 +1476,9 @@ console.log(result);
 
 ### Rules
 
-- If **any rule has a `priority`**, the function will return the response with the highest priority (1 being the highest). Lower priorities (2, 3, etc.) are considered progressively less important. Any rules with priority values of 0 or below are ignored.
-- If **multiple nodes share the highest priority**, merges their `eids`.
+- If **any rule has a `priority`**, the function returns the `eids` (and their sources and resolved IDs) of the highest priority that resolved any, 1 being the highest. Lower priorities (2, 3, etc.) are used only when every higher priority returned no `eids`. Rules with no priority, or a priority of 0 or below, never contribute `eids`.
+- If **multiple nodes share the selected priority**, merges their `eids`.
+- `ortb2.user.data` (audience segments) is always merged from every rule that resolved, whatever its priority.
 - If **no priority is set**, aggregates all responses.
 
 ### Return Value
@@ -1486,8 +1487,12 @@ console.log(result);
 type MultiNodeTargetingResponse = {
   // All sources that resolved the response
   eidSources: Set<string>;
+  // Identifiers that matched, across the selected rules
+  resolvedIds: Set<string>;
   // IAB OpenRTB 2.6 Ortb2 User Object (Partial)
   ortb2: { user: { eids: EID[]; data: Data[] } };
+  // Metadata referenced from the EIDs, renumbered so references stay unique across nodes
+  refs: Record<string, unknown>;
 };
 ```
 
@@ -1496,14 +1501,14 @@ type MultiNodeTargetingResponse = {
 ```typescript
 type NodeTargetingRule = {
   // Targeting function to resolve. e.g. window.optable.node_sdk_instance.targeting('__ip__')
-  // For multiple identifiers, use: window.optable.node_sdk_instance.targeting({ ids: ["id1", "id2"] })
-  targetingFn: () => Optable.TargetingFn(targetingArg: string | { ids?: string[] });
-  // Technology provider domain
-  matcher: string;
-  // Match method (mm) based on IAB v26 standards.
+  // For multiple identifiers, use: window.optable.node_sdk_instance.targeting({ ids: ["id1", "id2"], hids: [] })
+  targetingFn: () => Promise<TargetingResponse>;
+  // (Optional) Technology provider domain; an EID's own matcher takes precedence
+  matcher?: string;
+  // (Optional) Match method (mm) based on IAB v26 standards; an EID's own mm takes precedence.
   // Determines how the ID was matched. Possible values:
   // 0 = unknown, 1 = no_match, 2 = cookie_sync, 3 = authenticated, 4 = observed, 5 = inference.
-  mm: IDMatchMethod;
+  mm?: IDMatchMethod;
   // (Optional) If provided we will only pick one resolved Ortb2Response from the most prioritize matcher.
   // Any values below 1 will be threated as ignore
   priority?: number;
@@ -1548,7 +1553,7 @@ if (isBot()) {
 
 With no argument it reads `navigator.userAgent`; pass a string to test one explicitly.
 
-When the page also runs a Prebid RTD provider, prefer `SkipTargetingForBots()`. It calls `isBot()` and, for a bot, marks targeting as already done so the RTD module short-circuits instead of waiting for a targeting call that will never be made:
+To skip the targeting call for bots, use `SkipTargetingForBots()`. It calls `isBot()` and, for a bot, sets the session marker that `TargetingOncePerSession()` checks (see below), so that helper skips the edge call too:
 
 ```typescript
 import { SkipTargetingForBots } from "@optable/web-sdk/lib/dist/edge/targeting";
@@ -1558,7 +1563,7 @@ if (!SkipTargetingForBots()) {
 }
 ```
 
-A wrapper that resolves targeting itself can share the same marker rather than tracking its own: `TargetingResolvedThisSession()` is true once targeting has resolved this session (or a bot was detected), and `MarkTargetingResolved()` sets it. The `optableForceTargeting` flag overrides the check.
+To resolve targeting at most once per session, use `TargetingOncePerSession()`. The marker is `sessionStorage["OPTABLE_TARGETING_DONE"]`, and the `optableForceTargeting` flag overrides it.
 
 ```typescript
 import { TargetingOncePerSession } from "@optable/web-sdk/lib/dist/edge/targeting";
@@ -1567,6 +1572,8 @@ const response = await TargetingOncePerSession(sdk);
 ```
 
 `TargetingOncePerSession(sdk, input?)` wraps the whole pattern: it skips the call when the marker is set, marks it on success, and resolves `null` rather than rejecting when the edge call fails, so identity resolution cannot break the page. A failed call leaves the marker unset, so a later page retries. A bot reads as already resolved, since `SkipTargetingForBots` sets the same marker.
+
+The marker does not affect the Prebid RTD module: with `waitForTargeting: true` and an empty cache, a bot page still waits up to Prebid's `auctionDelay`. To avoid that, build the RTD config with `buildRTD({ waitForTargeting: !isBot(), ... })`.
 
 Matching is substring-based and case-insensitive, covering generic crawlers, headless browsers, HTTP clients and Google's non-search agents. It is deliberately broad and user-agent only — a cost-saving filter, not a fraud signal. For the full match list, see the [bot detection addon README](lib/addons/botDetection.md).
 
@@ -1597,6 +1604,23 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 `mergeCache` takes and returns cache format: `refs` keyed by EID source, no `uids[].ext.optable.ref` pointers. The wire format is unchanged everywhere else, so a response goes through `replaceCache` on the way in, while a cache read back from storage is already in that format.
 
 For the merge rules and UID2 ref handling, see the [EID cache README](lib/core/eid-cache.md).
+
+## UID2 refresh
+
+The UID2 refresh addon refreshes cached UID2 tokens directly against the UID2 operator, without a round trip to the Optable edge, and writes the outcome back to the targeting cache (a new token on success, the EID removed on opt-out or an invalid/expired token).
+
+```typescript
+import { refreshStaleUid2s, refreshStaleUid2sFromCache } from "@optable/web-sdk/lib/dist/addons/uid2-refresh";
+
+// After merging a response into the cache:
+const { merged, staleUid2s } = mergeCache(replaceCache(response), cached);
+await refreshStaleUid2s(sdk.dcn, staleUid2s);
+
+// On a page that served targeting from cache and merged no response:
+await refreshStaleUid2sFromCache(sdk.dcn);
+```
+
+Neither call throws into the page; failures are logged under `optableDebug`. The addon also exports the lower-level `refreshUid2Token` and `applyUid2Refresh`. For outcomes and cache handling, see the [UID2 refresh addon README](lib/addons/uid2-refresh.md).
 
 ## Prebid pubProvidedId delivery
 
@@ -1667,17 +1691,68 @@ window.optable.site = await checkSourceExists({
 });
 ```
 
-The result is cached in `sessionStorage`, so the probe runs at most once per session for each site, node and host. For the probe and fallback details, see the [source check addon README](lib/addons/sourceCheck.md).
+The result is cached in `sessionStorage`, so the probe runs at most once per session for each site, node and host. A probe that times out (after 1500ms) falls back for that call only and is not cached, so a later page probes again. For the probe and fallback details, see the [source check addon README](lib/addons/sourceCheck.md).
+
+## A/B test assignment
+
+`setupAB` assigns each visitor to a variant with traffic weighting, keeps the assignment sticky in `localStorage` (with a `sessionStorage` override for testing), and can stamp the variant onto Prebid.js bid requests for the Prebid analytics addon. Unlike the `abTests` config option, which picks a server-side test per targeting call, it is a client-side, per-visitor split.
+
+```javascript
+import { setupAB } from "@optable/web-sdk/lib/dist/addons/abTestAssignment";
+
+const ab = setupAB({
+  variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }],
+});
+
+if (ab.isControl) {
+  // Skip Optable for this visitor.
+}
+```
+
+For options and Prebid integration, see the [A/B test assignment addon README](lib/addons/abTestAssignment.md).
+
+## Traffic source
+
+`getTrafficSource()` classifies how the visitor arrived as one of `direct`, `internal`, `paid`, `campaign`, `email`, `organic_search`, `social` or `referral`, from the referrer and UTM / click-ID parameters, and returns `{ trafficSource, referrer? }`. Only the referring hostname is reported, never the full URL. The first non-internal classification is cached in `sessionStorage` under `optableTrafficSource` and reused for the rest of the tab session. The Prebid analytics addon adds it to every payload.
+
+```typescript
+import { getTrafficSource } from "@optable/web-sdk/lib/dist/core/traffic-source";
+
+const { trafficSource, referrer } = getTrafficSource();
+```
+
+## GAM signal enrichment key-value
+
+`setGAMSignalEnrichment({ control, enriched, context? })` sets a page-level GAM key-value, `optableSignalEnrichment`, for measuring Optable's impact in GAM reporting. Its value is `<treatment|control>,<enriched|empty>,<context|nocontext>`. It is set through `googletag.setConfig`, so it merges with the page's other targeting, and it fails silently on GPT versions without `setConfig`.
+
+```typescript
+import { setGAMSignalEnrichment } from "@optable/web-sdk/lib/dist/core/gam-signal-enrichment";
+
+setGAMSignalEnrichment({ control: isControlGroup, enriched: hasCachedEids, context: true });
+```
+
+## Other SDK methods
+
+| Method                                 | Description                                                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `sdk.tokenize(id)`                     | Exchanges an identifier for EIDs via `/v2/tokenize`; resolves `{ user, refs? }`. Used by `identifyAndTokenize`. |
+| `sdk.uid2Token(id)`                    | Requests a UID2 token for an identifier via `/uid2/token`.                                                      |
+| `sdk.resolve(id?)`                     | Resolves identity clusters via `/v1/resolve`; resolves `{ clusters, lmpid? }`.                                  |
+| `sdk.site()` / `sdk.siteFromCache()`   | Fetches (or reads from cache) the site configuration returned by `/config`.                                     |
+| `OptableSDK.sha256(value)`             | Returns the SHA-256 hex digest of a string, with no normalization (unlike `eid()`, which lowercases and trims). |
+| `OptableSDK.version`                   | The SDK version string.                                                                                         |
+| `OptableSDK.TargetingKeyValues(tdata)` | Static form of `targetingKeyValues()`, for a targeting response you already have.                               |
+| `OptableSDK.PrebidORTB2(tdata)`        | Static form of the deprecated `prebidORTB2()`.                                                                  |
 
 ## Demo Pages
 
 The demo pages are working examples of both `identify` and `targeting` APIs, as well as an integration with the [Google Ad Manager 360](https://admanager.google.com/home/) ad server, enabling the targeting of ads served by GAM360 to audiences activated in the [Optable](https://optable.co/) DCN.
 
-You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found in the [demos directory](https://github.com/Optable/optable-web-sdk/tree/master/demos). The demo pages will connect to the [Optable](https://optable.co/) demo DCN at `sandbox.optable.co` and reference the web site slug `web-sdk-demo`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
+You can browse a recent (but not necessarily the latest) released version of the demo pages at [https://demo.optable.co/](https://demo.optable.co/). The source code to the demos can be found in the [demos directory](https://github.com/Optable/optable-web-sdk/tree/master/demos). By default the demo pages connect to the [Optable](https://optable.co/) demo DCN at `ca.edge.optable.co` (node `optable`) and reference the web site slug `web-sdk-demo`; override `DCN_HOST`, `DCN_NODE` and `DCN_SITE` when running `make`. The GAM360 targeting demo loads ads from a GAM360 account operated by [Optable](https://optable.co/).
 
 Note that the demo pages at [https://demo.optable.co/](https://demo.optable.co/) will by default rely on secure HTTP first-party cookies as described in [this section](https://github.com/Optable/optable-web-sdk#domains-and-cookies). To see an example based on [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage), see the [index-nocookies variant here](https://demo.optable.co/index-nocookies.html).
 
-To build and run the demos locally, you will need [Docker](https://www.docker.com/), `docker-compose` and `make`:
+To build and run the demos locally, you will need [Docker](https://www.docker.com/), `docker-compose`, `make`, [mise](https://mise.jdx.dev/) (which installs the pinned toolchain, including pnpm), [mkcert](https://github.com/FiloSottile/mkcert) for the local TLS certificate, and `envsubst`:
 
 ```shell
 cd path/to/optable-web-sdk
@@ -1685,8 +1760,10 @@ make
 docker-compose up
 ```
 
-Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make build` and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
+Then head to [https://localhost:8180/](localhost:8180) to see the demo pages. You can modify the code in each demo, then run `make demos` (and `make build` if you changed the SDK itself) and finally refresh the demo pages to see your changes take effect. If you want to test the demos with your own DCN, make sure to update the configuration (hostname and site slug) given to the OptableSDK (see `webpack.config.js` for the react example).
 
 Note that using HTTP first-party cookies with a local instance of the demos pages pointing to an Optable DCN will not work because [https://localhost:8180/](localhost:8180) does not share the same top-level domain name `.optable.co`. We recommend using [LocalStorage](https://github.com/Optable/optable-web-sdk#localstorage) instead.
 
 The [Optable Identity System](#optable-identity-system-ois) demo (`/vanilla/ois.html`, or `/vanilla/nocookies/ois.html`) covers both OIS identities: it explains why the `OPTABLE_OID` cookie identity is invisible to JavaScript, and shows the derived OIS ID the DCN returned, the `localStorage` key holding it, and the `X-Optable-OID` header sent and received on each call. It needs a DCN node with OIS ID derivation enabled, and only produces an ID for requests from a residential IP.
+
+The [npm demo](demos/npm) shows the SDK installed as a package and bundled with webpack; see its README to build it.

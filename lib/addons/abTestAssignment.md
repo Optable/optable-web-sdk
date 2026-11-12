@@ -7,7 +7,7 @@ This addon manages A/B test assignment for Optable SDK bundles. It handles varia
 ### Basic setup
 
 ```js
-import { setupAB } from "@optable/web-sdk/lib/addons/abTestAssignment";
+import { setupAB } from "@optable/web-sdk/lib/dist/addons/abTestAssignment";
 
 const ab = setupAB({
   variants: [
@@ -27,8 +27,8 @@ if (ab.isControl) {
 Pass `pbjs` to `setupAB` and hooks are registered automatically. Pass it **before** calling `analytics.hookIntoPrebid()` so bids are stamped before the analytics addon reads them.
 
 ```js
-import { setupAB } from "@optable/web-sdk/lib/addons/abTestAssignment";
-import OptablePrebidAnalytics from "@optable/web-sdk/lib/addons/prebid/analytics";
+import { setupAB } from "@optable/web-sdk/lib/dist/addons/abTestAssignment";
+import OptablePrebidAnalytics from "@optable/web-sdk/lib/dist/addons/prebid/analytics";
 
 const ab = setupAB({
   variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }],
