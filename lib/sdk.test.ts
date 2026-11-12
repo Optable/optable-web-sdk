@@ -903,6 +903,15 @@ describe("behavior testing of", () => {
       })
     );
 
+    await sdk.targeting({ ids: ["someId"], hids: ["someHint"] });
+
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        method: "GET",
+        url: expect.stringContaining("v2/targeting?id=someId&hid=someHint"),
+      })
+    );
+
     const latestResultFromCache = sdk.targetingFromCache();
     expect(latestResultFromCache).toEqual({ ...targetingWithParam, refs: {} });
 

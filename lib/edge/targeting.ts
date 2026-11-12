@@ -27,7 +27,7 @@ type UserIdentifiers = {
 
 type TargetingRequest = {
   ids: string[];
-  hids: string[];
+  hids?: string[];
 };
 
 type TargetingResponse = {
@@ -49,7 +49,7 @@ const TARGETING_DONE_KEY = "OPTABLE_TARGETING_DONE";
 async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise<TargetingResponse> {
   const searchParams = new URLSearchParams();
   req.ids.forEach((id) => searchParams.append("id", id));
-  req.hids.forEach((id) => searchParams.append("hid", id));
+  req.hids?.forEach((id) => searchParams.append("hid", id));
   const abTest = determineABTest(config.abTests);
   if (abTest) {
     searchParams.append("ab_test_id", abTest.id);
