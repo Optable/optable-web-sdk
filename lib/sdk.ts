@@ -26,6 +26,8 @@ import {
   ContextualBrandSafetyOf,
   ContextualEmotion,
   ContextualEmotionsOf,
+  ContextualEntity,
+  ContextualEntitiesOf,
   ContextualMaxRiskLevel,
   ContextualRiskTier,
   ContextualSegments,
@@ -254,6 +256,12 @@ class OptableSDK {
   // them (highest score first); empty when the page has none.
   ctxEmotions(): ContextualEmotion[] {
     return ContextualEmotionsOf(this.contextualResponse);
+  }
+
+  // Named entities from the cached ctxSegments() response, in the order the DCN
+  // serves them (highest score first); empty when the page has none.
+  ctxEntities(): ContextualEntity[] {
+    return ContextualEntitiesOf(this.contextualResponse);
   }
 
   async tokenize(id: string): Promise<TokenizeResponse> {
