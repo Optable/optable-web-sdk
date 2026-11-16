@@ -7,6 +7,7 @@ import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
 import {
   generatedPairKeys,
+  generateID5SignatureKeys,
   generateOISKeys,
   generatePassportKeys,
   generateSiteKeys,
@@ -15,6 +16,7 @@ import {
 } from "./storage-keys";
 
 const pairEIDSource = "pair-protocol.com";
+const id5EIDSource = "id5-sync.com";
 
 // The default targeting request id. It identifies the browser rather than a
 // person, so it is not part of an identity's id set.
@@ -34,6 +36,7 @@ class LocalStorage {
   private siteKeys: StorageKeys;
   private pairKeys: StorageKeys;
   private oisKeys: StorageKeys;
+  private id5SignatureKeys: StorageKeys;
   private storage: LocalStorageProxy;
 
   constructor(private config: ResolvedConfig) {
@@ -54,6 +57,7 @@ class LocalStorage {
     this.siteKeys = generateSiteKeys(config);
     this.pairKeys = generatedPairKeys();
     this.oisKeys = generateOISKeys(config);
+    this.id5SignatureKeys = generateID5SignatureKeys(config);
     this.storage = new LocalStorageProxy(this.config.consent);
   }
 
@@ -135,6 +139,7 @@ class LocalStorage {
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
     this.writeToStorageKeys(this.targetingIdKeys, JSON.stringify(stored));
     this.setPairIDs(targeting);
+    this.setID5Signature(targeting);
     return next as TargetingResponse;
   }
 
@@ -337,6 +342,30 @@ class LocalStorage {
   getPairIDs(): string[] | null {
     const raw = this.readStorageKeys(this.pairKeys);
     return raw ? JSON.parse(atob(raw))?.envelope : null;
+  }
+
+  // ID5 returns a signature with every ID and expects it back on later
+  // requests. It sits in refs, which the cache format drops, so it is read off
+  // the wire response.
+  setID5Signature(targeting: TargetingResponse) {
+    for (const eid of targeting.ortb2?.user?.eids ?? []) {
+      if (eid.source !== id5EIDSource) {
+        continue;
+      }
+
+      for (const uid of eid.uids ?? []) {
+        const key = (uid.ext as { optable?: { ref?: string | number } } | undefined)?.optable?.ref;
+        const ref = key !== undefined ? (targeting.refs?.[key] as { signature?: unknown } | undefined) : undefined;
+        if (typeof ref?.signature === "string" && ref.signature) {
+          this.writeToStorageKeys(this.id5SignatureKeys, ref.signature);
+          return;
+        }
+      }
+    }
+  }
+
+  getID5Signature(): string | null {
+    return this.readStorageKeys(this.id5SignatureKeys);
   }
 
   // Returns the first key with data
