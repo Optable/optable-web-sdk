@@ -1,5 +1,6 @@
 import { SiteResponse } from "../edge/site";
-import { replaceCache } from "./eid-cache";
+import { mergeCache, replaceCache } from "./eid-cache";
+import type { ResolvedCache } from "./eid-cache";
 import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
@@ -93,7 +94,23 @@ class LocalStorage {
     }
 
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
-    this.writeToStorageKeys(this.targetingKeys, JSON.stringify(replaceCache(targeting)));
+    const incoming = replaceCache(targeting as ResolvedCache);
+
+    // EIDs carry over, the rest of the response does not: a session whose edge
+    // resolved fewer matchers would otherwise drop sources the cache still
+    // holds. mergeCache keeps only the EID subset, so take that and nothing
+    // else from it.
+    const { merged } = mergeCache(incoming, this.getTargeting() as ResolvedCache | null);
+    const eids = merged.ortb2?.user?.eids ?? [];
+    const next = eids.length
+      ? {
+          ...incoming,
+          ortb2: { ...incoming.ortb2, user: { ...incoming.ortb2?.user, eids } },
+          refs: merged.refs,
+        }
+      : incoming;
+
+    this.writeToStorageKeys(this.targetingKeys, JSON.stringify(next));
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
     this.setPairIDs(targeting);
   }

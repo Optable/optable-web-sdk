@@ -20,6 +20,8 @@ A targeting response off the wire keys `refs` opaquely and points at it from `ui
 
 Nothing outside the cache changes: `sdk.targeting()` still resolves to the wire response, and so does the `optable-targeting:change` payload. Conversion happens where the cache is written — `setTargeting` writes through `replaceCache`, and `mergeCache` takes and returns cache format.
 
+`setTargeting` merges rather than replaces. It stores the incoming response as sent, with `ortb2.user.eids` and `refs` taken from `mergeCache` against what is already cached, so a session whose edge resolved fewer matchers keeps the sources it already held. Only the EID subset carries over; `audience`, `user` and every other field come from the new response alone. A response that carries no EIDs at all is stored unchanged.
+
 So anything read back out of storage is ready to merge as-is, and anything coming off the wire goes through `replaceCache` on the way in. `replaceCache` is idempotent, so calling it on a value that is already cache format is a no-op rather than a way to lose refs.
 
 ## Merge rules
