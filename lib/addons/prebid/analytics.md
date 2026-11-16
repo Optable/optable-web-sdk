@@ -141,6 +141,21 @@ responses can carry a `requestId` that matches no client bid; those go to the
 first bid of the same bidder and ad unit still without a response. Bids that fit
 nowhere are counted in `unmatchedBids`, omitted when 0.
 
+Received bids also carry the buyer-side fields the bid adapter sets, in both the
+V1 and V2 add-ons. Each is omitted when the bid does not have it, so a bid without
+them adds nothing. `bidWon` entries carry `adomain` and `dealId`.
+
+| Field          | Source on the Prebid bid                     | Notes                                    |
+| -------------- | -------------------------------------------- | ---------------------------------------- |
+| `adomain`      | `meta.advertiserDomains`                     | Lowercased, de-duplicated, at most three |
+| `dealId`       | `dealId`                                     | Empty when the bid is open auction       |
+| `networkId`    | `meta.networkId` (PubMatic: the DSP id)      | String                                   |
+| `networkName`  | `meta.networkName`                           |                                          |
+| `buyerId`      | `meta.buyerId` (PubMatic: the advertiser id) | String                                   |
+| `advertiserId` | `meta.advertiserId`                          | String                                   |
+
+Text values are trimmed and cut at 64 characters.
+
 Troubleshooting fields, same meaning as in the V1 add-on. The page-dependent ones
 are captured when the auction ends, since the payload is only built after
 `bidWinTimeout`:
