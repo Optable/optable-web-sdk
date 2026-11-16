@@ -3,21 +3,21 @@ import { getBidMeta } from "./bid-meta";
 describe("getBidMeta", () => {
   it("reads advertiser domains, deal and buyer fields", () => {
     const bid = {
-      dealId: "PM-DEAL-1",
+      dealId: "DEAL-1",
       meta: {
-        advertiserDomains: ["Cure.com", "cure.com", "example.com"],
-        networkId: 26492,
-        networkName: "Some DSP",
-        buyerId: "887",
+        advertiserDomains: ["Brand.example", "brand.example", "example.com"],
+        networkId: 1234,
+        networkName: "Example DSP",
+        buyerId: "5678",
         advertiserId: 12345,
       },
     };
     expect(getBidMeta(bid)).toEqual({
-      adomain: ["cure.com", "example.com"],
-      dealId: "PM-DEAL-1",
-      networkId: "26492",
-      networkName: "Some DSP",
-      buyerId: "887",
+      adomain: ["brand.example", "example.com"],
+      dealId: "DEAL-1",
+      networkId: "1234",
+      networkName: "Example DSP",
+      buyerId: "5678",
       advertiserId: "12345",
     });
   });

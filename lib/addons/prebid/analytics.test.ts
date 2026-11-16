@@ -1376,8 +1376,8 @@ describe("OptablePrebidAnalytics", () => {
             height: 600,
             currency: "USD",
             adUnitCode: "ad-unit-1",
-            dealId: "PM-DEAL-1",
-            meta: { advertiserDomains: ["Cure.com"], networkId: 26492, buyerId: "887" },
+            dealId: "DEAL-1",
+            meta: { advertiserDomains: ["Brand.example"], networkId: 1234, buyerId: "5678" },
           },
           { requestId: "bid-2", cpm: 0.4, width: 300, height: 250, currency: "USD", adUnitCode: "ad-unit-2" },
         ],
@@ -1391,23 +1391,23 @@ describe("OptablePrebidAnalytics", () => {
           bidderCode: "pubmatic",
           adUnitCode: "ad-unit-1",
           cpm: 1.5,
-          dealId: "PM-DEAL-1",
-          meta: { advertiserDomains: ["Cure.com"] },
+          dealId: "DEAL-1",
+          meta: { advertiserDomains: ["Brand.example"] },
         },
       ];
       const payload = await analytics.toWitness(stored!.auctionEnd, won);
 
       const [withMeta, withoutMeta] = payload.bidderRequests[0].bids;
       expect(withMeta).toMatchObject({
-        adomain: ["cure.com"],
-        dealId: "PM-DEAL-1",
-        networkId: "26492",
-        buyerId: "887",
+        adomain: ["brand.example"],
+        dealId: "DEAL-1",
+        networkId: "1234",
+        buyerId: "5678",
       });
       expect(withoutMeta).not.toHaveProperty("adomain");
       expect(withoutMeta).not.toHaveProperty("dealId");
       expect(payload.bidWon).toEqual([
-        { bidderCode: "pubmatic", adUnitCode: "ad-unit-1", cpm: 1.5, adomain: ["cure.com"], dealId: "PM-DEAL-1" },
+        { bidderCode: "pubmatic", adUnitCode: "ad-unit-1", cpm: 1.5, adomain: ["brand.example"], dealId: "DEAL-1" },
       ]);
     });
 
