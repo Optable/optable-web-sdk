@@ -24,6 +24,10 @@ Nothing outside the cache changes: `sdk.targeting()` still resolves to the wire 
 
 The merged EID list is written whenever either side lists `eids`, so a response that lists none still picks up the cached ones, and a response revoking every cached source stores an empty list. Only when neither side lists `eids` is the response stored exactly as sent. The merge runs with no UID cap, since the cap belongs to whoever produced the response.
 
+Carry-over is scoped to one identity. `setTargeting` fingerprints the passport's visitor id together with the request's ids and hids, stores it in a `<key>:id` sibling, and replaces instead of merging when it changes. The visitor id covers the `__passport__` flow, where every request sends the same literal id; the request ids cover a caller passing identifiers directly. A second user on the same browser therefore starts from the response alone rather than inheriting the first user's sources.
+
+`Targeting` reports what was stored rather than the response it sent, so the `optable-targeting:change` payload and the cache agree. Without that, `resolved` reads false and `ortb2` omits the carried sources whenever a response carries no EIDs of its own.
+
 Callers pass `{ merge: false }` when the request changed which matchers ran. `Targeting` does this for an A/B arm carrying `skipMatchers`, `skipResolvers` or `matcher_override`: that arm resolved a deliberately smaller set, and carrying cached EIDs forward would put back exactly what it left out. An arm that only buckets traffic still merges.
 
 So anything read back out of storage is ready to merge as-is, and anything coming off the wire goes through `replaceCache` on the way in. `replaceCache` is idempotent, so calling it on a value that is already cache format is a no-op rather than a way to lose refs.
@@ -34,6 +38,7 @@ So anything read back out of storage is ready to merge as-is, and anything comin
 - Cached EIDs from sources absent in the new response are carried over.
 - Each EID keeps at most `maxUidsPerEid` UIDs (default 2). `setTargeting` passes `Infinity`.
 - `ortb2.user.data` comes from the new response, falling back to the cached one.
+- A source's `refs` entry comes from the response that re-sent it, or from the cache when it was carried over. `setTargeting` re-derives these rather than taking `mergeCache`'s, which keeps UID2 entries only.
 - The inputs are never mutated. The merged cache is built from copies.
 
 ## Non-overriding matchers

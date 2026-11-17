@@ -88,8 +88,14 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
       abTest?.skipResolvers?.length ||
       abTest?.matcher_override?.length
     );
-    ls.setTargeting(response, { merge: !armRestrictedResolution });
-    sendTargetingUpdateEvent(config, response);
+    const stored = ls.setTargeting(response, {
+      merge: !armRestrictedResolution,
+      requestIds: [...req.ids, ...(req.hids ?? [])],
+    });
+
+    // Report the cache, not the response: after a carry-over the two differ,
+    // and a listener that trusted the response would miss the carried EIDs.
+    sendTargetingUpdateEvent(config, stored ?? response);
   }
 
   return response;
