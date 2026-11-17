@@ -112,8 +112,7 @@ class LocalStorage {
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
     const incoming = replaceCache(targeting as ResolvedCache);
     const identity = this.identityOf(options.requestIds ?? []);
-    const sameIdentity = this.readStorageKeys(this.targetingIdKeys) === identity;
-    const next = options.merge === false || !sameIdentity ? incoming : this.mergeOntoCache(incoming);
+    const next = options.merge === false || !this.sameIdentity(identity) ? incoming : this.mergeOntoCache(incoming);
 
     this.writeToStorageKeys(this.targetingKeys, JSON.stringify(next));
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
@@ -122,11 +121,38 @@ class LocalStorage {
     return next as TargetingResponse;
   }
 
-  // Opaque digest of who a response was resolved for. The visitor id covers the
-  // __passport__ flow, where every request sends the same literal id, and the
-  // request ids cover a caller that passes identifiers directly.
+  // Who a response was resolved for: the passport visitor id, plus one digest
+  // per request id so the ids can be compared without being stored.
   private identityOf(requestIds: string[]): string {
-    return sha256.hex(JSON.stringify([[...requestIds].sort(), this.getVisitorId() ?? ""]));
+    const ids = [...new Set(requestIds.map((id) => sha256.hex(id)))].sort();
+    return JSON.stringify({ visitor: this.getVisitorId() ?? "", ids });
+  }
+
+  // Carry-over needs the same visitor and an id set that contradicts nothing
+  // already cached. Either set containing the other means ids were added or
+  // dropped, as signing in or out does; each side holding an id the other
+  // lacks is a different person.
+  private sameIdentity(identity: string): boolean {
+    const stored = this.readStorageKeys(this.targetingIdKeys);
+    if (!stored) {
+      return false;
+    }
+
+    let cached: { visitor?: string; ids?: string[] };
+    try {
+      cached = JSON.parse(stored);
+    } catch {
+      return false;
+    }
+
+    const next = JSON.parse(identity) as { visitor: string; ids: string[] };
+    if (cached.visitor !== next.visitor) {
+      return false;
+    }
+
+    const cachedIds = cached.ids ?? [];
+    const contains = (a: string[], b: string[]) => b.every((id) => a.includes(id));
+    return contains(cachedIds, next.ids) || contains(next.ids, cachedIds);
   }
 
   // Keeps EIDs for sources the response omits, so an edge that resolved fewer

@@ -18,13 +18,15 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 
 A targeting response off the wire keys `refs` opaquely and points at it from `uids[0].ext.optable.ref`. The cache keys `refs` by EID `source` and carries no pointers. `replaceCache` converts one to the other.
 
-Nothing outside the cache changes: `sdk.targeting()` still resolves to the wire response, and so does the `optable-targeting:change` payload. Conversion happens where the cache is written — `setTargeting` writes through `replaceCache`, and `mergeCache` takes and returns cache format.
+`sdk.targeting()` still resolves to the wire response. The `optable-targeting:change` payload reports the cache instead, so its `ortb2.user.eids` carry no `ext.optable.ref` pointers; the event has never carried `refs`, so there was nothing to resolve them against. Conversion happens where the cache is written — `setTargeting` writes through `replaceCache`, and `mergeCache` takes and returns cache format.
 
 `setTargeting` merges rather than replaces. It stores the incoming response as sent, with `ortb2.user.eids` and `refs` taken from `mergeCache` against what is already cached, so a session whose edge resolved fewer matchers keeps the sources it already held. Only the EID subset carries over; `audience`, `user` and every other field come from the new response alone.
 
 The merged EID list is written whenever either side lists `eids`, so a response that lists none still picks up the cached ones, and a response revoking every cached source stores an empty list. Only when neither side lists `eids` is the response stored exactly as sent. The merge runs with no UID cap, since the cap belongs to whoever produced the response.
 
-Carry-over is scoped to one identity. `setTargeting` fingerprints the passport's visitor id together with the request's ids and hids, stores it in a `<key>:id` sibling, and replaces instead of merging when it changes. The visitor id covers the `__passport__` flow, where every request sends the same literal id; the request ids cover a caller passing identifiers directly. A second user on the same browser therefore starts from the response alone rather than inheriting the first user's sources.
+Carry-over is scoped to one identity. `setTargeting` stores the passport's visitor id and a digest per request id and hid in a `<key>:id` sibling, and replaces instead of merging when the visitor id differs, or when each side holds an id the other lacks. Adding or dropping ids for the same visitor still merges, so signing in or out mid-session does not clear the cache.
+
+Two caveats follow from that. A request carrying only `__passport__` identifies the browser, not the person, so two people sharing a signed-out browser share EIDs. And nothing bounds how long a carried EID survives: a source stays in the cache until the identity changes or the edge sends that source back with an empty `uids` list, so a matcher turned off on the node keeps feeding bidders until then. A max age per source would cover it and is not implemented.
 
 `Targeting` reports what was stored rather than the response it sent, so the `optable-targeting:change` payload and the cache agree. Without that, `resolved` reads false and `ortb2` omits the carried sources whenever a response carries no EIDs of its own.
 
