@@ -1354,6 +1354,63 @@ describe("OptablePrebidAnalytics", () => {
       expect(payload.bidderRequests[0].status).toBe("RECEIVED");
     });
 
+    it("reports advertiser domains, deal and buyer ids on received and won bids", async () => {
+      const event = {
+        auctionId: "auction-bid-meta",
+        bidderRequests: [
+          {
+            bidderCode: "pubmatic",
+            bidderRequestId: "req-1",
+            ortb2: { site: { domain: "example.com" }, user: { eids: [] } },
+            bids: [
+              { bidId: "bid-1", adUnitCode: "ad-unit-1" },
+              { bidId: "bid-2", adUnitCode: "ad-unit-2" },
+            ],
+          },
+        ],
+        bidsReceived: [
+          {
+            requestId: "bid-1",
+            cpm: 1.5,
+            width: 300,
+            height: 600,
+            currency: "USD",
+            adUnitCode: "ad-unit-1",
+            dealId: "DEAL-1",
+            meta: { advertiserDomains: ["Brand.example"], networkId: 1234, buyerId: "5678" },
+          },
+          { requestId: "bid-2", cpm: 0.4, width: 300, height: 250, currency: "USD", adUnitCode: "ad-unit-2" },
+        ],
+        noBids: [],
+      };
+
+      await analytics.trackAuctionEnd(event);
+      const stored = analytics["auctions"].get("auction-bid-meta");
+      const won = [
+        {
+          bidderCode: "pubmatic",
+          adUnitCode: "ad-unit-1",
+          cpm: 1.5,
+          dealId: "DEAL-1",
+          meta: { advertiserDomains: ["Brand.example"] },
+        },
+      ];
+      const payload = await analytics.toWitness(stored!.auctionEnd, won);
+
+      const [withMeta, withoutMeta] = payload.bidderRequests[0].bids;
+      expect(withMeta).toMatchObject({
+        adomain: ["brand.example"],
+        dealId: "DEAL-1",
+        networkId: "1234",
+        buyerId: "5678",
+      });
+      expect(withoutMeta).not.toHaveProperty("adomain");
+      expect(withoutMeta).not.toHaveProperty("dealId");
+      expect(payload.bidWon).toEqual([
+        { bidderCode: "pubmatic", adUnitCode: "ad-unit-1", cpm: 1.5, adomain: ["brand.example"], dealId: "DEAL-1" },
+      ]);
+    });
+
     const bidCountAuction = (bidsPerRequest: (string | undefined)[][], bidsReceived: any[]) => ({
       auctionId: "auction-bid-count",
       bidderRequests: bidsPerRequest.map((adUnits, i) => ({

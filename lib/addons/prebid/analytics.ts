@@ -5,6 +5,7 @@ import type OptableSDK from "../../sdk";
 import { buildRequest } from "../../core/network";
 import { getTrafficSource } from "../../core/traffic-source";
 import { generateTargetingKeys } from "../../core/storage-keys";
+import { getBidMeta } from "../../core/bid-meta";
 
 import * as Bowser from "bowser";
 
@@ -591,6 +592,7 @@ class OptablePrebidAnalytics {
           bid.cpm = bidReceived.cpm;
           bid.size = `${bidReceived.width}x${bidReceived.height}`;
           bid.currency = bidReceived.currency;
+          Object.assign(bid, getBidMeta(bidReceived));
           const receivedSplitTest = bidReceived.ortb2Imp?.ext?.optable?.splitTestAssignment;
           if (receivedSplitTest !== undefined) {
             bid.splitTestAssignment = receivedSplitTest;
@@ -632,11 +634,16 @@ class OptablePrebidAnalytics {
       intentiqEIDs: Array.from(iSourcesSet),
       growthcodeEIDs: Array.from(gSourcesSet),
       transunionEIDs: Array.from(tSourcesSet),
-      bidWon: bidWonEvents.map((e) => ({
-        bidderCode: e.bidderCode,
-        adUnitCode: e.adUnitCode,
-        cpm: e.cpm,
-      })),
+      bidWon: bidWonEvents.map((e) => {
+        const { adomain, dealId } = getBidMeta(e);
+        return {
+          bidderCode: e.bidderCode,
+          adUnitCode: e.adUnitCode,
+          cpm: e.cpm,
+          ...(adomain ? { adomain } : {}),
+          ...(dealId ? { dealId } : {}),
+        };
+      }),
       missed: missed && oSourcesSet.size === 0,
       url: `${window.location.hostname}${window.location.pathname}`,
       ...getTrafficSource(),
