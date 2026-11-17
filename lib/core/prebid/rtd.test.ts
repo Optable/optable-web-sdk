@@ -95,8 +95,6 @@ describe("buildRTD - prebidGlobal", () => {
     expect(globalEids(req)).toHaveLength(1);
   });
 
-  // The bug this option exists for: the auction runs on another instance, the
-  // delay lookup misses, and the wait never happens.
   it("does not wait when only another instance declares the delay", async () => {
     delete w.pbjs;
     w.asc = withAuctionDelay(500);

@@ -84,8 +84,7 @@ interface RTDOptions {
   forceGlobalRouting?: boolean;
   mergeStrategy?: MergeStrategy;
   instance?: string;
-  // Name of the publisher's Prebid global, the one whose realTimeData
-  // auctionDelay bounds the waitForTargeting wait.
+  // Prebid global whose realTimeData.auctionDelay bounds the waitForTargeting wait.
   prebidGlobal?: string;
   waitForTargeting?: boolean;
   // Split-test gate: while it returns true, handleRtd serves no EIDs. Wired
@@ -171,11 +170,11 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   const cachedData = targetingFromCache(config);
   const cacheHasEids = (cachedData?.ortb2?.user?.eids?.length ?? 0) > 0;
 
-  // Get auction delay from pbjs config
+  // Get auction delay from the configured Prebid global's config
   const delay = (window as any)?.[config.prebidGlobal]?.getConfig?.()?.realTimeData?.auctionDelay;
 
-  // An unbounded wait would hold the auction indefinitely, so a missing delay
-  // still serves. Say so: it reads as waitForTargeting silently doing nothing.
+  // No delay means nothing bounds the wait, so the auction serves unenriched.
+  // Indistinguishable from waitForTargeting being off, hence the warning.
   if (config.waitForTargeting && !cacheHasEids && !delay) {
     config.log(
       "warn",
