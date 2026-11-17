@@ -96,10 +96,8 @@ class LocalStorage {
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
     const incoming = replaceCache(targeting as ResolvedCache);
 
-    // EIDs carry over, the rest of the response does not: a session whose edge
-    // resolved fewer matchers would otherwise drop sources the cache still
-    // holds. mergeCache keeps only the EID subset, so take that and nothing
-    // else from it.
+    // Carry EIDs forward so a response resolving fewer matchers does not drop
+    // cached sources. mergeCache returns only the EID subset, so take only that.
     const { merged } = mergeCache(incoming, this.getTargeting() as ResolvedCache | null);
     const eids = merged.ortb2?.user?.eids ?? [];
     const next = eids.length
