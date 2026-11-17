@@ -171,21 +171,24 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   const cacheHasEids = (cachedData?.ortb2?.user?.eids?.length ?? 0) > 0;
 
   // Get auction delay from the configured Prebid global's config
-  const delay = (window as any)?.[config.prebidGlobal]?.getConfig?.()?.realTimeData?.auctionDelay;
-
-  // No delay means nothing bounds the wait, so the auction serves unenriched.
-  // Indistinguishable from waitForTargeting being off, hence the warning.
-  if (config.waitForTargeting && !cacheHasEids && !delay) {
-    config.log(
-      "warn",
-      `waitForTargeting is set but window.${config.prebidGlobal} reports no realTimeData.auctionDelay; serving this auction unenriched`
-    );
-  }
+  const prebid = (window as any)?.[config.prebidGlobal];
+  const delay = prebid?.getConfig?.()?.realTimeData?.auctionDelay;
 
   // Return immediately when waitForTargeting is off, the cache already has
   // EIDs to serve, or no auction delay bounds a wait. A cache entry without
   // EIDs does not short-circuit: targeting may still be in flight.
   if (!config.waitForTargeting || cacheHasEids || !delay) {
+    // Nothing bounds the wait, so this auction serves unenriched. Warn, since
+    // that is indistinguishable from waitForTargeting being off.
+    if (config.waitForTargeting && !cacheHasEids) {
+      config.log(
+        "warn",
+        prebid
+          ? `waitForTargeting is set but window.${config.prebidGlobal} reports no realTimeData.auctionDelay; serving this auction unenriched`
+          : `waitForTargeting is set but window.${config.prebidGlobal} is not defined; serving this auction unenriched`
+      );
+    }
+
     if (!cachedData) {
       config.log("info", "No cached targeting data found");
       return {};

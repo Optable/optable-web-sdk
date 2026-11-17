@@ -19,7 +19,7 @@ function seedCache(eids: unknown[]) {
   localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify({ ortb2: { user: { eids } } }));
 }
 
-function withAuctionDelay(ms: number): PrebidStub {
+function withAuctionDelay(ms?: number): PrebidStub {
   return { getConfig: () => ({ realTimeData: { auctionDelay: ms } }) };
 }
 
@@ -100,7 +100,11 @@ describe("buildRTD - prebidGlobal", () => {
     w.asc = withAuctionDelay(500);
     const req = bidsConfig();
 
-    await buildRTD({ waitForTargeting: true }).handleRtd(req);
+    // Seeding after the call: only a wait would pick these up.
+    const pending = buildRTD({ waitForTargeting: true }).handleRtd(req);
+    seedCache(EIDS);
+    window.dispatchEvent(new CustomEvent(targetingEventName));
+    await pending;
 
     expect(globalEids(req)).toHaveLength(0);
   });
@@ -117,14 +121,37 @@ describe("buildRTD - prebidGlobal", () => {
     expect(globalEids(req)).toHaveLength(1);
   });
 
-  it("warns when the wait is asked for but no delay bounds it", async () => {
-    delete w.pbjs;
+  it("warns when the named global declares no delay", async () => {
+    w.pbjs = withAuctionDelay(undefined);
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     const req = bidsConfig();
 
     await buildRTD({ waitForTargeting: true, enableLogging: true }).handleRtd(req);
 
     expect(warn.mock.calls.flat().join(" ")).toContain("no realTimeData.auctionDelay");
+    warn.mockRestore();
+  });
+
+  it("warns that the named global is missing when it does not exist", async () => {
+    delete w.pbjs;
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const req = bidsConfig();
+
+    await buildRTD({ waitForTargeting: true, enableLogging: true, prebidGlobal: "asc" }).handleRtd(req);
+
+    expect(warn.mock.calls.flat().join(" ")).toContain("window.asc is not defined");
+    warn.mockRestore();
+  });
+
+  it("does not warn when the cache already has EIDs", async () => {
+    delete w.pbjs;
+    seedCache(EIDS);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const req = bidsConfig();
+
+    await buildRTD({ waitForTargeting: true, enableLogging: true }).handleRtd(req);
+
+    expect(warn.mock.calls.flat().join(" ")).not.toContain("serving this auction unenriched");
     warn.mockRestore();
   });
 });
