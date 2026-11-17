@@ -20,7 +20,11 @@ A targeting response off the wire keys `refs` opaquely and points at it from `ui
 
 Nothing outside the cache changes: `sdk.targeting()` still resolves to the wire response, and so does the `optable-targeting:change` payload. Conversion happens where the cache is written — `setTargeting` writes through `replaceCache`, and `mergeCache` takes and returns cache format.
 
-`setTargeting` merges rather than replaces. It stores the incoming response as sent, with `ortb2.user.eids` and `refs` taken from `mergeCache` against what is already cached, so a session whose edge resolved fewer matchers keeps the sources it already held. Only the EID subset carries over; `audience`, `user` and every other field come from the new response alone. A response that carries no EIDs at all is stored unchanged.
+`setTargeting` merges rather than replaces. It stores the incoming response as sent, with `ortb2.user.eids` and `refs` taken from `mergeCache` against what is already cached, so a session whose edge resolved fewer matchers keeps the sources it already held. Only the EID subset carries over; `audience`, `user` and every other field come from the new response alone.
+
+The merged EID list is written whenever either side lists `eids`, so a response that lists none still picks up the cached ones, and a response revoking every cached source stores an empty list. Only when neither side lists `eids` is the response stored exactly as sent. The merge runs with no UID cap, since the cap belongs to whoever produced the response.
+
+Callers pass `{ merge: false }` when the request changed which matchers ran. `Targeting` does this for an A/B arm carrying `skipMatchers`, `skipResolvers` or `matcher_override`: that arm resolved a deliberately smaller set, and carrying cached EIDs forward would put back exactly what it left out. An arm that only buckets traffic still merges.
 
 So anything read back out of storage is ready to merge as-is, and anything coming off the wire goes through `replaceCache` on the way in. `replaceCache` is idempotent, so calling it on a value that is already cache format is a no-op rather than a way to lose refs.
 
@@ -28,7 +32,7 @@ So anything read back out of storage is ready to merge as-is, and anything comin
 
 - New EIDs replace cached ones with the same `source`. A new EID without `uids` evicts the cached one: the response revoked that source.
 - Cached EIDs from sources absent in the new response are carried over.
-- Each EID keeps at most `maxUidsPerEid` UIDs (default 2).
+- Each EID keeps at most `maxUidsPerEid` UIDs (default 2). `setTargeting` passes `Infinity`.
 - `ortb2.user.data` comes from the new response, falling back to the cached one.
 - The inputs are never mutated. The merged cache is built from copies.
 

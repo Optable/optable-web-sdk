@@ -88,29 +88,46 @@ class LocalStorage {
     return raw ? JSON.parse(raw) : null;
   }
 
-  setTargeting(targeting?: TargetingResponse | null) {
+  // merge carries cached EIDs forward for sources the response omits. Callers
+  // that changed which matchers ran, such as an A/B arm, must pass false.
+  setTargeting(targeting?: TargetingResponse | null, options: { merge?: boolean } = {}) {
     if (!targeting) {
       return;
     }
 
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
     const incoming = replaceCache(targeting as ResolvedCache);
-
-    // Carry EIDs forward so a response resolving fewer matchers does not drop
-    // cached sources. mergeCache returns only the EID subset, so take only that.
-    const { merged } = mergeCache(incoming, this.getTargeting() as ResolvedCache | null);
-    const eids = merged.ortb2?.user?.eids ?? [];
-    const next = eids.length
-      ? {
-          ...incoming,
-          ortb2: { ...incoming.ortb2, user: { ...incoming.ortb2?.user, eids } },
-          refs: merged.refs,
-        }
-      : incoming;
+    const next = options.merge === false ? incoming : this.mergeOntoCache(incoming);
 
     this.writeToStorageKeys(this.targetingKeys, JSON.stringify(next));
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
     this.setPairIDs(targeting);
+  }
+
+  // Keeps EIDs for sources the response omits, so an edge that resolved fewer
+  // matchers does not cost bid density. Only the EID subset carries over.
+  private mergeOntoCache(incoming: ResolvedCache): ResolvedCache {
+    let cached: ResolvedCache | null = null;
+    try {
+      cached = this.getTargeting() as ResolvedCache | null;
+    } catch {
+      // Corrupt cache: merge onto nothing and overwrite it.
+    }
+
+    // Neither side listing eids means there is nothing to merge, so the
+    // response stands as sent rather than gaining an empty list.
+    if (!incoming.ortb2?.user?.eids && !cached?.ortb2?.user?.eids) {
+      return incoming;
+    }
+
+    // Infinity because the cap belongs to whoever wrote the response, not to
+    // this write path: mergeCache would otherwise trim every EID to 2 UIDs.
+    const { merged } = mergeCache(incoming, cached, { maxUidsPerEid: Infinity });
+    return {
+      ...incoming,
+      ortb2: { ...incoming.ortb2, user: { ...incoming.ortb2?.user, eids: merged.ortb2?.user?.eids ?? [] } },
+      refs: merged.refs,
+    };
   }
 
   // The private key is in both lists, and the public key can be unset.
