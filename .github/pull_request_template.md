@@ -19,5 +19,6 @@
 
 <!-- Tradeoffs, edge cases, migration steps, follow-ups -->
 
-- [ ] Breaking change
+<!-- Labels set the release bump. type:feature releases a minor, any other type:* a patch, and breaking a major. -->
+
 - [ ] Requires release <!-- check if a version bump should be published after merge -->
