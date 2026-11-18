@@ -198,8 +198,37 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: docker push "us-docker.pkg.dev/optable-artifact-registry/optable/optable-web-sdk-demos:$REF_NAME"
 
+  github-release:
+    needs: [define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-demo]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          # GitHub's "Latest" release follows the CDN latest alias.
+          LATEST: ${{ contains(fromJSON(needs.define-gcs-versions-to-update.outputs.sdk-versions), 'latest') }}
+          PRERELEASE: ${{ contains(github.ref_name, '-') }}
+        run: |
+          # A release created by hand in the UI already covers this tag.
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+          gh release create "$TAG" --verify-tag --generate-notes --latest="$LATEST" --prerelease="$PRERELEASE"
+
   slack-notification:
-    needs: [tests-prettier, build, deploy-sdk-to-npm, define-gcs-versions-to-update, deploy-sdk-to-gcs, deploy-demo]
+    needs:
+      - tests-prettier
+      - build
+      - deploy-sdk-to-npm
+      - define-gcs-versions-to-update
+      - deploy-sdk-to-gcs
+      - deploy-demo
+      - github-release
     runs-on: ubuntu-22.04
     if: ${{ failure() }}
     steps:
