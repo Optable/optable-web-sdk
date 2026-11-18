@@ -42,6 +42,10 @@ const handlers = [
     return HttpResponse.json({ ...passport }, ok200);
   }),
 
+  http.post(`${TEST_BASE_URL}/events`, async ({}) => {
+    return HttpResponse.json({ ...passport }, ok200);
+  }),
+
   http.post(`${TEST_BASE_URL}/profile`, async ({}) => {
     return HttpResponse.json({ ...passport }, ok200);
   }),

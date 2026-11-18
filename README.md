@@ -24,6 +24,7 @@ JavaScript SDK for integrating with an [Optable Data Connectivity Node (DCN)](ht
     - [TypeScript Types](#typescript-types)
     - [Caching Targeting Data](#caching-targeting-data)
   - [Witness API](#witness-api)
+  - [Page View API](#page-view-api)
   - [Contextual Pageview Tracking](#contextual-pageview-tracking)
     - [Option 1: Automatic (recommended)](#option-1-automatic-recommended)
     - [Option 2: Manual](#option-2-manual)
@@ -177,6 +178,9 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`initContextual` (`boolean | (response: ContextualSegmentsResponse) => void`, default: `false`)**
   If `true`, the SDK will automatically fire a `pageview` witness event with full page context during initialization, and also call `ctxSegments()` to fetch contextual segments for the current page, caching the result on the instance for later use via `ctxTargetingKeyValues()`. This is the recommended way to enable contextual pageview tracking and contextual targeting without writing custom code. Implies `pageContext: true` when no `pageContext` is explicitly configured.
   When set to a callback function, the SDK does everything `true` does **and** invokes the callback with the `ContextualSegmentsResponse` once it resolves — useful for chaining an ad-server load (e.g. GAM) on the contextual response without making a second `ctxSegments()` call. The callback is not invoked if the request fails.
+
+- **`initPageView` (boolean, default: `false`)**
+  If `true`, the SDK sends one page view to the DCN's `/events` endpoint during initialization, after the passport is initialized when `initPassport` is on. See the [Page View API](#page-view-api). The DCN node must have the events endpoint enabled; otherwise the request fails silently.
 
 - **`consent` (`InitConsent`)**
   Defines the consent settings for data collection and processing: `{ cmpapi?: CMPApiConfig; static?: Consent }`. Pass `cmpapi` to read consent from the page's CMP (TCF/GPP), or `static` to supply consent you already collected; `static` wins if both are set. When omitted, the SDK assumes all-permissive consent with no applicable regulation.
@@ -417,6 +421,32 @@ type WitnessProperties = {
   [key: string]: string | number | boolean | unknown[] | null | { [key: string]: unknown };
 };
 ```
+
+### Page View API
+
+To record a page view, call `pageView()`. It posts the current page to the DCN's `/events` endpoint:
+
+```javascript
+sdk.pageView().catch((err) => console.warn(`Page view error: ${err.message}`));
+```
+
+The request body carries the page and its UTM parameters, read from the browser at call time:
+
+```json
+{
+  "page": {
+    "url": "https://example.com/article?utm_source=newsletter",
+    "referrer": "",
+    "title": "An article",
+    "language": "en-US"
+  },
+  "utm": { "source": "newsletter" }
+}
+```
+
+`utm` holds the `utm_source`, `utm_medium`, `utm_campaign`, `utm_term` and `utm_content` query parameters that are present on the page URL. To send one page view automatically on SDK load, set `initPageView: true` in the [configuration](#optional-keys).
+
+The DCN node must have the events endpoint enabled. Otherwise the DCN answers 404 and the promise rejects.
 
 ### Contextual Pageview Tracking
 

@@ -90,6 +90,8 @@ type InitConfig = {
   // ctxSegments() call. The callback is not invoked if the request fails.
   // Implies pageContext: true when no pageContext is explicitly configured.
   initContextual?: boolean | ((response: ContextualSegmentsResponse) => void);
+  // Automatically send one page view to the DCN's /events endpoint on SDK initialization.
+  initPageView?: boolean;
 };
 
 type ResolvedConfig = {
@@ -108,6 +110,7 @@ type ResolvedConfig = {
   skipEnrichment?: boolean;
   initTargeting?: boolean;
   initContextual?: boolean | ((response: ContextualSegmentsResponse) => void);
+  initPageView?: boolean;
   abTests?: ABTestConfig[];
   additionalTargetingSignals?: TargetingSignals;
   ois?: boolean;
@@ -146,6 +149,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
     skipEnrichment: init.skipEnrichment,
     initTargeting: init.initTargeting,
     initContextual: init.initContextual,
+    initPageView: init.initPageView,
     abTests: init.abTests,
     additionalTargetingSignals: init.additionalTargetingSignals,
     ois: init.ois,
