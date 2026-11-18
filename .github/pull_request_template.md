@@ -19,6 +19,6 @@
 
 <!-- Tradeoffs, edge cases, migration steps, follow-ups -->
 
-<!-- Labels set the release bump. type:feature releases a minor, any other type:* a patch, and breaking a major. -->
+<!-- Labels set the release bump. type:feature releases a minor and any other type:* a patch. breaking releases a major from 1.0.0 on, and a minor before. -->
 
 - [ ] Requires release <!-- check if a version bump should be published after merge -->
