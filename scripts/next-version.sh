@@ -74,15 +74,9 @@ for sha in $commits; do
 done
 
 computed=${levels[rank]}
-reason="$computed${sources:+ from $sources}"
-# Below 1.0.0 a breaking change ships as a minor. Leaving 0.x takes an explicit bump of major.
-if [[ "$computed" == major && "$previous" == v0.* ]]; then
-  computed=minor
-  reason="minor from $sources (breaking, held below 1.0.0)"
-fi
-
 if [[ "$override" == auto ]]; then
   bump=$computed
+  reason="$bump${sources:+ from $sources}"
 else
   bump=$override
   reason="$bump (set by hand, labels gave $computed)"

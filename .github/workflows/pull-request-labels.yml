@@ -18,6 +18,6 @@ jobs:
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           if ! jq -e 'any(.[]; startswith("type:") or . == "dependencies")' <<< "$LABELS" > /dev/null; then
-            echo "::error::Add one type:* label (type:feature releases a minor, any other type a patch). Add breaking too for a breaking change, which releases a major from 1.0.0 on and a minor before."
+            echo "::error::Add one type:* label (type:feature releases a minor, any other type a patch). Add breaking too for a major."
             exit 1
           fi
