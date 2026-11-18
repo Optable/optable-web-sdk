@@ -112,13 +112,29 @@ class LocalStorage {
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
     const incoming = replaceCache(targeting as ResolvedCache);
     const identity = this.identityOf(options.requestIds ?? []);
-    const next = options.merge === false || !this.sameIdentity(identity) ? incoming : this.mergeOntoCache(incoming);
+    const replacing = options.merge === false || !this.sameIdentity(identity);
+    const next = replacing ? LocalStorage.dropRevoked(incoming) : this.mergeOntoCache(incoming);
 
     this.writeToStorageKeys(this.targetingKeys, JSON.stringify(next));
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
     this.writeToStorageKeys(this.targetingIdKeys, identity);
     this.setPairIDs(targeting);
     return next as TargetingResponse;
+  }
+
+  // A source sent with no uids is a revocation, which mergeCache acts on. The
+  // replace path has no cache to act against, so drop it here or it is stored
+  // as an EID that enriches nothing.
+  private static dropRevoked(cache: ResolvedCache): ResolvedCache {
+    const eids = cache.ortb2?.user?.eids;
+    if (!eids?.some((eid) => !eid.uids?.length)) {
+      return cache;
+    }
+
+    return {
+      ...cache,
+      ortb2: { ...cache.ortb2, user: { ...cache.ortb2?.user, eids: eids.filter((eid) => eid.uids?.length) } },
+    };
   }
 
   // Who a response was resolved for: the passport visitor id, plus one digest
