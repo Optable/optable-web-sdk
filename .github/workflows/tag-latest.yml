@@ -28,21 +28,30 @@ jobs:
   tag:
     runs-on: ubuntu-22.04
     permissions:
-      contents: write
+      contents: read
       pull-requests: read
 
-    outputs:
-      previous: ${{ steps.next-version.outputs.previous }}
-      version: ${{ steps.next-version.outputs.version }}
-      reason: ${{ steps.next-version.outputs.reason }}
-      unlabeled: ${{ steps.next-version.outputs.unlabeled }}
-      tag: ${{ steps.push-tag.outputs.tag }}
-
     steps:
+      - name: Refuse to tag from anything but master
+        if: github.ref != 'refs/heads/master'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::Tag latest only runs on master, got $REF."
+          exit 1
+
+      # A tag pushed with GITHUB_TOKEN would not start release.yml, a tag pushed with an App token does.
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ vars.GH_ACTION_REPO_WRITE_APP_ID }}
+          private-key: ${{ secrets.GH_ACTION_REPO_WRITE_APP_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: master
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -77,16 +86,28 @@ jobs:
         env:
           DRY_RUN: ${{ inputs.dry_run }}
           VERSION: ${{ steps.next-version.outputs.version }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          APP_ID: ${{ vars.GH_ACTION_REPO_WRITE_APP_ID }}
         run: |
           if [[ "$DRY_RUN" == "true" || -z "$VERSION" ]]; then
             echo "Not tagging (dry run: $DRY_RUN, version: ${VERSION:-none})"
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
           git tag -a "$VERSION" -m "Release $VERSION"
           git push origin "refs/tags/$VERSION"
           echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Post tag to Slack
+        if: steps.push-tag.outputs.tag != ''
+        uses: slackapi/slack-github-action@v3.0.1
+        with:
+          method: chat.postMessage
+          token: "${{ secrets.SLACK_MESSENGER_APP_TOKEN }}"
+          payload: |
+            channel: "${{ env.SLACK_CHANNEL_ID }}"
+            text: "web-sdk ${{ steps.push-tag.outputs.tag }} tagged: ${{ steps.next-version.outputs.reason }}\n${{ github.server_url }}/${{ github.repository }}/actions/workflows/release.yml${{ steps.next-version.outputs.unlabeled && format('\nUnlabeled PRs counted as patch: {0}', steps.next-version.outputs.unlabeled) || '' }}"
 
       - name: Post nothing to release to Slack
         if: steps.next-version.outputs.version == ''
@@ -98,31 +119,8 @@ jobs:
             channel: "${{ env.SLACK_CHANNEL_ID }}"
             text: "web-sdk: nothing changed on master since ${{ steps.next-version.outputs.previous }}, no tag created"
 
-  release:
-    needs: [tag]
-    if: needs.tag.outputs.tag != ''
-    runs-on: ubuntu-22.04
-    permissions:
-      actions: write
-    steps:
-      # A tag pushed with GITHUB_TOKEN does not trigger release.yml's push event, but a dispatch does.
-      - name: Dispatch release workflow
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.tag.outputs.tag }}
-        run: gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"
-
-      - name: Post to Slack
-        uses: slackapi/slack-github-action@v3.0.1
-        with:
-          method: chat.postMessage
-          token: "${{ secrets.SLACK_MESSENGER_APP_TOKEN }}"
-          payload: |
-            channel: "${{ env.SLACK_CHANNEL_ID }}"
-            text: "web-sdk ${{ needs.tag.outputs.tag }} tagged: ${{ needs.tag.outputs.reason }}\n${{ github.server_url }}/${{ github.repository }}/actions/workflows/release.yml${{ needs.tag.outputs.unlabeled && format('\nUnlabeled PRs counted as patch: {0}', needs.tag.outputs.unlabeled) || '' }}"
-
   slack-notification:
-    needs: [tag, release]
+    needs: [tag]
     runs-on: ubuntu-22.04
     if: ${{ failure() }}
     steps:

@@ -4,7 +4,6 @@ on:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
       - v[0-9]+.[0-9]+.[0-9]+-*
-  workflow_dispatch:
 
 # Cancelling mid-run could leave the version published on npm but not on GCS.
 concurrency:
@@ -17,8 +16,6 @@ env:
 
 jobs:
   tests-prettier:
-    # Every other job depends on this one, so a dispatch from a branch releases nothing.
-    if: startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/reusable-lint-test.yml
 
   build:
