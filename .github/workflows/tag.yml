@@ -1,0 +1,85 @@
+name: Tag release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which part of the version to increment"
+        type: choice
+        options:
+          - minor
+          - major
+          - patch
+        default: minor
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    name: Tag master
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+    steps:
+      - name: Refuse to release from anything but master
+        if: github.ref != 'refs/heads/master'
+        run: |
+          echo "::error::Release must run on master, got ${{ github.ref }}. Re-run and pick master."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: next
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          latest=$(git tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          latest=${latest:-v0.0.0}
+          IFS=. read -r major minor patch <<<"${latest#v}"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          version="v${major}.${minor}.${patch}"
+          echo "${latest} -> ${version}"
+          echo "version=${version}" >>"$GITHUB_OUTPUT"
+          {
+            echo "### Release \`${version}\`"
+            echo ""
+            echo "Previous: \`${latest}\` · bump: \`${BUMP}\` · commit: \`${GITHUB_SHA:0:7}\`"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
+            echo "::error::${VERSION} already exists. Someone tagged out of band."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${VERSION}" -m "Release ${VERSION}"
+          git push origin "${VERSION}"
+
+  release:
+    # Tags pushed with GITHUB_TOKEN don't trigger other workflows, so release.yml is called directly.
+    name: Release
+    needs: tag
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.tag.outputs.version }}
