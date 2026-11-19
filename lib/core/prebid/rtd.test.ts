@@ -4,7 +4,8 @@ import type { ReqBidsConfigObj } from "./rtd";
 
 const EIDS = [{ source: "uidapi.com", uids: [{ id: "uid2-token" }] }];
 
-const w = window as unknown as { pbjs?: { getConfig: () => unknown } };
+type PrebidStub = { getConfig: () => unknown };
+const w = window as unknown as { pbjs?: PrebidStub; asc?: PrebidStub };
 
 function bidsConfig(): ReqBidsConfigObj {
   return { ortb2Fragments: { global: {}, bidder: {} } };
@@ -18,10 +19,15 @@ function seedCache(eids: unknown[]) {
   localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify({ ortb2: { user: { eids } } }));
 }
 
+function withAuctionDelay(ms?: number): PrebidStub {
+  return { getConfig: () => ({ realTimeData: { auctionDelay: ms } }) };
+}
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
-  w.pbjs = { getConfig: () => ({ realTimeData: { auctionDelay: 500 } }) };
+  w.pbjs = withAuctionDelay(500);
+  delete w.asc;
 });
 
 describe("buildRTD - waitForTargeting", () => {
@@ -72,6 +78,81 @@ describe("buildRTD - waitForTargeting", () => {
     await pending;
 
     expect(globalEids(req)).toHaveLength(1);
+  });
+});
+
+describe("buildRTD - prebidGlobal", () => {
+  it("takes the auction delay from the named global", async () => {
+    delete w.pbjs;
+    w.asc = withAuctionDelay(500);
+    const req = bidsConfig();
+
+    const pending = buildRTD({ waitForTargeting: true, prebidGlobal: "asc" }).handleRtd(req);
+    seedCache(EIDS);
+    window.dispatchEvent(new CustomEvent(targetingEventName));
+    await pending;
+
+    expect(globalEids(req)).toHaveLength(1);
+  });
+
+  it("does not wait when only another instance declares the delay", async () => {
+    delete w.pbjs;
+    w.asc = withAuctionDelay(500);
+    const req = bidsConfig();
+
+    // Seeding after the call: only a wait would pick these up.
+    const pending = buildRTD({ waitForTargeting: true }).handleRtd(req);
+    seedCache(EIDS);
+    window.dispatchEvent(new CustomEvent(targetingEventName));
+    await pending;
+
+    expect(globalEids(req)).toHaveLength(0);
+  });
+
+  it("still defaults to pbjs", async () => {
+    w.asc = withAuctionDelay(500);
+    const req = bidsConfig();
+
+    const pending = buildRTD({ waitForTargeting: true }).handleRtd(req);
+    seedCache(EIDS);
+    window.dispatchEvent(new CustomEvent(targetingEventName));
+    await pending;
+
+    expect(globalEids(req)).toHaveLength(1);
+  });
+
+  it("warns when the named global declares no delay", async () => {
+    w.pbjs = withAuctionDelay(undefined);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const req = bidsConfig();
+
+    await buildRTD({ waitForTargeting: true, enableLogging: true }).handleRtd(req);
+
+    expect(warn.mock.calls.flat().join(" ")).toContain("no realTimeData.auctionDelay");
+    warn.mockRestore();
+  });
+
+  it("warns that the named global is missing when it does not exist", async () => {
+    delete w.pbjs;
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const req = bidsConfig();
+
+    await buildRTD({ waitForTargeting: true, enableLogging: true, prebidGlobal: "asc" }).handleRtd(req);
+
+    expect(warn.mock.calls.flat().join(" ")).toContain("window.asc is not defined");
+    warn.mockRestore();
+  });
+
+  it("does not warn when the cache already has EIDs", async () => {
+    delete w.pbjs;
+    seedCache(EIDS);
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const req = bidsConfig();
+
+    await buildRTD({ waitForTargeting: true, enableLogging: true }).handleRtd(req);
+
+    expect(warn.mock.calls.flat().join(" ")).not.toContain("serving this auction unenriched");
+    warn.mockRestore();
   });
 });
 

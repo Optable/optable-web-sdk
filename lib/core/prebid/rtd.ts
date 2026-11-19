@@ -68,6 +68,7 @@ interface RTDConfig {
   targetingFromCache: (config?: RTDConfig) => TargetingData | null;
   handleRtd: (reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any) => Promise<void | null>;
   instance: string;
+  prebidGlobal: string;
   waitForTargeting: boolean;
   isControlGroup: () => boolean;
 }
@@ -83,6 +84,8 @@ interface RTDOptions {
   forceGlobalRouting?: boolean;
   mergeStrategy?: MergeStrategy;
   instance?: string;
+  // Prebid global whose realTimeData.auctionDelay bounds the waitForTargeting wait.
+  prebidGlobal?: string;
   waitForTargeting?: boolean;
   // Split-test gate: while it returns true, handleRtd serves no EIDs. Wired
   // to the wrapper's assignment (for example setupAB's result).
@@ -167,13 +170,25 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
   const cachedData = targetingFromCache(config);
   const cacheHasEids = (cachedData?.ortb2?.user?.eids?.length ?? 0) > 0;
 
-  // Get auction delay from pbjs config
-  const delay = (window as any)?.pbjs?.getConfig?.()?.realTimeData?.auctionDelay;
+  // Get auction delay from the configured Prebid global's config
+  const prebid = (window as any)?.[config.prebidGlobal];
+  const delay = prebid?.getConfig?.()?.realTimeData?.auctionDelay;
 
   // Return immediately when waitForTargeting is off, the cache already has
   // EIDs to serve, or no auction delay bounds a wait. A cache entry without
   // EIDs does not short-circuit: targeting may still be in flight.
   if (!config.waitForTargeting || cacheHasEids || !delay) {
+    // Nothing bounds the wait, so this auction serves unenriched. Warn, since
+    // that is indistinguishable from waitForTargeting being off.
+    if (config.waitForTargeting && !cacheHasEids) {
+      config.log(
+        "warn",
+        prebid
+          ? `waitForTargeting is set but window.${config.prebidGlobal} reports no realTimeData.auctionDelay; serving this auction unenriched`
+          : `waitForTargeting is set but window.${config.prebidGlobal} is not defined; serving this auction unenriched`
+      );
+    }
+
     if (!cachedData) {
       config.log("info", "No cached targeting data found");
       return {};
@@ -389,6 +404,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     appendNewMergeStrategy,
     targetingFromCache,
     instance: options.instance ?? "instance",
+    prebidGlobal: options.prebidGlobal ?? "pbjs",
     waitForTargeting: options.waitForTargeting ?? false,
     isControlGroup: options.isControlGroup ?? (() => false),
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
