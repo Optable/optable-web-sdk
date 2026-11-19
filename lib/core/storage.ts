@@ -16,6 +16,14 @@ import {
 
 const pairEIDSource = "pair-protocol.com";
 
+// The default targeting request id. It identifies the browser rather than a
+// person, so it is not part of an identity's id set.
+const passportRequestId = "__passport__";
+
+// Who a cached response was resolved for. Digests, so the ids themselves are
+// never written to storage.
+type Identity = { visitor: string; ids: string[] };
+
 class LocalStorage {
   private passportKeys: StorageKeys;
   private targetingKeys: StorageKeys;
@@ -111,13 +119,20 @@ class LocalStorage {
 
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
     const incoming = replaceCache(targeting as ResolvedCache);
+    const cached = this.storedIdentity();
     const identity = this.identityOf(options.requestIds ?? []);
-    const replacing = options.merge === false || !this.sameIdentity(identity);
-    const next = replacing ? LocalStorage.dropRevoked(incoming) : this.mergeOntoCache(incoming);
+    const merging = options.merge !== false && LocalStorage.sameIdentity(cached, identity);
+    const next = merging ? this.mergeOntoCache(incoming) : LocalStorage.dropRevoked(incoming);
+
+    // A merged cache holds both identities' sources, so the stored identity
+    // has to name both. Keeping only the new ids would let signed in as A,
+    // signed out, signed in as B read as two separately allowed steps and
+    // carry A's sources into B's bids.
+    const stored = merging ? LocalStorage.unionIdentity(cached, identity) : identity;
 
     this.writeToStorageKeys(this.targetingKeys, JSON.stringify(next));
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
-    this.writeToStorageKeys(this.targetingIdKeys, identity);
+    this.writeToStorageKeys(this.targetingIdKeys, JSON.stringify(stored));
     this.setPairIDs(targeting);
     return next as TargetingResponse;
   }
@@ -139,47 +154,67 @@ class LocalStorage {
 
   // Who a response was resolved for: the passport visitor id, plus one digest
   // per request id so the ids can be compared without being stored.
-  private identityOf(requestIds: string[]): string {
-    const ids = [...new Set(requestIds.map((id) => sha256.hex(id)))].sort();
-    return JSON.stringify({ visitor: this.getVisitorId() ?? "", ids });
+  // __passport__ names the browser, which the visitor id already identifies.
+  // Counting it as an id would make targeting() and targeting("e:x") look
+  // like disjoint id sets and replace a cache they should merge onto.
+  private identityOf(requestIds: string[]): Identity {
+    const ids = requestIds.filter((id) => id !== passportRequestId).map((id) => sha256.hex(id));
+    return { visitor: this.getVisitorId() ?? "", ids: [...new Set(ids)].sort() };
+  }
+
+  private storedIdentity(): Identity | null {
+    const raw = this.readStorageKeys(this.targetingIdKeys);
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<Identity>;
+      return { visitor: parsed?.visitor ?? "", ids: parsed?.ids ?? [] };
+    } catch {
+      return null;
+    }
   }
 
   // Carry-over needs the same visitor and an id set that contradicts nothing
   // already cached. Either set containing the other means ids were added or
   // dropped, as signing in or out does; each side holding an id the other
   // lacks is a different person.
-  private sameIdentity(identity: string): boolean {
-    const stored = this.readStorageKeys(this.targetingIdKeys);
-    if (!stored) {
+  private static sameIdentity(cached: Identity | null, next: Identity): boolean {
+    if (!cached || cached.visitor !== next.visitor) {
       return false;
     }
 
-    let cached: { visitor?: string; ids?: string[] };
-    try {
-      cached = JSON.parse(stored);
-    } catch {
-      return false;
-    }
-
-    const next = JSON.parse(identity) as { visitor: string; ids: string[] };
-    if (cached.visitor !== next.visitor) {
-      return false;
-    }
-
-    const cachedIds = cached.ids ?? [];
     const contains = (a: string[], b: string[]) => b.every((id) => a.includes(id));
-    return contains(cachedIds, next.ids) || contains(next.ids, cachedIds);
+    return contains(cached.ids, next.ids) || contains(next.ids, cached.ids);
+  }
+
+  private static unionIdentity(cached: Identity | null, next: Identity): Identity {
+    const ids = [...new Set([...(cached?.ids ?? []), ...next.ids])].sort();
+    return { visitor: next.visitor, ids };
+  }
+
+  // Every stored copy, folded into one. identifyAndTokenize writes its result
+  // to the public key alone, so a source it added lives only there; merging
+  // against the private copy would drop it on the next targeting write. The
+  // copies are identical whenever targeting wrote both, so the fold only
+  // matters where another writer has touched one of them.
+  private cachedForMerge(): ResolvedCache | null {
+    let cached: ResolvedCache | null = null;
+
+    for (const copy of this.getTargetingCopies() as ResolvedCache[]) {
+      // A copy can still hold wire format; replaceCache is idempotent.
+      const next = replaceCache(copy);
+      cached = cached ? mergeCache(next, cached, { maxUidsPerEid: Infinity }).merged : next;
+    }
+
+    return cached;
   }
 
   // Keeps EIDs for sources the response omits, so an edge that resolved fewer
   // matchers does not cost bid density. Only the EID subset carries over.
   private mergeOntoCache(incoming: ResolvedCache): ResolvedCache {
-    let cached: ResolvedCache | null = null;
-    try {
-      cached = this.getTargeting() as ResolvedCache | null;
-    } catch {
-      // Corrupt cache: merge onto nothing and overwrite it.
-    }
+    const cached = this.cachedForMerge();
 
     // Neither side listing eids means there is nothing to merge, so the
     // response stands as sent rather than gaining an empty list.

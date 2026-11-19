@@ -26,6 +26,12 @@ The merged EID list is written whenever either side lists `eids`, so a response 
 
 Carry-over is scoped to one identity. `setTargeting` stores the passport's visitor id and a digest per request id and hid in a `<key>:id` sibling, and replaces instead of merging when the visitor id differs, or when each side holds an id the other lacks. Adding or dropping ids for the same visitor still merges, so signing in or out mid-session does not clear the cache.
 
+`__passport__` is not counted as an id. It names the browser, which the visitor field already identifies, and counting it would make `sdk.targeting()` and `sdk.targeting("e:x")` look like disjoint sets: the default request sends `__passport__` alone and the string form sends the id alone, so signing in would replace the cache rather than merge onto it.
+
+A merge stores the union of the cached ids and the new ones, not just the new ones. Without that, signing in as A, signing out, then signing in as B reads as two separately allowed steps, because the signed-out write would narrow the stored identity to nothing for the next comparison to contradict. The union keeps A's id in the fingerprint, so B's request contradicts it and replaces.
+
+The merge runs against every stored copy, not only the private one. `identifyAndTokenize` writes its result to the public key alone, so a source it added lives only there and merging against the private copy would drop it on the next targeting write.
+
 Two caveats follow from that. A request carrying only `__passport__` identifies the browser, not the person, so two people sharing a signed-out browser share EIDs. And nothing bounds how long a carried EID survives: a source stays in the cache until the identity changes or the edge sends that source back with an empty `uids` list, so a matcher turned off on the node keeps feeding bidders until then. A max age per source would cover it and is not implemented.
 
 `Targeting` reports what was stored rather than the response it sent, so the `optable-targeting:change` payload and the cache agree. Without that, `resolved` reads false and `ortb2` omits the carried sources whenever a response carries no EIDs of its own.
