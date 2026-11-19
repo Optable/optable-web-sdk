@@ -24,6 +24,8 @@ const passportRequestId = "__passport__";
 // never written to storage.
 type Identity = { visitor: string; ids: string[] };
 
+type SetTargetingOptions = { merge?: boolean; requestIds?: string[] };
+
 class LocalStorage {
   private passportKeys: StorageKeys;
   private targetingKeys: StorageKeys;
@@ -109,10 +111,9 @@ class LocalStorage {
   // requestIds identifies who the response was resolved for; see identityOf.
   // Returns what was stored, so a caller can report the cache rather than the
   // response it sent.
-  setTargeting(
-    targeting?: TargetingResponse | null,
-    options: { merge?: boolean; requestIds?: string[] } = {}
-  ): TargetingResponse | null {
+  setTargeting(targeting: TargetingResponse, options?: SetTargetingOptions): TargetingResponse;
+  setTargeting(targeting?: TargetingResponse | null, options?: SetTargetingOptions): TargetingResponse | null;
+  setTargeting(targeting?: TargetingResponse | null, options: SetTargetingOptions = {}): TargetingResponse | null {
     if (!targeting) {
       return null;
     }

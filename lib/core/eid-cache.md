@@ -32,7 +32,13 @@ A merge stores the union of the cached ids and the new ones, not just the new on
 
 The merge runs against every stored copy, not only the private one. `identifyAndTokenize` writes its result to the public key alone, so a source it added lives only there and merging against the private copy would drop it on the next targeting write.
 
-Two caveats follow from that. A request carrying only `__passport__` identifies the browser, not the person, so two people sharing a signed-out browser share EIDs. And nothing bounds how long a carried EID survives: a source stays in the cache until the identity changes or the edge sends that source back with an empty `uids` list, so a matcher turned off on the node keeps feeding bidders until then. A max age per source would cover it and is not implemented.
+Four caveats follow from that. A request carrying only `__passport__` identifies the browser, not the person, so two people sharing a signed-out browser share EIDs.
+
+Signing out is a subset of signing in, so it merges: a session that signed in as A and then signed out keeps the EIDs A's email resolved. That is deliberate, since the browser is the same visitor and clearing on sign-out would cost bid density on every logout. It ends as soon as a request carries an id A's set does not contain, which is what a different person signing in sends.
+
+A source carried over from the public copy is not identity-checked individually. The fold only runs on the merge path, so the stored identity has already matched the request, but `identifyAndTokenize` writes the public key without updating the `<key>:id` sibling. A source it wrote for one person can therefore survive into a merge for another, as long as the targeting identity itself has not changed. A request that does contradict the fingerprint replaces every copy, so the exposure ends there.
+
+And nothing bounds how long a carried EID survives: a source stays in the cache until the identity changes or the edge sends that source back with an empty `uids` list, so a matcher turned off on the node keeps feeding bidders until then. A max age per source would cover it and is not implemented.
 
 `Targeting` reports what was stored rather than the response it sent, so the `optable-targeting:change` payload and the cache agree. Without that, `resolved` reads false and `ortb2` omits the carried sources whenever a response carries no EIDs of its own.
 
