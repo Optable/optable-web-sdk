@@ -2,6 +2,7 @@ import type { ResolvedConfig } from "../config";
 import { fetch } from "../core/network";
 
 type PageViewPayload = {
+  type: "page_view";
   page: {
     url: string;
     referrer: string;
@@ -33,6 +34,7 @@ function utmParams(url: string): UTMParams {
 function PageView(config: ResolvedConfig): Promise<void> {
   const url = window.location.href;
   const payload: PageViewPayload = {
+    type: "page_view",
     page: {
       url,
       referrer: document.referrer,

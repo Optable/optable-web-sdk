@@ -405,10 +405,30 @@ describe("behavior testing of", () => {
       expect.objectContaining({
         url: expect.stringContaining("/events?"),
         _bodyText:
-          '{"page":{"url":"http://localhost/article?utm_source=newsletter&utm_campaign=spring&other=1","referrer":"","title":"","language":"en-US"},"utm":{"source":"newsletter","campaign":"spring"}}',
+          '{"type":"page_view","page":{"url":"http://localhost/article?utm_source=newsletter&utm_campaign=spring&other=1","referrer":"","title":"","language":"en-US"},"utm":{"source":"newsletter","campaign":"spring"}}',
       })
     );
     window.history.pushState({}, "", "/");
+  });
+
+  test("config has initPageView true then constructor sends a page view", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    new OptableSDK({ ...defaultConfig, initPassport: false, initPageView: true });
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "POST",
+          url: expect.stringContaining("/events?"),
+        })
+      );
+    });
+  });
+
+  test("config has initPageView unset then constructor sends no page view", async () => {
+    const fetchSpy = jest.spyOn(window, "fetch");
+    const sdk = new OptableSDK({ ...defaultConfig, initPassport: false });
+    await sdk.identify("id");
+    expect(fetchSpy).not.toHaveBeenCalledWith(expect.objectContaining({ url: expect.stringContaining("/events?") }));
   });
 
   test("witness with pageContext requires explicit opt-in", async () => {

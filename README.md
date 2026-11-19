@@ -434,6 +434,7 @@ The request body carries the page and its UTM parameters, read from the browser 
 
 ```json
 {
+  "type": "page_view",
   "page": {
     "url": "https://example.com/article?utm_source=newsletter",
     "referrer": "",
