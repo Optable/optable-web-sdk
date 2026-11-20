@@ -20,6 +20,7 @@ import {
   PrebidORTB2,
 } from "./edge/targeting";
 import { Witness } from "./edge/witness";
+import { PageView } from "./edge/events";
 import { Profile } from "./edge/profile";
 import {
   ContextualBrandSafety,
@@ -71,6 +72,10 @@ class OptableSDK {
 
     if (this.dcn.initTargeting) {
       this.targeting().catch(() => {});
+    }
+
+    if (this.dcn.initPageView) {
+      this.pageView().catch(() => {});
     }
 
     if (this.dcn.initContextual) {
@@ -206,6 +211,11 @@ class OptableSDK {
     }
 
     return Witness(this.dcn, event, properties, context);
+  }
+
+  async pageView(): Promise<void> {
+    await this.init;
+    return PageView(this.dcn);
   }
 
   resetContext(): void {
