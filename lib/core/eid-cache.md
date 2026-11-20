@@ -18,7 +18,31 @@ localStorage.setItem("OPTABLE_RESOLVED", JSON.stringify(merged));
 
 A targeting response off the wire keys `refs` opaquely and points at it from `uids[0].ext.optable.ref`. The cache keys `refs` by EID `source` and carries no pointers. `replaceCache` converts one to the other.
 
-Nothing outside the cache changes: `sdk.targeting()` still resolves to the wire response, and so does the `optable-targeting:change` payload. Conversion happens where the cache is written — `setTargeting` writes through `replaceCache`, and `mergeCache` takes and returns cache format.
+`sdk.targeting()` still resolves to the wire response. The `optable-targeting:change` payload reports the cache instead, so its `ortb2.user.eids` carry no `ext.optable.ref` pointers; the event has never carried `refs`, so there was nothing to resolve them against. Conversion happens where the cache is written — `setTargeting` writes through `replaceCache`, and `mergeCache` takes and returns cache format.
+
+`setTargeting` merges rather than replaces. It stores the incoming response as sent, with `ortb2.user.eids` and `refs` taken from `mergeCache` against what is already cached, so a session whose edge resolved fewer matchers keeps the sources it already held. Only the EID subset carries over; `audience`, `user` and every other field come from the new response alone.
+
+The merged EID list is written whenever either side lists `eids`, so a response that lists none still picks up the cached ones, and a response revoking every cached source stores an empty list. Only when neither side lists `eids` is the response stored exactly as sent. The merge runs with no UID cap, since the cap belongs to whoever produced the response.
+
+Carry-over is scoped to one identity. `setTargeting` stores the passport's visitor id and a digest per request id and hid in a `<key>:id` sibling, and replaces instead of merging when the visitor id differs, or when each side holds an id the other lacks. Adding or dropping ids for the same visitor still merges, so signing in or out mid-session does not clear the cache.
+
+`__passport__` is not counted as an id. It names the browser, which the visitor field already identifies, and counting it would make `sdk.targeting()` and `sdk.targeting("e:x")` look like disjoint sets: the default request sends `__passport__` alone and the string form sends the id alone, so signing in would replace the cache rather than merge onto it.
+
+A merge stores the union of the cached ids and the new ones, not just the new ones. Without that, signing in as A, signing out, then signing in as B reads as two separately allowed steps, because the signed-out write would narrow the stored identity to nothing for the next comparison to contradict. The union keeps A's id in the fingerprint, so B's request contradicts it and replaces.
+
+The merge runs against every stored copy, not only the private one. `identifyAndTokenize` writes its result to the public key alone, so a source it added lives only there and merging against the private copy would drop it on the next targeting write.
+
+Four caveats follow from that. A request carrying only `__passport__` identifies the browser, not the person, so two people sharing a signed-out browser share EIDs.
+
+Signing out is a subset of signing in, so it merges: a session that signed in as A and then signed out keeps the EIDs A's email resolved. That is deliberate, since the browser is the same visitor and clearing on sign-out would cost bid density on every logout. It ends as soon as a request carries an id A's set does not contain, which is what a different person signing in sends.
+
+A source carried over from the public copy is not identity-checked individually. The fold only runs on the merge path, so the stored identity has already matched the request, but `identifyAndTokenize` writes the public key without updating the `<key>:id` sibling. A source it wrote for one person can therefore survive into a merge for another, as long as the targeting identity itself has not changed. A request that does contradict the fingerprint replaces every copy, so the exposure ends there.
+
+And nothing bounds how long a carried EID survives: a source stays in the cache until the identity changes or the edge sends that source back with an empty `uids` list, so a matcher turned off on the node keeps feeding bidders until then. A max age per source would cover it and is not implemented.
+
+`Targeting` reports what was stored rather than the response it sent, so the `optable-targeting:change` payload and the cache agree. Without that, `resolved` reads false and `ortb2` omits the carried sources whenever a response carries no EIDs of its own.
+
+Callers pass `{ merge: false }` when the request changed which matchers ran. `Targeting` does this for an A/B arm carrying `skipMatchers`, `skipResolvers` or `matcher_override`: that arm resolved a deliberately smaller set, and carrying cached EIDs forward would put back exactly what it left out. An arm that only buckets traffic still merges.
 
 So anything read back out of storage is ready to merge as-is, and anything coming off the wire goes through `replaceCache` on the way in. `replaceCache` is idempotent, so calling it on a value that is already cache format is a no-op rather than a way to lose refs.
 
@@ -26,8 +50,9 @@ So anything read back out of storage is ready to merge as-is, and anything comin
 
 - New EIDs replace cached ones with the same `source`. A new EID without `uids` evicts the cached one: the response revoked that source.
 - Cached EIDs from sources absent in the new response are carried over.
-- Each EID keeps at most `maxUidsPerEid` UIDs (default 2).
+- Each EID keeps at most `maxUidsPerEid` UIDs (default 2). `setTargeting` passes `Infinity`.
 - `ortb2.user.data` comes from the new response, falling back to the cached one.
+- A source's `refs` entry comes from the response that re-sent it, or from the cache when it was carried over. `setTargeting` re-derives these rather than taking `mergeCache`'s, which keeps UID2 entries only.
 - The inputs are never mutated. The merged cache is built from copies.
 
 ## Non-overriding matchers

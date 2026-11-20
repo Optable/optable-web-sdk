@@ -1,5 +1,7 @@
+import { sha256 } from "js-sha256";
 import { SiteResponse } from "../edge/site";
-import { replaceCache } from "./eid-cache";
+import { mergeCache, replaceCache } from "./eid-cache";
+import type { ResolvedCache } from "./eid-cache";
 import type { ResolvedConfig } from "../config";
 import type { TargetingResponse } from "../edge/targeting";
 import { LocalStorageProxy } from "./regs/storage";
@@ -14,10 +16,21 @@ import {
 
 const pairEIDSource = "pair-protocol.com";
 
+// The default targeting request id. It identifies the browser rather than a
+// person, so it is not part of an identity's id set.
+const passportRequestId = "__passport__";
+
+// Who a cached response was resolved for. Digests, so the ids themselves are
+// never written to storage.
+type Identity = { visitor: string; ids: string[] };
+
+type SetTargetingOptions = { merge?: boolean; requestIds?: string[] };
+
 class LocalStorage {
   private passportKeys: StorageKeys;
   private targetingKeys: StorageKeys;
   private targetingTsKeys: StorageKeys;
+  private targetingIdKeys: StorageKeys;
   private siteKeys: StorageKeys;
   private pairKeys: StorageKeys;
   private oisKeys: StorageKeys;
@@ -31,6 +44,12 @@ class LocalStorage {
     this.targetingTsKeys = {
       read: this.targetingKeys.read.map((k) => `${k}:ts`),
       write: this.targetingKeys.write.map((k) => `${k}:ts`),
+    };
+    // "<key>:id" siblings fingerprint the identity a cached response was resolved
+    // for, so carry-over stays within one identity.
+    this.targetingIdKeys = {
+      read: this.targetingKeys.read.map((k) => `${k}:id`),
+      write: this.targetingKeys.write.map((k) => `${k}:id`),
     };
     this.siteKeys = generateSiteKeys(config);
     this.pairKeys = generatedPairKeys();
@@ -87,15 +106,153 @@ class LocalStorage {
     return raw ? JSON.parse(raw) : null;
   }
 
-  setTargeting(targeting?: TargetingResponse | null) {
+  // merge carries cached EIDs forward for sources the response omits. Callers
+  // that changed which matchers ran, such as an A/B arm, must pass false.
+  // requestIds identifies who the response was resolved for; see identityOf.
+  // Returns what was stored, so a caller can report the cache rather than the
+  // response it sent.
+  setTargeting(targeting: TargetingResponse, options?: SetTargetingOptions): TargetingResponse;
+  setTargeting(targeting?: TargetingResponse | null, options?: SetTargetingOptions): TargetingResponse | null;
+  setTargeting(targeting?: TargetingResponse | null, options: SetTargetingOptions = {}): TargetingResponse | null {
     if (!targeting) {
-      return;
+      return null;
     }
 
     // Stored copies always hold the cache format: source-keyed refs, no pointers.
-    this.writeToStorageKeys(this.targetingKeys, JSON.stringify(replaceCache(targeting)));
+    const incoming = replaceCache(targeting as ResolvedCache);
+    const cached = this.storedIdentity();
+    const identity = this.identityOf(options.requestIds ?? []);
+    const merging = options.merge !== false && LocalStorage.sameIdentity(cached, identity);
+    const next = merging ? this.mergeOntoCache(incoming) : LocalStorage.dropRevoked(incoming);
+
+    // A merged cache holds both identities' sources, so the stored identity
+    // has to name both. Keeping only the new ids would let signed in as A,
+    // signed out, signed in as B read as two separately allowed steps and
+    // carry A's sources into B's bids.
+    const stored = merging ? LocalStorage.unionIdentity(cached, identity) : identity;
+
+    this.writeToStorageKeys(this.targetingKeys, JSON.stringify(next));
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
+    this.writeToStorageKeys(this.targetingIdKeys, JSON.stringify(stored));
     this.setPairIDs(targeting);
+    return next as TargetingResponse;
+  }
+
+  // A source sent with no uids is a revocation, which mergeCache acts on. The
+  // replace path has no cache to act against, so drop it here or it is stored
+  // as an EID that enriches nothing.
+  private static dropRevoked(cache: ResolvedCache): ResolvedCache {
+    const eids = cache.ortb2?.user?.eids;
+    if (!eids?.some((eid) => !eid.uids?.length)) {
+      return cache;
+    }
+
+    return {
+      ...cache,
+      ortb2: { ...cache.ortb2, user: { ...cache.ortb2?.user, eids: eids.filter((eid) => eid.uids?.length) } },
+    };
+  }
+
+  // Who a response was resolved for: the passport visitor id, plus one digest
+  // per request id so the ids can be compared without being stored.
+  // __passport__ names the browser, which the visitor id already identifies.
+  // Counting it as an id would make targeting() and targeting("e:x") look
+  // like disjoint id sets and replace a cache they should merge onto.
+  private identityOf(requestIds: string[]): Identity {
+    const ids = requestIds.filter((id) => id !== passportRequestId).map((id) => sha256.hex(id));
+    return { visitor: this.getVisitorId() ?? "", ids: [...new Set(ids)].sort() };
+  }
+
+  private storedIdentity(): Identity | null {
+    const raw = this.readStorageKeys(this.targetingIdKeys);
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<Identity>;
+      return { visitor: parsed?.visitor ?? "", ids: parsed?.ids ?? [] };
+    } catch {
+      return null;
+    }
+  }
+
+  // Carry-over needs the same visitor and an id set that contradicts nothing
+  // already cached. Either set containing the other means ids were added or
+  // dropped, as signing in or out does; each side holding an id the other
+  // lacks is a different person.
+  private static sameIdentity(cached: Identity | null, next: Identity): boolean {
+    if (!cached || cached.visitor !== next.visitor) {
+      return false;
+    }
+
+    const contains = (a: string[], b: string[]) => b.every((id) => a.includes(id));
+    return contains(cached.ids, next.ids) || contains(next.ids, cached.ids);
+  }
+
+  private static unionIdentity(cached: Identity | null, next: Identity): Identity {
+    const ids = [...new Set([...(cached?.ids ?? []), ...next.ids])].sort();
+    return { visitor: next.visitor, ids };
+  }
+
+  // Every stored copy, folded into one. identifyAndTokenize writes its result
+  // to the public key alone, so a source it added lives only there; merging
+  // against the private copy would drop it on the next targeting write. The
+  // copies are identical whenever targeting wrote both, so the fold only
+  // matters where another writer has touched one of them.
+  private cachedForMerge(): ResolvedCache | null {
+    let cached: ResolvedCache | null = null;
+
+    for (const copy of this.getTargetingCopies() as ResolvedCache[]) {
+      // A copy can still hold wire format; replaceCache is idempotent.
+      const next = replaceCache(copy);
+      cached = cached ? mergeCache(next, cached, { maxUidsPerEid: Infinity }).merged : next;
+    }
+
+    return cached;
+  }
+
+  // Keeps EIDs for sources the response omits, so an edge that resolved fewer
+  // matchers does not cost bid density. Only the EID subset carries over.
+  private mergeOntoCache(incoming: ResolvedCache): ResolvedCache {
+    const cached = this.cachedForMerge();
+
+    // Neither side listing eids means there is nothing to merge, so the
+    // response stands as sent rather than gaining an empty list.
+    if (!incoming.ortb2?.user?.eids && !cached?.ortb2?.user?.eids) {
+      return incoming;
+    }
+
+    // Infinity because the cap belongs to whoever wrote the response, not to
+    // this write path: mergeCache would otherwise trim every EID to 2 UIDs.
+    const { merged } = mergeCache(incoming, cached, { maxUidsPerEid: Infinity });
+    const eids = merged.ortb2?.user?.eids ?? [];
+    return {
+      ...incoming,
+      ortb2: { ...incoming.ortb2, user: { ...incoming.ortb2?.user, eids } },
+      refs: this.mergeRefs(eids, incoming, cached),
+    };
+  }
+
+  // mergeCache rebuilds refs through getRefData, which keeps UID2 entries only.
+  // Re-derive them so any other ref survives: a source the response re-sent
+  // takes that response's ref, a carried-over one keeps the cached ref.
+  private mergeRefs(
+    eids: { source: string }[],
+    incoming: ResolvedCache,
+    cached: ResolvedCache | null
+  ): Record<string, unknown> {
+    const resent = new Set((incoming.ortb2?.user?.eids ?? []).map((eid) => eid.source));
+    const refs: Record<string, unknown> = {};
+
+    for (const { source } of eids) {
+      const ref = (resent.has(source) ? incoming.refs : cached?.refs)?.[source];
+      if (ref !== undefined) {
+        refs[source] = ref;
+      }
+    }
+
+    return refs;
   }
 
   // The private key is in both lists, and the public key can be unset.
@@ -215,6 +372,7 @@ class LocalStorage {
   clearTargeting() {
     this.clearStorageKeys(this.targetingKeys);
     this.clearStorageKeys(this.targetingTsKeys);
+    this.clearStorageKeys(this.targetingIdKeys);
   }
 
   clearSite() {

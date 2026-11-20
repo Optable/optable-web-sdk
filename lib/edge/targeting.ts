@@ -81,8 +81,21 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
 
   if (response) {
     const ls = new LocalStorage(config);
-    ls.setTargeting(response);
-    sendTargetingUpdateEvent(config, response);
+    // An arm that skipped matchers resolved a deliberately smaller set, so
+    // carrying cached EIDs forward would put back what the arm left out.
+    const armRestrictedResolution = !!(
+      abTest?.skipMatchers?.length ||
+      abTest?.skipResolvers?.length ||
+      abTest?.matcher_override?.length
+    );
+    const stored = ls.setTargeting(response, {
+      merge: !armRestrictedResolution,
+      requestIds: [...req.ids, ...(req.hids ?? [])],
+    });
+
+    // Report the cache, not the response: after a carry-over the two differ,
+    // and a listener that trusted the response would miss the carried EIDs.
+    sendTargetingUpdateEvent(config, stored);
   }
 
   return response;
