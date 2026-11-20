@@ -24,6 +24,8 @@ type ABTestConfig = {
 type TargetingSignals = {
   // Include the current URL in the targeting call
   ref?: boolean;
+  // Store the ID5 signature from targeting responses and send it back as id5_signature
+  id5Signature?: boolean;
 };
 
 type InitConsent = {
