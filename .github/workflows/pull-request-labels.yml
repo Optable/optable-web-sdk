@@ -1,0 +1,23 @@
+name: Pull request labels
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      # Reports on every head SHA, so the check can be required.
+      - synchronize
+      - labeled
+      - unlabeled
+
+jobs:
+  type-label:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Require a type label
+        env:
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          if ! jq -e 'any(.[]; startswith("type:") or . == "dependencies")' <<< "$LABELS" > /dev/null; then
+            echo "::error::Add one type:* label (type:feature releases a minor, any other type a patch). Add breaking too for a major."
+            exit 1
+          fi
