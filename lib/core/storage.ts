@@ -139,7 +139,9 @@ class LocalStorage {
     this.writeToStorageKeys(this.targetingTsKeys, String(Date.now()));
     this.writeToStorageKeys(this.targetingIdKeys, JSON.stringify(stored));
     this.setPairIDs(targeting);
-    this.setID5Signature(targeting);
+    if (this.config.additionalTargetingSignals?.id5Signature) {
+      this.setID5Signature(targeting);
+    }
     return next as TargetingResponse;
   }
 

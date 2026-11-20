@@ -203,8 +203,8 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`skipEnrichment` (boolean, default: `undefined`)**
   When `true`, sends `skip_enrichment=true` so the DCN skips enrichment for these requests.
 
-- **`additionalTargetingSignals` (`{ ref?: boolean }`, default: `undefined`)**
-  With `ref: true`, targeting calls also send the current page URL (protocol, host and path, without the query string) as `ref`.
+- **`additionalTargetingSignals` (`{ ref?: boolean; id5Signature?: boolean }`, default: `undefined`)**
+  With `ref: true`, targeting calls also send the current page URL (protocol, host and path, without the query string) as `ref`. With `id5Signature: true`, the SDK stores the ID5 signature from targeting responses and sends it back as `id5_signature` on later targeting calls.
 
 - **`abTests` (`ABTestConfig[]`, default: `undefined`)**
   Server-side A/B tests for targeting. Each entry is `{ id, trafficPercentage, matcher_override?, skipMatchers?, skipResolvers? }`. On each targeting call one test is picked at random according to `trafficPercentage` (percentages must sum to 100 or less, otherwise no test is applied) and its `id` is sent as `ab_test_id`, along with any matcher overrides and skipped matchers/resolvers. For a sticky, per-visitor split on the client, see `setupAB` in [`lib/addons/abTestAssignment.md`](lib/addons/abTestAssignment.md).

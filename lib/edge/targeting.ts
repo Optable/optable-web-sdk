@@ -73,7 +73,7 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
   }
 
   const ls = new LocalStorage(config);
-  const id5Signature = ls.getID5Signature();
+  const id5Signature = config.additionalTargetingSignals?.id5Signature && ls.getID5Signature();
   if (id5Signature) {
     searchParams.append("id5_signature", id5Signature);
   }
