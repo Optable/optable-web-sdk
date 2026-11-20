@@ -402,6 +402,7 @@ class LocalStorage {
     this.clearStorageKeys(this.targetingKeys);
     this.clearStorageKeys(this.targetingTsKeys);
     this.clearStorageKeys(this.targetingIdKeys);
+    this.clearStorageKeys(this.id5SignatureKeys);
   }
 
   clearSite() {
