@@ -1729,6 +1729,60 @@ describe("OptablePrebidAnalytics", () => {
         expect(result.totalBids).toBe(2);
       });
 
+      it("attaches seat bids to the s2s request when the seat differs from the requested bidder", async () => {
+        const result = await analytics.toWitness(
+          {
+            auctionId: "auction-s2s-seat",
+            bidderRequests: [
+              {
+                bidderCode: "prebidServer",
+                bidderRequestId: "req-pbs",
+                ortb2: { site: { domain: "example.com" } },
+                bids: [{ bidId: "bid-pbs", adUnitCode: "slot-1", src: "s2s" }],
+              },
+            ],
+            bidsReceived: [
+              { requestId: null, bidderCode: "amx_ay", adUnitCode: "slot-1", cpm: 2.53, source: "s2s" },
+              { requestId: null, bidderCode: "ix_ay", adUnitCode: "slot-1", cpm: 3.84, source: "s2s" },
+            ],
+            noBids: [],
+          },
+          []
+        );
+
+        const request = (result.bidderRequests as any[])[0];
+        expect(request.bids.map((b: any) => [b.seat, b.cpm, b.src])).toEqual([
+          ["amx_ay", 2.53, "s2s"],
+          ["ix_ay", 3.84, "s2s"],
+        ]);
+        expect(request.bids[1].bidId).not.toBe(request.bids[0].bidId);
+        expect(request.status).toBe("RECEIVED");
+        expect(result.totalBids).toBe(2);
+        expect(result.unmatchedBids).toBeUndefined();
+      });
+
+      it("keeps seat bids unmatched when no s2s request covers the ad unit", async () => {
+        const result = await analytics.toWitness(
+          {
+            auctionId: "auction-s2s-miss",
+            bidderRequests: [
+              {
+                bidderCode: "prebidServer",
+                bidderRequestId: "req-pbs",
+                ortb2: { site: { domain: "example.com" } },
+                bids: [{ bidId: "bid-pbs", adUnitCode: "slot-1", src: "s2s" }],
+              },
+            ],
+            bidsReceived: [{ requestId: null, bidderCode: "amx_ay", adUnitCode: "slot-2", cpm: 2, source: "s2s" }],
+            noBids: [],
+          },
+          []
+        );
+
+        expect(result.unmatchedBids).toBe(1);
+        expect(result.totalBids).toBe(0);
+      });
+
       it("counts a bid as unmatched when no bidder and ad unit fit", async () => {
         const result = await analytics.toWitness(
           s2sAuction([
