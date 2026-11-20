@@ -164,7 +164,7 @@ async function refreshStaleUid2s(config: ResolvedConfig, stale: StaleUid2[]): Pr
  */
 async function refreshStaleUid2sFromCache(config: ResolvedConfig): Promise<void> {
   // identifyAndTokenize writes only to its own cacheKey, so its copy is read
-  // here only when optableCacheTargeting names that same key.
+  // here only when optableCacheTargeting names that same key (true by default).
   const stale = new Map<string, Uid2RefData>();
   try {
     for (const cached of new LocalStorage(config).getTargetingCopies() as ResolvedCache[]) {
