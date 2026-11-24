@@ -124,14 +124,14 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 | `hookIntoPrebid` | `(pbjs?) => boolean` | Attaches event hooks. Defers via `pbjs.que` when `onEvent` is not ready. Returns `false` when Prebid is absent. |
 | `clearData`      | `() => void`         | Clears stored auction/missed-event state (useful in tests).                                                     |
 
-## Debug override
+## Forcing analytics on
 
-The [`optableDebugOverrides` flag](../../core/flags.md) bypasses sampling entirely, so
-every auction is sent regardless of `samplingRate`. `optableDebug` is unrelated — it
-only controls console logging.
+The [`optableEnableAnalytics` flag](../../core/flags.md) makes `shouldSample()` return
+true, so every auction is sent regardless of `samplingRate`. `optableDebug` is
+unrelated — it only controls console logging.
 
-Overridden auctions report `optableSampling: 1`, so the processor does not extrapolate
-them, and `optableDebugOverrides: "1"`, so they can be told apart from production
+These auctions report `optableSampling: 1`, so the processor does not extrapolate
+them, and `optableEnableAnalytics: "1"`, so they can be told apart from production
 traffic. The processor does not filter on the tag, so they still count in aggregates.
 
 ## Payload
@@ -139,7 +139,7 @@ traffic. The processor does not filter on the tag, so they still count in aggreg
 Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `bidderRequests` (with per-bid `status`, `cpm`, `size`, `splitTestAssignment`),
 `optableMatchers`, `optableSources`, `optableTargetingDone`, `optableSampling`,
-`optableDebugOverrides`, `liveintentEIDs`
+`optableEnableAnalytics`, `liveintentEIDs`
 (with per-bidder `hasLiEids` and `liSources`), `intentiqEIDs`, `growthcodeEIDs`,
 `transunionEIDs` (with per-bidder `iiqSources`, `gcSources`, `tuSources`),
 `bidWon`, `missed`, `adUnitCode` (first bid's ad unit), `totalBids` (received

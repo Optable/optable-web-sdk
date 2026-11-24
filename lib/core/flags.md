@@ -56,8 +56,7 @@ if (controlGroup === "1") {
 
 | Flag                        | Read by                                  | Effect                                                                                |
 | --------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------- |
-| `optableDebug`              | `debugLog`, `optableMessage`, RTD module | Verbose logging, and nothing else.                                                    |
-| `optableDebugOverrides`     | `shouldSample`                           | Bypass analytics sampling.                                                            |
+| `optableDebug`              | `debugLog`, `optableMessage`, RTD module | Verbose logging.                                                                      |
 | `optableDisableConsent`     | `getConsent`                             | Bypass the CMP and treat all permissions as granted.                                  |
 | `optableControlGroup`       | `setupAB`                                | `1` forces the control variant, `0` forces treatment. Two-state — read the raw value. |
 | `optableForceTargeting`     | wrapper code                             | Re-run targeting even when a session guard says it already ran.                       |
@@ -66,7 +65,7 @@ if (controlGroup === "1") {
 | `optableForceSkipMerge`     | `buildRTD`                               | Skip merging EIDs into the auction entirely.                                          |
 | `optableResolve1P`          | wrapper code                             | Resolve using a first-party test identifier.                                          |
 | `optableResolve3P`          | wrapper code                             | Resolve using a third-party test IP.                                                  |
-| `optableEnableAnalytics`    | wrapper code                             | Force analytics on, ignoring the sampling rate.                                       |
+| `optableEnableAnalytics`    | `shouldSample`, wrapper code             | Force analytics on, ignoring the sampling rate.                                       |
 | `optableResolveId5`         | `resolveId5`                             | Return a placeholder ID5 value without loading the ID5 API.                           |
 | `optableResolveID5ID`       | `resolveId5`                             | Return a specific ID5 value without loading the ID5 API.                              |
 

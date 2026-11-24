@@ -57,10 +57,10 @@ The payload tenant is read from the SDK instance's `node`.
 ## Usage
 
 - **Sampling**: `samplingRate` (0–1) controls the fraction of events/sessions sent.
-- **Debugging**: pass `debug: true` to log collector activity to the console. The examples above turn it on with the `optableDebug` [QA flag](../../core/flags.md), e.g. by adding `?optableDebug` to the page URL. It changes logging only, never what the SDK collects or sends.
-- **Debug overrides**: set the `optableDebugOverrides` [QA flag](../../core/flags.md) to
-  bypass sampling. Overridden auctions are tagged in the payload so they can be told
-  apart from production traffic.
+- **Debugging**: pass `debug: true` to log collector activity to the console. The examples above turn it on with the `optableDebug` [QA flag](../../core/flags.md), e.g. by adding `?optableDebug` to the page URL.
+- **Forcing analytics on**: set the `optableEnableAnalytics` [QA flag](../../core/flags.md)
+  to send every auction regardless of `samplingRate`. These auctions are tagged in the
+  payload so they can be told apart from production traffic.
 - **Custom fields**: set `window.optable.customAnalytics` to an async function
   returning an object; its keys are merged into every auction payload.
 

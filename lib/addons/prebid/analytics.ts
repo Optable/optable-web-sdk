@@ -158,7 +158,7 @@ class OptablePrebidAnalytics {
    * @returns true if the event should be sampled and analytics calls may proceed.
    */
   shouldSample(): boolean {
-    if (flagEnabled("optableDebugOverrides")) return true;
+    if (flagEnabled("optableEnableAnalytics")) return true;
     if (this.config.samplingRate! <= 0) return false;
     if (this.config.samplingRate! >= 1) return true;
 
@@ -610,7 +610,7 @@ class OptablePrebidAnalytics {
       }
     });
 
-    const debugOverride = flagEnabled("optableDebugOverrides");
+    const analyticsForced = flagEnabled("optableEnableAnalytics");
 
     const witnessData: WitnessProperties = {
       bidderRequests: requests.map((br: any) => {
@@ -627,13 +627,13 @@ class OptablePrebidAnalytics {
       adUnitCode,
       totalRequests: bidderRequests.length,
       totalBids,
-      // The override sends every auction, so reporting the configured rate would
+      // The flag sends every auction, so reporting the configured rate would
       // have the processor extrapolate a debug session as if it were a sample.
       // Read once so the rate and the tag cannot disagree for one event.
-      optableSampling: debugOverride ? 1 : this.config.samplingRate || 1,
+      optableSampling: analyticsForced ? 1 : this.config.samplingRate || 1,
       // Tells debug traffic apart from production. Sent as a '1'/'0' string for
       // the same reason as optableTargetingDone below.
-      optableDebugOverrides: debugOverride ? "1" : "0",
+      optableEnableAnalytics: analyticsForced ? "1" : "0",
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
       // A raw count (e.g. 2) coerces to "2" which matches neither branch → status='unknown'.
