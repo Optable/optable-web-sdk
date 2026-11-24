@@ -6,6 +6,7 @@ import { buildRequest } from "../../core/network";
 import { getTrafficSource } from "../../core/traffic-source";
 import { generateTargetingKeys } from "../../core/storage-keys";
 import { getBidMeta } from "../../core/bid-meta";
+import { flagEnabled } from "../../core/flags";
 
 import * as Bowser from "bowser";
 
@@ -157,6 +158,7 @@ class OptablePrebidAnalytics {
    * @returns true if the event should be sampled and analytics calls may proceed.
    */
   shouldSample(): boolean {
+    if (flagEnabled("optableEnableAnalytics")) return true;
     if (this.config.samplingRate! <= 0) return false;
     if (this.config.samplingRate! >= 1) return true;
 
@@ -608,6 +610,8 @@ class OptablePrebidAnalytics {
       }
     });
 
+    const analyticsForced = flagEnabled("optableEnableAnalytics");
+
     const witnessData: WitnessProperties = {
       bidderRequests: requests.map((br: any) => {
         br.optableMatchers.forEach((m: unknown) => oMatchersSet.add(m));
@@ -623,7 +627,13 @@ class OptablePrebidAnalytics {
       adUnitCode,
       totalRequests: bidderRequests.length,
       totalBids,
-      optableSampling: this.config.samplingRate || 1,
+      // The flag sends every auction, so reporting the configured rate would
+      // have the processor extrapolate a debug session as if it were a sample.
+      // Read once so the rate and the tag cannot disagree for one event.
+      optableSampling: analyticsForced ? 1 : this.config.samplingRate || 1,
+      // Tells debug traffic apart from production. Sent as a '1'/'0' string for
+      // the same reason as optableTargetingDone below.
+      optableAnalyticsForced: analyticsForced ? "1" : "0",
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
       // A raw count (e.g. 2) coerces to "2" which matches neither branch → status='unknown'.

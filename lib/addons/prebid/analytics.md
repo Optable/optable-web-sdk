@@ -124,11 +124,25 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 | `hookIntoPrebid` | `(pbjs?) => boolean` | Attaches event hooks. Defers via `pbjs.que` when `onEvent` is not ready. Returns `false` when Prebid is absent. |
 | `clearData`      | `() => void`         | Clears stored auction/missed-event state (useful in tests).                                                     |
 
+## Forcing analytics on
+
+The [`optableEnableAnalytics` flag](../../core/flags.md) makes `shouldSample()` return
+true, so every auction is sent regardless of `samplingRate`. It covers this V2 add-on
+only: the V1 add-on and any wrapper deciding whether to load analytics at all sample on
+their own, and some read the flag's value as a rate. Here any value other than `0`
+forces full sampling, so `?optableEnableAnalytics=0.5` sends every auction.
+`optableDebug` is unrelated — it only controls console logging.
+
+These auctions report `optableSampling: 1`, so the processor does not extrapolate
+them, and `optableAnalyticsForced: "1"`, so they can be told apart from production
+traffic. The processor does not filter on the tag, so they still count in aggregates.
+
 ## Payload
 
 Each sampled auction sends an `optable.prebid.auction` event with, among others:
 `bidderRequests` (with per-bid `status`, `cpm`, `size`, `splitTestAssignment`),
-`optableMatchers`, `optableSources`, `optableTargetingDone`, `liveintentEIDs`
+`optableMatchers`, `optableSources`, `optableTargetingDone`, `optableSampling`,
+`optableAnalyticsForced`, `liveintentEIDs`
 (with per-bidder `hasLiEids` and `liSources`), `intentiqEIDs`, `growthcodeEIDs`,
 `transunionEIDs` (with per-bidder `iiqSources`, `gcSources`, `tuSources`),
 `bidWon`, `missed`, `adUnitCode` (first bid's ad unit), `totalBids` (received

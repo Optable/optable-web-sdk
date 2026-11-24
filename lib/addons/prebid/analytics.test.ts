@@ -1,6 +1,7 @@
 import OptablePrebidAnalytics, { initPrebidAnalytics } from "./analytics";
 import type OptableSDK from "../../sdk";
 import { generateTargetingKeys } from "../../core/storage-keys";
+import { resetFlags } from "../../core/flags";
 
 // Mock the SDK_WRAPPER_VERSION global
 declare global {
@@ -32,6 +33,8 @@ describe("OptablePrebidAnalytics", () => {
       document.removeEventListener("visibilitychange", (analytics as any).handleVisibilityChange);
     }
     jest.clearAllMocks();
+    sessionStorage.clear();
+    resetFlags();
   });
 
   describe("Class instantiation", () => {
@@ -147,6 +150,48 @@ describe("OptablePrebidAnalytics", () => {
       expect(analytics.shouldSample()).toBe(false);
 
       mockRandom.mockRestore();
+    });
+
+    it("should return true when optableEnableAnalytics flag is set, even with samplingRate 0", () => {
+      sessionStorage.setItem("optableEnableAnalytics", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(true);
+    });
+
+    it("should ignore optableEnableAnalytics=0 and honour samplingRate 0", () => {
+      sessionStorage.setItem("optableEnableAnalytics", "0");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(false);
+    });
+
+    it("should ignore optableDebug, which only controls logging", () => {
+      sessionStorage.setItem("optableDebug", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0 });
+      expect(analytics.shouldSample()).toBe(false);
+    });
+  });
+
+  describe("sampling reported in the payload", () => {
+    const auctionEndEvent = { auctionId: "auction-sampling" };
+
+    it("should report the configured rate and no tag by default", async () => {
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
+      const result = await analytics.toWitness(auctionEndEvent, []);
+      expect(result.optableSampling).toBe(0.1);
+      expect(result.optableAnalyticsForced).toBe("0");
+    });
+
+    it("should report a rate of 1 and tag the event when optableEnableAnalytics is set", async () => {
+      sessionStorage.setItem("optableEnableAnalytics", "1");
+      resetFlags();
+      analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
+      const result = await analytics.toWitness(auctionEndEvent, []);
+      // Reporting 0.1 here would have the processor extrapolate a debug session tenfold.
+      expect(result.optableSampling).toBe(1);
+      expect(result.optableAnalyticsForced).toBe("1");
     });
   });
 
