@@ -633,7 +633,7 @@ class OptablePrebidAnalytics {
       optableSampling: analyticsForced ? 1 : this.config.samplingRate || 1,
       // Tells debug traffic apart from production. Sent as a '1'/'0' string for
       // the same reason as optableTargetingDone below.
-      optableEnableAnalytics: analyticsForced ? "1" : "0",
+      optableAnalyticsForced: analyticsForced ? "1" : "0",
       // Processor schema declares optableTargetingDone as STRING and checks IN ('1','true').
       // Send '1'/'0' so Spark reads a predictable string regardless of matcher count.
       // A raw count (e.g. 2) coerces to "2" which matches neither branch → status='unknown'.

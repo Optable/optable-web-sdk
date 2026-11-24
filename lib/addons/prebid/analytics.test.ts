@@ -181,7 +181,7 @@ describe("OptablePrebidAnalytics", () => {
       analytics = new OptablePrebidAnalytics(mockOptableInstance, { samplingRate: 0.1 });
       const result = await analytics.toWitness(auctionEndEvent, []);
       expect(result.optableSampling).toBe(0.1);
-      expect(result.optableEnableAnalytics).toBe("0");
+      expect(result.optableAnalyticsForced).toBe("0");
     });
 
     it("should report a rate of 1 and tag the event when optableEnableAnalytics is set", async () => {
@@ -191,7 +191,7 @@ describe("OptablePrebidAnalytics", () => {
       const result = await analytics.toWitness(auctionEndEvent, []);
       // Reporting 0.1 here would have the processor extrapolate a debug session tenfold.
       expect(result.optableSampling).toBe(1);
-      expect(result.optableEnableAnalytics).toBe("1");
+      expect(result.optableAnalyticsForced).toBe("1");
     });
   });
 
