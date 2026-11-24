@@ -116,3 +116,6 @@ sessionStorage.setItem("optableControlGroup", "0"); // force treatment
 ```
 
 URL params take precedence over `sessionStorage`. Clear `localStorage.OPTABLE_SPLIT_TEST` to reset a sticky assignment.
+
+A flag-forced variant is **not** written to `localStorage`, which outlives the flag —
+persisting it would pin the browser to that variant long after the flag is gone.

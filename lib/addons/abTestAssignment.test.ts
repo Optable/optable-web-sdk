@@ -83,6 +83,22 @@ describe("setupAB - override via flags", () => {
     expect(result.variant.id).toBe("production");
     expect(result.isControl).toBe(false);
   });
+
+  it("does not persist a flag-forced variant to localStorage", () => {
+    sessionStorage.setItem("optableControlGroup", "0");
+    resetFlags();
+    setupAB({ variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }] });
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("does not overwrite an existing assignment when a flag forces the other variant", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: "test", trafficPercentage: 5 }));
+    sessionStorage.setItem("optableControlGroup", "0");
+    resetFlags();
+    const result = setupAB({ variants: [{ id: "production" }, { id: "test", trafficPercentage: 5 }] });
+    expect(result.variant.id).toBe("production");
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).id).toBe("test");
+  });
 });
 
 describe("setupAB - custom variant ids", () => {
