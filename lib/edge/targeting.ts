@@ -115,9 +115,13 @@ function TargetingClearCache(config: ResolvedConfig) {
  * Skip targeting for bots by marking targeting as already done, so a wrapper's
  * session guard (TargetingOncePerSession) skips the edge call. No-op for real
  * users. Returns whether the request was identified as a bot.
+ *
+ * Returns false without calling isBot() under optableForceTargeting, so a
+ * headless browser used while debugging still gets targeting.
  */
 export function SkipTargetingForBots(): boolean {
   try {
+    if (flagEnabled("optableForceTargeting")) return false;
     if (typeof isBot === "function" && isBot()) {
       markTargetingResolved();
       return true;

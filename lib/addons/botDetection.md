@@ -37,6 +37,8 @@ if (!skipped) {
 
 It returns whether the request was identified as a bot, and is a no-op for real visitors. Prefer it over a bare `isBot()` early-return when other code on the page can also trigger targeting.
 
+When the [`optableForceTargeting` flag](../core/flags.md) is set it returns `false` without calling `isBot()`, so a headless browser used while debugging still gets targeting. The flag also makes `TargetingOncePerSession` ignore an `OPTABLE_TARGETING_DONE` left by an earlier bot-detected load. A page using a bare `isBot()` early-return is not affected by the flag.
+
 ## What is matched
 
 The user agent is tested case-insensitively against a single pattern built from these substrings:
