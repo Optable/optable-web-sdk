@@ -298,6 +298,14 @@ function sanitizeGamValue(keyword: string): string {
     .trim();
 }
 
+// The response's keywords sorted by prominence (1 = most prominent); missing or
+// invalid prominence sorts last.
+function keywordsByProminence(response: ContextualSegmentsResponse | null): ContextualKeyword[] {
+  const prominenceOf = (k: ContextualKeyword): number =>
+    Number.isFinite(k?.prominence) ? k.prominence : Number.POSITIVE_INFINITY;
+  return [...(response?.classifications?.keywords ?? [])].sort((a, b) => prominenceOf(a) - prominenceOf(b));
+}
+
 // Builds GAM-style targeting key-values from a contextual segments response by
 // grouping category ids under a key derived from each category's taxonomy.
 //
@@ -357,14 +365,10 @@ function ContextualTargetingKeyValues(
   const keywordKey = options?.keywordKey ?? DEFAULT_KEYWORD_KEY;
   if (keywordKey) {
     const maxKeywords = options?.maxKeywords ?? DEFAULT_MAX_KEYWORDS;
-    const keywords = response?.classifications?.keywords ?? [];
-    // Sort by prominence (1 = most prominent); missing/invalid prominence sorts last.
-    const prominenceOf = (k: ContextualKeyword): number =>
-      typeof k?.prominence === "number" ? k.prominence : Number.POSITIVE_INFINITY;
 
     const values: string[] = [];
     const seen = new Set<string>();
-    for (const keyword of [...keywords].sort((a, b) => prominenceOf(a) - prominenceOf(b))) {
+    for (const keyword of keywordsByProminence(response)) {
       if (values.length >= maxKeywords) {
         break;
       }
@@ -454,9 +458,90 @@ function brandSafetyTargetingValue(response: ContextualSegmentsResponse | null):
   return ContextualMaxRiskLevel(response) ?? BRAND_SAFETY_NO_FLAGS;
 }
 
+// IAB segtax of each category taxonomy the DCN serves, from AdCOM 1.0's
+// "List: Category Taxonomies".
+const TAXONOMY_SEGTAX: Record<string, number> = {
+  iab_ct_2_2: 6,
+  iab_ct_3_1: 9,
+};
+
+// Name of the site.content.data entries carrying Optable's categories, so a
+// merge can replace ours without touching other providers'.
+const CONTEXTUAL_DATA_NAME = "optable.co";
+
+type ContextualSiteData = {
+  name: string;
+  ext: { segtax: number };
+  segment: { id: string }[];
+};
+
+// ORTB2 site fragment to merge into a Prebid auction.
+type ContextualPrebidORTB2 = {
+  site: {
+    content: { data: ContextualSiteData[]; keywords?: string };
+  };
+};
+
+// OpenRTB keywords only reserve the comma, which splits them; GAM's case,
+// character and length rules do not apply.
+function sanitizeORTBKeyword(keyword: string): string {
+  return keyword.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// Builds the ORTB2 site fragment for a contextual segments response:
+// categories as site.content.data segments under their taxonomy's segtax,
+// and every keyword, by prominence, in the comma-separated site.content.keywords
+// that Prebid's keyword helpers read (most adapters ignore kwarray).
+function ContextualPrebidORTB2(response: ContextualSegmentsResponse | null): ContextualPrebidORTB2 {
+  const segments = new Map<number, string[]>();
+  for (const category of response?.classifications?.categories ?? []) {
+    // Own-property lookup, as in riskLevelRank.
+    if (
+      !Object.prototype.hasOwnProperty.call(TAXONOMY_SEGTAX, category?.taxonomy) ||
+      category.id == null ||
+      category.id === ""
+    ) {
+      continue;
+    }
+    const segtax = TAXONOMY_SEGTAX[category.taxonomy];
+    const ids = segments.get(segtax) ?? [];
+    if (!ids.includes(category.id)) {
+      ids.push(category.id);
+    }
+    segments.set(segtax, ids);
+  }
+
+  const data = [...segments].map(([segtax, ids]) => ({
+    name: CONTEXTUAL_DATA_NAME,
+    ext: { segtax },
+    segment: ids.map((id) => ({ id })),
+  }));
+
+  // Keyed case-insensitively, as the RTD merge dedupes; the most prominent spelling wins.
+  const keywords = new Map<string, string>();
+  for (const keyword of keywordsByProminence(response)) {
+    if (typeof keyword?.keyword !== "string") {
+      continue;
+    }
+    const sanitized = sanitizeORTBKeyword(keyword.keyword);
+    const key = sanitized.toLowerCase();
+    if (sanitized && !keywords.has(key)) {
+      keywords.set(key, sanitized);
+    }
+  }
+
+  return {
+    site: {
+      content: keywords.size ? { data, keywords: [...keywords.values()].join(",") } : { data },
+    },
+  };
+}
+
 export {
   ContextualSegments,
   ContextualTargetingKeyValues,
+  ContextualPrebidORTB2,
+  CONTEXTUAL_DATA_NAME,
   ContextualBrandSafetyOf,
   ContextualMaxRiskLevel,
   ContextualSentimentOf,

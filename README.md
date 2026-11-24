@@ -541,7 +541,7 @@ type ContextualSegmentsResponse = {
 
 > **Note:** The requested URL must already have been classified by the DCN.
 
-Each successful call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache; a failed call leaves the previous response in place). When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
+Each successful call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache; a failed call leaves the previous response in place), readable with `ctxSegmentsFromCache()`. When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
 
 #### Brand safety
 
@@ -1270,13 +1270,15 @@ For bidder adapters that do not support SDA, but that do support targeting priva
 
 ### RTD module
 
-`buildRTD()` builds the config behind the Optable RTD provider, which merges cached EIDs into the auction's `ortb2Fragments` with per-source bidder routing and merge strategies. With `waitForTargeting: true` it waits — bounded by Prebid's `auctionDelay` — for the targeting response when the cache has no EIDs yet, and an `isControlGroup` callback gates serving for split tests:
+`buildRTD()` builds the config behind the Optable RTD provider, which merges cached EIDs into the auction's `ortb2Fragments` with per-source bidder routing and merge strategies. With `waitForTargeting: true` it waits (up to Prebid's `auctionDelay`) for the targeting response when the cache has no EIDs yet, and an `isControlGroup` callback gates serving for split tests:
 
 ```typescript
 import { buildRTD } from "@optable/web-sdk/lib/dist/core/prebid/rtd";
 
 const rtd = buildRTD({ waitForTargeting: true, isControlGroup: () => isControlGroup });
 ```
+
+While an `enableContextual` callback returns true (evaluated per auction), it also merges the cached `ctxSegments()` response of the SDK instance named by `instance` into `ortb2Fragments.global.site`, including for the control group: categories as `site.content.data` segments and keywords as `site.content.keywords`. Enable `initContextual` so the response is cached before the first auction.
 
 For the auction flow and the full option list, see the [RTD module README](lib/core/prebid/rtd.md).
 

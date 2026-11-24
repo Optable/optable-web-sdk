@@ -521,6 +521,19 @@ describe("behavior testing of", () => {
     });
   });
 
+  test("ctxSegmentsFromCache returns null before ctxSegments has been called", () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+
+    expect(sdk.ctxSegmentsFromCache()).toBeNull();
+  });
+
+  test("ctxSegmentsFromCache returns the response cached by ctxSegments", async () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxSegmentsFromCache()).toBe(result);
+  });
+
   test("ctxSegments returns an empty categories array when the server returns one", async () => {
     server.use(
       http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {

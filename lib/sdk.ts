@@ -233,6 +233,11 @@ class OptableSDK {
     return response;
   }
 
+  // The latest ctxSegments() response, or null before one has landed.
+  ctxSegmentsFromCache(): ContextualSegmentsResponse | null {
+    return this.contextualResponse;
+  }
+
   ctxTargetingKeyValues(
     taxonomyKeys?: Record<string, string>,
     options?: ContextualTargetingKeyValuesOptions
