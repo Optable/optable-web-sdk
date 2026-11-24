@@ -127,8 +127,9 @@ Returns the `OptablePrebidAnalytics` instance, or `null` when no Prebid instance
 ## Forcing analytics on
 
 The [`optableEnableAnalytics` flag](../../core/flags.md) makes `shouldSample()` return
-true, so every auction is sent regardless of `samplingRate`. `optableDebug` is
-unrelated — it only controls console logging.
+true, so every auction is sent regardless of `samplingRate`. It covers this V2 add-on
+only: the V1 add-on and any wrapper deciding whether to load analytics at all sample on
+their own. `optableDebug` is unrelated — it only controls console logging.
 
 These auctions report `optableSampling: 1`, so the processor does not extrapolate
 them, and `optableEnableAnalytics: "1"`, so they can be told apart from production

@@ -65,7 +65,7 @@ if (controlGroup === "1") {
 | `optableForceSkipMerge`     | `buildRTD`                               | Skip merging EIDs into the auction entirely.                                          |
 | `optableResolve1P`          | wrapper code                             | Resolve using a first-party test identifier.                                          |
 | `optableResolve3P`          | wrapper code                             | Resolve using a third-party test IP.                                                  |
-| `optableEnableAnalytics`    | `shouldSample`, wrapper code             | Force analytics on, ignoring the sampling rate.                                       |
+| `optableEnableAnalytics`    | `shouldSample` (V2), wrapper code        | V2 Prebid analytics sends every auction, ignoring `samplingRate`.                     |
 | `optableResolveId5`         | `resolveId5`                             | Return a placeholder ID5 value without loading the ID5 API.                           |
 | `optableResolveID5ID`       | `resolveId5`                             | Return a specific ID5 value without loading the ID5 API.                              |
 
