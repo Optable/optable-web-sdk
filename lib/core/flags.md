@@ -56,7 +56,8 @@ if (controlGroup === "1") {
 
 | Flag                        | Read by                                  | Effect                                                                                |
 | --------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------- |
-| `optableDebug`              | `debugLog`, `optableMessage`, RTD module | Verbose logging.                                                                      |
+| `optableDebug`              | `debugLog`, `optableMessage`, RTD module | Verbose logging, and nothing else.                                                    |
+| `optableDebugOverrides`     | `shouldSample`                           | Bypass analytics sampling.                                                            |
 | `optableDisableConsent`     | `getConsent`                             | Bypass the CMP and treat all permissions as granted.                                  |
 | `optableControlGroup`       | `setupAB`                                | `1` forces the control variant, `0` forces treatment. Two-state — read the raw value. |
 | `optableForceTargeting`     | wrapper code                             | Re-run targeting even when a session guard says it already ran.                       |

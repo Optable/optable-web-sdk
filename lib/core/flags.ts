@@ -1,5 +1,8 @@
 const FLAG_KEYS = [
   "optableDebug",
+  // Separate from optableDebug, which publishers already set to turn on console
+  // logging and must keep meaning only that.
+  "optableDebugOverrides",
   "optableDisableConsent",
   "optableResolve1P",
   "optableResolve3P",
