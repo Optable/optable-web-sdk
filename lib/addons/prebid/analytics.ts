@@ -571,6 +571,8 @@ class OptablePrebidAnalytics {
     });
     // Prebid Server responses can carry a requestId that matches no client bidId.
     // Fall back to the same bidder and ad unit, first bid still waiting for a response.
+    // A Prebid Server seat (e.g. "amx_ay") can differ from the requested bidder ("prebidServer"): attach it to the
+    // s2s request for the same ad unit, filling the waiting bid first and adding one bid per further seat.
     let unmatchedBids = 0;
     unresolvedBids.forEach((b: any) => {
       const bidderCode = b.bidderCode || b.bidder;
@@ -578,8 +580,25 @@ class OptablePrebidAnalytics {
         .filter((r: any) => r.bidderCode === bidderCode)
         .flatMap((r: any) => r.bids)
         .find((bid: any) => bid.adUnitCode === b.adUnitCode && !bidsReceivedMap.has(bid.bidId));
-      if (match) bidsReceivedMap.set(match.bidId, b);
-      else unmatchedBids += 1;
+      if (match) {
+        bidsReceivedMap.set(match.bidId, b);
+        return;
+      }
+      const s2sRequest =
+        b.source === "s2s" &&
+        requests.find((r: any) => r.bids.some((bid: any) => bid.src === "s2s" && bid.adUnitCode === b.adUnitCode));
+      if (!s2sRequest) {
+        unmatchedBids += 1;
+        return;
+      }
+      const s2sBids = s2sRequest.bids.filter((bid: any) => bid.src === "s2s" && bid.adUnitCode === b.adUnitCode);
+      let target = s2sBids.find((bid: any) => !bidsReceivedMap.has(bid.bidId));
+      if (!target) {
+        target = { ...s2sBids[0], bidId: `${s2sBids[0].bidId}:${bidderCode}:${s2sRequest.bids.length}` };
+        s2sRequest.bids.push(target);
+      }
+      target.seat = bidderCode;
+      bidsReceivedMap.set(target.bidId, b);
     });
     const noBidRequestIds = new Set<string>(noBids.map((nb: any) => nb.bidderRequestId));
     const timedOutRequestIds = new Set<string>(timeoutBids.map((tb: any) => tb.bidderRequestId));

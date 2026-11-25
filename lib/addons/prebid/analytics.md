@@ -152,8 +152,12 @@ parsed `userAgent`/`device`.
 
 Received bids are matched to request bids on `requestId`. Prebid Server
 responses can carry a `requestId` that matches no client bid; those go to the
-first bid of the same bidder and ad unit still without a response. Bids that fit
-nowhere are counted in `unmatchedBids`, omitted when 0.
+first bid of the same bidder and ad unit still without a response. A Prebid
+Server seat can also differ from the requested bidder (seat `amx_ay` on a
+`prebidServer` request): such an `s2s` bid goes to the `s2s` request for the
+same ad unit, filling its waiting bid first and adding one bid per further seat,
+and records the seat in `seat`. Bids that fit nowhere are counted in
+`unmatchedBids`, omitted when 0.
 
 Received bids also carry the buyer-side fields the bid adapter sets, in both the
 V1 and V2 add-ons. Each is omitted when the bid does not have it, so a bid without
