@@ -22,6 +22,24 @@ interface EIDSource {
   mergeStrategy?: MergeStrategy;
 }
 
+// Per-auction routing rule, applied on top of eidSources. See rtd.md.
+interface EIDRule {
+  // Substring(s) matched against the EID source. Omitted: every source.
+  sources?: string | string[];
+  // Substrings matched against EID sources other providers already put in the
+  // auction's global ORTB2. Omitted: the rule applies to every auction.
+  when?: {
+    sourcePresent?: string;
+    sourceAbsent?: string;
+  };
+  // Replace the working set of bidders.
+  routes?: string[];
+  // Add bidders to the working set.
+  include?: string[];
+  // Remove bidders from the working set, including their -s2s / _s2s aliases.
+  exclude?: string[];
+}
+
 interface ORTB2User {
   eids?: EID[];
   ext?: {
@@ -42,6 +60,7 @@ interface TargetingData {
 }
 
 interface ReqBidsConfigObj {
+  adUnits?: Array<{ bids?: Array<{ bidder?: string }> }>;
   ortb2Fragments: {
     global: ORTB2;
     bidder: {
@@ -56,6 +75,7 @@ interface RTDConfig {
   enableLogging: boolean;
   log: (level: string, message: string, ...args: any[]) => void;
   eidSources: { [source: string]: EIDSource };
+  eidRules: EIDRule[];
   skipMerge: (targetORTB2: ORTB2, eidSource: string) => boolean;
   optableCacheTargeting: string;
   matcherFilter: string[];
@@ -76,6 +96,8 @@ interface RTDConfig {
 interface RTDOptions {
   enableLogging?: boolean;
   eidSources?: { [source: string]: EIDSource };
+  // Ordered per-auction routing rules applied on top of eidSources.
+  eidRules?: EIDRule[];
   skipMerge?: (targetORTB2: ORTB2, eidSource: string) => boolean;
   optableCacheTargeting?: string;
   matcherFilter?: string[];
@@ -289,6 +311,109 @@ function merge(config: RTDConfig, targetORTB2: ORTB2, sourceORTB2: ORTB2): numbe
   return skipped;
 }
 
+const S2S_ALIAS = /[-_]s2s$/;
+
+// Reads EIDs past Prebid's ORTB2 Proxy, whose get trap blocks direct reads of `eids`.
+function readEids(ortb2?: ORTB2): EID[] {
+  const ext = ortb2?.user?.ext;
+  const eids = ext ? Object.getOwnPropertyDescriptor(ext, "eids")?.value : null;
+  return Array.isArray(eids) ? eids : [];
+}
+
+// Bidders in this auction: adUnit bids plus s2sConfig bidders, which reach
+// Prebid Server through ortb2Fragments.bidder and so need routing too.
+function auctionBidders(config: RTDConfig, reqBidsConfigObj: ReqBidsConfigObj): string[] {
+  const bidders = new Set<string>();
+  reqBidsConfigObj.adUnits?.forEach((adUnit) =>
+    adUnit.bids?.forEach((bid) => {
+      if (bid.bidder) bidders.add(bid.bidder);
+    })
+  );
+  const s2sConfig = (window as any)?.[config.prebidGlobal]?.getConfig?.("s2sConfig");
+  (Array.isArray(s2sConfig) ? s2sConfig : [s2sConfig]).forEach((s2s) =>
+    s2s?.bidders?.forEach((bidder: string) => bidders.add(bidder))
+  );
+  return [...bidders];
+}
+
+function ruleMatchesAuction(rule: EIDRule, auctionSources: string[]): boolean {
+  const present = (needle: string) => auctionSources.some((source) => source.includes(needle));
+  if (rule.when?.sourcePresent && !present(rule.when.sourcePresent)) return false;
+  if (rule.when?.sourceAbsent && present(rule.when.sourceAbsent)) return false;
+  return true;
+}
+
+function ruleCoversSource(rule: EIDRule, source: string): boolean {
+  if (!rule.sources) return true;
+  const needles = Array.isArray(rule.sources) ? rule.sources : [rule.sources];
+  return needles.some((needle) => source.includes(needle));
+}
+
+// Applies config.eidRules to this auction. Returns, per source the rules
+// narrowed, the bidders in the auction that receive it (possibly none).
+// Sources the rules leave alone are absent and keep their eidSources routing.
+function routesFromRules(
+  config: RTDConfig,
+  reqBidsConfigObj: ReqBidsConfigObj,
+  sources: string[]
+): { [source: string]: string[] } {
+  if (!config.eidRules?.length) return {};
+
+  // Conditions look at what other providers resolved, not at our own EIDs
+  // (for example ones already merged through pubProvidedId).
+  const auctionSources = readEids(reqBidsConfigObj.ortb2Fragments.global)
+    .filter((eid) => (eid as any).inserter !== "optable.co")
+    .map((eid) => eid.source || "");
+  const active = config.eidRules.filter((rule) => ruleMatchesAuction(rule, auctionSources));
+  if (!active.length) {
+    config.log("info", "No EID rule matches this auction");
+    return {};
+  }
+
+  const candidates = auctionBidders(config, reqBidsConfigObj);
+  if (!candidates.length) {
+    config.log("warn", "EID rules match but no bidders were found in the auction; routing unchanged");
+    return {};
+  }
+
+  const scoped: { [source: string]: string[] } = {};
+  sources.forEach((source) => {
+    const base = config.eidSources[source];
+    const baseRoutes = base?.routes ?? (base?.route ? [base.route] : ["global"]);
+    const wasGlobal = baseRoutes.includes("global");
+    let set = wasGlobal ? candidates : baseRoutes;
+    let touched = false;
+
+    active
+      .filter((rule) => ruleCoversSource(rule, source))
+      .forEach((rule) => {
+        if (rule.routes) {
+          set = rule.routes.includes("global") ? candidates : [...rule.routes];
+          touched = true;
+        }
+        if (rule.include) {
+          set = [...new Set([...set, ...rule.include])];
+          touched = true;
+        }
+        if (rule.exclude) {
+          const excluded = rule.exclude;
+          set = set.filter((bidder) => !excluded.includes(bidder) && !excluded.includes(bidder.replace(S2S_ALIAS, "")));
+          touched = true;
+        }
+      });
+
+    if (!touched) return;
+    const routes = set.filter((bidder) => candidates.includes(bidder));
+    // Still everyone: stay global rather than fan out into identical per-bidder copies.
+    if (wasGlobal && routes.length === candidates.length) return;
+
+    scoped[source] = routes;
+    const withheld = (wasGlobal ? candidates : baseRoutes).filter((bidder) => !routes.includes(bidder));
+    config.log("info", `EID rules route ${source} to [${routes}], withheld from [${withheld}]`);
+  });
+  return scoped;
+}
+
 // Custom handleRtd function to merge targeting data into the reqBidsConfigObj
 function handleRtd(
   config: RTDConfig,
@@ -301,10 +426,17 @@ function handleRtd(
 
   // Filter EIDs for global ORTB2 and collect bidder-specific EIDs
   const eidsPerRoute: { [route: string]: ORTB2 } = {};
+  // EIDs whose source an EID rule narrowed: delivered only to those bidders.
+  const ruleEidsPerRoute: { [route: string]: ORTB2 } = {};
   let processedEids = 0;
   let skippedEids = 0;
 
   config.log("info", "targetingData", targetingData);
+
+  const sources = [
+    ...new Set((targetingData?.ortb2?.user?.eids ?? []).map((eid) => eid?.source).filter(Boolean)),
+  ] as string[];
+  const ruleRoutes = routesFromRules(config, reqBidsConfigObj, sources);
 
   targetingData?.ortb2?.user?.eids?.forEach((eid, index) => {
     if (!eid || typeof eid !== "object") {
@@ -324,6 +456,22 @@ function handleRtd(
     if (config.matcherExclude.length > 0 && config.matcherExclude.includes(eid.matcher || "")) {
       config.log("info", `EID with source ${eid.source} excluded (matcher: ${eid.matcher})`);
       skippedEids += 1;
+      return;
+    }
+
+    const ruleRouted = ruleRoutes[eid.source];
+    if (ruleRouted) {
+      if (!ruleRouted.length) {
+        config.log("info", `EID with source ${eid.source} withheld from every bidder by EID rules`);
+        skippedEids += 1;
+        return;
+      }
+      const { _ref, ...clean } = eid as any;
+      ruleRouted.forEach((route) => {
+        ruleEidsPerRoute[route] = ruleEidsPerRoute[route] ?? { user: { ext: { eids: [] } } };
+        ruleEidsPerRoute[route].user!.ext!.eids!.push(clean);
+      });
+      processedEids += 1;
       return;
     }
 
@@ -362,6 +510,17 @@ function handleRtd(
     }
   });
 
+  // Rule routes only name bidders in this auction, and must never fall back to
+  // global (that would hand the EID to the bidders a rule withheld it from), so
+  // the bidder's fragment is created when Prebid has none. Runs after the loop
+  // above so creating a fragment here does not change where other sources go.
+  Object.entries(ruleEidsPerRoute).forEach(([route, ortb2]) => {
+    const fragments = reqBidsConfigObj.ortb2Fragments.bidder;
+    fragments[route] = fragments[route] ?? {};
+    bidderEidsCount += ortb2.user?.ext?.eids?.length || 0;
+    skippedEids += merge(config, fragments[route], ortb2);
+  });
+
   config.log("info", `Processed ${processedEids} EIDs, skipped ${skippedEids} EIDs`);
   config.log("info", `Merged ${globalEidsCount} global EIDs and ${bidderEidsCount} bidder-specific EID sets`);
   config.log("info", "Successfully completed handleRtd function");
@@ -389,6 +548,7 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
       }
     },
     eidSources: options.eidSources ?? { ...defaultEIDSources },
+    eidRules: options.eidRules ?? [],
     skipMerge: flagEnabled("optableForceSkipMerge")
       ? () => true
       : options.skipMerge !== undefined
@@ -433,6 +593,7 @@ export {
   defaultEIDSources,
   type EID,
   type EIDSource,
+  type EIDRule,
   type ORTB2,
   type ORTB2User,
   type TargetingData,

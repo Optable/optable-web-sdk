@@ -156,6 +156,219 @@ describe("buildRTD - prebidGlobal", () => {
   });
 });
 
+describe("buildRTD - eidRules", () => {
+  const OURS = [
+    { source: "uidapi.com", uids: [{ id: "uid2" }] },
+    { source: "criteo-hemapi.com", uids: [{ id: "hem" }] },
+    { source: "triplelift.com", uids: [{ id: "tl" }] },
+  ];
+
+  // An auction with these bidders, LiveIntent's EID already in global ORTB2
+  // when `liveintent` is set, and no bidder fragments (Prebid only creates
+  // them for bidders with bidder config).
+  function auction(bidders: string[], { liveintent = false } = {}): ReqBidsConfigObj {
+    const global = liveintent ? { user: { ext: { eids: [{ source: "liveintent.com", uids: [{ id: "li" }] }] } } } : {};
+    return {
+      adUnits: [{ bids: bidders.map((bidder) => ({ bidder })) }],
+      ortb2Fragments: { global, bidder: {} },
+    };
+  }
+
+  function sourcesIn(ortb2?: { user?: { ext?: { eids?: { source: string }[] } } }) {
+    return (ortb2?.user?.ext?.eids ?? []).map((eid) => eid.source).filter((s) => s !== "liveintent.com");
+  }
+
+  beforeEach(() => seedCache(OURS));
+
+  it("is a no-op without rules", async () => {
+    const req = auction(["criteo", "kargo"]);
+
+    await buildRTD({ eidSources: {} }).handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.global)).toEqual(["uidapi.com", "criteo-hemapi.com", "triplelift.com"]);
+    expect(req.ortb2Fragments.bidder).toEqual({});
+  });
+
+  it("holds named bidders out when another provider resolved the user", async () => {
+    const rtd = buildRTD({
+      eidSources: {},
+      eidRules: [{ when: { sourcePresent: "liveintent" }, exclude: ["kargo"] }],
+    });
+    const req = auction(["criteo", "kargo", "ttd"], { liveintent: true });
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.global)).toEqual([]);
+    expect(req.ortb2Fragments.bidder.kargo).toBeUndefined();
+    expect(sourcesIn(req.ortb2Fragments.bidder.criteo)).toEqual(["uidapi.com", "criteo-hemapi.com", "triplelift.com"]);
+    expect(sourcesIn(req.ortb2Fragments.bidder.ttd)).toEqual(["uidapi.com", "criteo-hemapi.com", "triplelift.com"]);
+  });
+
+  it("does not fire when the condition is not met", async () => {
+    const rtd = buildRTD({
+      eidSources: {},
+      eidRules: [{ when: { sourcePresent: "liveintent" }, exclude: ["kargo"] }],
+    });
+    const req = auction(["criteo", "kargo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.global)).toHaveLength(3);
+    expect(req.ortb2Fragments.bidder).toEqual({});
+  });
+
+  it("honors sourceAbsent", async () => {
+    const rtd = buildRTD({
+      eidSources: {},
+      eidRules: [{ when: { sourceAbsent: "liveintent" }, exclude: ["kargo"] }],
+    });
+    const withLi = auction(["criteo", "kargo"], { liveintent: true });
+    const withoutLi = auction(["criteo", "kargo"]);
+
+    await rtd.handleRtd(withLi);
+    await rtd.handleRtd(withoutLi);
+
+    expect(sourcesIn(withLi.ortb2Fragments.global)).toHaveLength(3);
+    expect(withoutLi.ortb2Fragments.bidder.kargo).toBeUndefined();
+    expect(sourcesIn(withoutLi.ortb2Fragments.bidder.criteo)).toHaveLength(3);
+  });
+
+  it("ignores our own EIDs when evaluating conditions", async () => {
+    const rtd = buildRTD({
+      eidSources: {},
+      eidRules: [{ when: { sourcePresent: "uidapi" }, exclude: ["kargo"] }],
+    });
+    const req = auction(["criteo", "kargo"]);
+    req.ortb2Fragments.global = {
+      user: { ext: { eids: [{ source: "uidapi.com", uids: [{ id: "ppid" }], inserter: "optable.co" } as any] } },
+    };
+
+    await rtd.handleRtd(req);
+
+    expect(req.ortb2Fragments.bidder).toEqual({});
+  });
+
+  it("excludes -s2s and _s2s aliases with the bidder", async () => {
+    const rtd = buildRTD({ eidSources: {}, eidRules: [{ exclude: ["ix"] }] });
+    const req = auction(["ix", "ix-s2s", "ix_s2s", "criteo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(Object.keys(req.ortb2Fragments.bidder)).toEqual(["criteo"]);
+  });
+
+  it("counts s2sConfig bidders as auction bidders", async () => {
+    w.pbjs = { getConfig: (key?: unknown) => (key === "s2sConfig" ? [{ bidders: ["rubicon-s2s"] }] : {}) };
+    const rtd = buildRTD({ eidSources: {}, eidRules: [{ exclude: ["kargo"] }] });
+    const req = auction(["kargo", "criteo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(Object.keys(req.ortb2Fragments.bidder).sort()).toEqual(["criteo", "rubicon-s2s"]);
+  });
+
+  it("scopes a partner's own ID to that partner, leaving other sources global", async () => {
+    const rtd = buildRTD({
+      eidSources: {},
+      eidRules: [{ sources: ["triplelift.com"], routes: ["triplelift"] }],
+    });
+    const req = auction(["triplelift", "criteo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.global)).toEqual(["uidapi.com", "criteo-hemapi.com"]);
+    expect(sourcesIn(req.ortb2Fragments.bidder.triplelift)).toEqual(["triplelift.com"]);
+    expect(req.ortb2Fragments.bidder.criteo).toBeUndefined();
+  });
+
+  it("adds a bidder to a source's configured routes with include", async () => {
+    const rtd = buildRTD({
+      eidSources: { "uidapi.com": { routes: ["criteo"] } },
+      eidRules: [{ sources: "uidapi", include: ["ttd"] }],
+    });
+    const req = auction(["criteo", "ttd", "kargo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.bidder.criteo)).toEqual(["uidapi.com"]);
+    expect(sourcesIn(req.ortb2Fragments.bidder.ttd)).toEqual(["uidapi.com"]);
+    expect(req.ortb2Fragments.bidder.kargo).toBeUndefined();
+  });
+
+  it("applies rules in order", async () => {
+    const rtd = buildRTD({
+      eidSources: {},
+      eidRules: [{ sources: "triplelift", routes: ["triplelift", "kargo"] }, { exclude: ["kargo"] }],
+    });
+    const req = auction(["triplelift", "kargo", "criteo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.bidder.triplelift)).toEqual([
+      "uidapi.com",
+      "criteo-hemapi.com",
+      "triplelift.com",
+    ]);
+    expect(sourcesIn(req.ortb2Fragments.bidder.criteo)).toEqual(["uidapi.com", "criteo-hemapi.com"]);
+    expect(req.ortb2Fragments.bidder.kargo).toBeUndefined();
+  });
+
+  it("drops bidders absent from the auction instead of falling back to global", async () => {
+    const rtd = buildRTD({ eidSources: {}, eidRules: [{ routes: ["notbidding"] }] });
+    const req = auction(["criteo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.global)).toEqual([]);
+    expect(req.ortb2Fragments.bidder).toEqual({});
+  });
+
+  it("stays global when the rules leave every bidder in", async () => {
+    const rtd = buildRTD({ eidSources: {}, eidRules: [{ exclude: ["notbidding"] }] });
+    const req = auction(["criteo", "kargo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.global)).toHaveLength(3);
+    expect(req.ortb2Fragments.bidder).toEqual({});
+  });
+
+  it("leaves routing unchanged when no auction bidders are known", async () => {
+    const rtd = buildRTD({ eidSources: {}, eidRules: [{ exclude: ["kargo"] }] });
+    const req = bidsConfig();
+
+    await rtd.handleRtd(req);
+
+    expect(globalEids(req)).toHaveLength(3);
+  });
+
+  it("merges into an existing bidder fragment", async () => {
+    const rtd = buildRTD({ eidSources: {}, eidRules: [{ exclude: ["kargo"] }] });
+    const req = auction(["criteo", "kargo"]);
+    req.ortb2Fragments.bidder.criteo = { user: { ext: { eids: [{ source: "criteo.com", uids: [{ id: "c" }] }] } } };
+
+    await rtd.handleRtd(req);
+
+    expect(sourcesIn(req.ortb2Fragments.bidder.criteo)).toEqual([
+      "criteo.com",
+      "uidapi.com",
+      "criteo-hemapi.com",
+      "triplelift.com",
+    ]);
+  });
+
+  it("reads rules from the config object on each auction", async () => {
+    const rtd = buildRTD({ eidSources: {} });
+    rtd.eidRules = [{ exclude: ["kargo"] }];
+    const req = auction(["criteo", "kargo"]);
+
+    await rtd.handleRtd(req);
+
+    expect(req.ortb2Fragments.bidder.kargo).toBeUndefined();
+    expect(sourcesIn(req.ortb2Fragments.bidder.criteo)).toHaveLength(3);
+  });
+});
+
 describe("buildRTD - isControlGroup", () => {
   it("serves no EIDs while the gate returns true", async () => {
     seedCache(EIDS);
