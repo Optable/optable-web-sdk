@@ -54,6 +54,7 @@ class OptableSDK {
   private contextSent: boolean = false;
   private contextConfig: PageContextConfig | null = null;
   private contextualResponse: ContextualSegmentsResponse | null = null;
+  private contextualURL: string | null = null;
   private warned = new Set<string>();
 
   constructor(dcn: InitConfig) {
@@ -220,6 +221,8 @@ class OptableSDK {
 
   resetContext(): void {
     this.contextSent = false;
+    this.contextualResponse = null;
+    this.contextualURL = null;
   }
 
   async profile(traits: ProfileTraits, id: string | null = null, neighbors: string[] | null = null): Promise<void> {
@@ -228,13 +231,19 @@ class OptableSDK {
   }
 
   async ctxSegments(url?: string): Promise<ContextualSegmentsResponse> {
-    const response = await ContextualSegments(this.dcn, url ?? window.location.href);
+    const target = url ?? window.location.href;
+    const response = await ContextualSegments(this.dcn, target);
     this.contextualResponse = response;
+    this.contextualURL = target;
     return response;
   }
 
-  // The latest ctxSegments() response, or null before one has landed.
-  ctxSegmentsFromCache(): ContextualSegmentsResponse | null {
+  // The latest ctxSegments() response, or null before one has landed. With a url,
+  // also null when the response was for another URL (e.g. a previous SPA route).
+  ctxSegmentsFromCache(url?: string): ContextualSegmentsResponse | null {
+    if (url !== undefined && url !== this.contextualURL) {
+      return null;
+    }
     return this.contextualResponse;
   }
 

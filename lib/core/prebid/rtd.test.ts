@@ -174,8 +174,8 @@ const CONTEXTUAL_SITE = {
 const o = window as unknown as { optable?: Record<string, unknown> };
 
 // Stands in for the SDK instance the RTD config names.
-function fakeInstance(cached: ContextualSegmentsResponse | null) {
-  return { ctxSegmentsFromCache: () => cached };
+function fakeInstance(cached: ContextualSegmentsResponse | null, url = window.location.href) {
+  return { ctxSegmentsFromCache: (requested?: string) => (requested === url ? cached : null) };
 }
 
 describe("buildRTD - contextual", () => {
@@ -232,6 +232,15 @@ describe("buildRTD - contextual", () => {
     await buildRTD({ enableContextual: () => true }).handleRtd(req);
 
     expect(req.ortb2Fragments.global.site).toEqual(CONTEXTUAL_SITE);
+  });
+
+  it("skips a contextual response cached for another page", async () => {
+    o.optable = { instance: fakeInstance(CONTEXTUAL, "https://example.com/previous-route") };
+    const req = bidsConfig();
+
+    await buildRTD({ enableContextual: () => true }).handleRtd(req);
+
+    expect(req.ortb2Fragments.global.site).toBeUndefined();
   });
 
   it("reads the instance named by the instance option", async () => {

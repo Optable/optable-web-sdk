@@ -25,7 +25,7 @@ On each auction, `handleRtd`:
 
 ## Contextual data
 
-Off by default: the wrapper turns it on with an `enableContextual` callback, evaluated per auction like `isControlGroup`, so it can follow a split-test assignment. The module reads the latest `ctxSegments()` response cached on the SDK instance at `window.optable[instance]` (`ctxSegmentsFromCache()`); it never requests or waits for one. Enable `initContextual` so the response is cached before the first auction. Nothing is merged when there is no response.
+Off by default: the wrapper turns it on with an `enableContextual` callback, evaluated per auction like `isControlGroup`, so it can follow a split-test assignment. The module reads the latest `ctxSegments()` response cached on the SDK instance at `window.optable[instance]` (`ctxSegmentsFromCache()`); it never requests or waits for one. Enable `initContextual` so the response is cached before the first auction. Nothing is merged when there is no response, or when it was cached for a URL other than the current `window.location.href` (e.g. a previous SPA route; call `resetContext()` and `ctxSegments()` on navigation).
 
 | Classification | ORTB2 field                                                                                           |
 | -------------- | ----------------------------------------------------------------------------------------------------- |

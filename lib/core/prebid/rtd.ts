@@ -271,7 +271,7 @@ function readContextualData(config: RTDConfig): ContextualSegmentsResponse | nul
     );
     return null;
   }
-  return sdk.ctxSegmentsFromCache();
+  return sdk.ctxSegmentsFromCache(window.location.href);
 }
 
 // Our keywords missing from theirs, comparing trimmed and ignoring case.

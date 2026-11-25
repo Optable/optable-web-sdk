@@ -495,7 +495,7 @@ const url = `${window.location.hostname}${window.location.pathname}`;
 sdk.witness("pageview", { url }, { includeContext: true });
 ```
 
-To reset the context (e.g. on SPA navigation), call `sdk.resetContext()` before the next `witness()` call.
+To reset the context (e.g. on SPA navigation), call `sdk.resetContext()` before the next `witness()` call. It also clears the cached `ctxSegments()` response; call `ctxSegments()` again to classify the new page.
 
 ### Contextual Segments API
 
@@ -541,7 +541,7 @@ type ContextualSegmentsResponse = {
 
 > **Note:** The requested URL must already have been classified by the DCN.
 
-Each successful call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache; a failed call leaves the previous response in place), readable with `ctxSegmentsFromCache()`. When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
+Each successful call to `ctxSegments()` caches its response on the SDK instance (calling it again refreshes the cache; a failed call leaves the previous response in place), readable with `ctxSegmentsFromCache()`. Pass a URL, `ctxSegmentsFromCache(window.location.href)`, to get `null` when the cached response was for another page. `resetContext()` clears the cache. When `initContextual: true`, the SDK calls `ctxSegments()` for you during initialization, so the cache is populated automatically.
 
 #### Brand safety
 
