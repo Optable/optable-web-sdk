@@ -72,6 +72,10 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
     searchParams.append("ref", `${window.location.protocol}//${window.location.host}${window.location.pathname}`);
   }
 
+  if (config.additionalTargetingSignals?.webEnvironment) {
+    searchParams.append("environment", "web");
+  }
+
   const ls = new LocalStorage(config);
   const id5Signature = config.additionalTargetingSignals?.id5Signature && ls.getID5Signature();
   if (id5Signature) {
