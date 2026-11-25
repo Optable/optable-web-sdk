@@ -188,8 +188,8 @@ When creating an instance of `OptableSDK`, you can pass an `InitConfig` object t
 - **`readOnly` (boolean, default: `false`)**
   When set to `true`, adds `ro=true` to every request so the DCN does not modify data while still answering API queries. The SDK itself does not block any calls client-side.
 
-- **`optableCacheTargeting` (string, defaults: `optable-cache:targeting`)**
-  Local storage cache key used to store latest targeting response.
+- **`optableCacheTargeting` (string, defaults: `OPTABLE_RESOLVED`)**
+  Local storage cache key used to store latest targeting response. The default is the key the Prebid RTD module (`buildRTD`), `pubProvidedId` and `identifyAndTokenize` use, so they share one cache; if you change it, pass the same key to those too.
 
 - **`ois` (boolean, default: `false`)**
   When set to `true`, participates in the [Optable Identity System](#optable-identity-system-ois): the SDK stores the derived OIS ID the DCN returns on the `X-Optable-OID` response header and replays it on subsequent requests, so the DCN recognizes the browser instead of deriving a new identity each visit. Requires a DCN node with OIS ID derivation enabled and device access consent, so it is a no-op otherwise. The `OPTABLE_OID` cookie identity is separate and needs no configuration.

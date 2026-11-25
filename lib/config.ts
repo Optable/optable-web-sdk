@@ -60,7 +60,7 @@ type InitConfig = {
   skipEnrichment?: boolean;
   // Targeting call on load
   initTargeting?: boolean;
-  // (Defaults to 'optable_cache_targeting') Cache Key used to store 'targeting' response
+  // (Defaults to 'OPTABLE_RESOLVED', the key prebid RTD and pubProvidedId read) Cache Key used to store 'targeting' response
   optableCacheTargeting?: string;
   // AB test configuration to define testing configurations
   abTests?: ABTestConfig[];
@@ -123,6 +123,7 @@ const DCN_DEFAULTS = {
   initPassport: true,
   readOnly: false,
   experiments: [],
+  optableCacheTargeting: "OPTABLE_RESOLVED",
   consent: {
     reg: null,
     deviceAccess: true,
@@ -136,7 +137,7 @@ function getConfig(init: InitConfig): ResolvedConfig {
   const config: ResolvedConfig = {
     host: init.host,
     site: init.site,
-    optableCacheTargeting: init.optableCacheTargeting ?? "optable-cache:targeting",
+    optableCacheTargeting: init.optableCacheTargeting ?? DCN_DEFAULTS.optableCacheTargeting,
     cookies: init.cookies ?? DCN_DEFAULTS.cookies,
     initPassport: init.initPassport ?? DCN_DEFAULTS.initPassport,
     consent: DCN_DEFAULTS.consent,
