@@ -72,6 +72,12 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
     searchParams.append("ref", `${window.location.protocol}//${window.location.host}${window.location.pathname}`);
   }
 
+  const ls = new LocalStorage(config);
+  const id5Signature = config.additionalTargetingSignals?.id5Signature && ls.getID5Signature();
+  if (id5Signature) {
+    searchParams.append("id5_signature", id5Signature);
+  }
+
   const path = "/v2/targeting?" + searchParams.toString();
 
   const response: TargetingResponse = await fetch(path, config, {
@@ -80,7 +86,6 @@ async function Targeting(config: ResolvedConfig, req: TargetingRequest): Promise
   });
 
   if (response) {
-    const ls = new LocalStorage(config);
     // An arm that skipped matchers resolved a deliberately smaller set, so
     // carrying cached EIDs forward would put back what the arm left out.
     const armRestrictedResolution = !!(
