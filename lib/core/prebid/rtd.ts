@@ -2,6 +2,8 @@
 import { targetingEventName } from "../events/cache-refresh";
 import { flagEnabled } from "../flags";
 import { consoleLog } from "../log";
+import { CONTEXTUAL_DATA_NAME, ContextualPrebidORTB2 } from "../../edge/contextual_segments";
+import type { ContextualSegmentsResponse } from "../../edge/contextual_segments";
 
 // Type definitions
 interface EID {
@@ -29,8 +31,19 @@ interface ORTB2User {
   };
 }
 
+interface ORTB2Site {
+  content?: {
+    data?: Array<{ name?: string; [key: string]: unknown }>;
+    keywords?: string;
+    kwarray?: string[];
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 interface ORTB2 {
   user?: ORTB2User;
+  site?: ORTB2Site;
 }
 
 interface TargetingData {
@@ -70,6 +83,7 @@ interface RTDConfig {
   instance: string;
   prebidGlobal: string;
   waitForTargeting: boolean;
+  enableContextual: () => boolean;
   isControlGroup: () => boolean;
 }
 
@@ -87,8 +101,9 @@ interface RTDOptions {
   // Prebid global whose realTimeData.auctionDelay bounds the waitForTargeting wait.
   prebidGlobal?: string;
   waitForTargeting?: boolean;
-  // Split-test gate: while it returns true, handleRtd serves no EIDs. Wired
-  // to the wrapper's assignment (for example setupAB's result).
+  // Evaluated per auction; off unless the wrapper turns it on.
+  enableContextual?: () => boolean;
+  // Split-test gate: serves no EIDs while true, but still serves contextual data.
   isControlGroup?: () => boolean;
 }
 
@@ -239,6 +254,70 @@ async function readTargetingData(config: RTDConfig): Promise<TargetingData> {
 
   config.log("info", `Found targeting data with ${targetingData.ortb2.user.eids.length} EIDs after waiting`);
   return targetingData;
+}
+
+// The contextual response cached on the SDK instance named by config.instance.
+function readContextualData(config: RTDConfig): ContextualSegmentsResponse | null {
+  const sdk = (window as any)?.optable?.[config.instance];
+  if (!sdk) {
+    config.log("warn", `No SDK instance at window.optable.${config.instance} - serving no contextual data`);
+    return null;
+  }
+  // An SDK build predating ctxSegmentsFromCache may share the page with this module.
+  if (typeof sdk.ctxSegmentsFromCache !== "function") {
+    config.log(
+      "warn",
+      `SDK at window.optable.${config.instance} lacks ctxSegmentsFromCache - serving no contextual data`
+    );
+    return null;
+  }
+  return sdk.ctxSegmentsFromCache(window.location.href);
+}
+
+// Our keywords missing from theirs, comparing trimmed and ignoring case.
+function missingKeywords(theirs: unknown[], ours: string[]): string[] {
+  const seen = new Set(
+    theirs.filter((kw): kw is string => typeof kw === "string").map((kw) => kw.trim().toLowerCase())
+  );
+  return ours.filter((kw) => {
+    const key = kw.trim().toLowerCase();
+    if (!key || seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+// Merges the contextual fragment into the target site, replacing only what
+// Optable owns: our site.content.data entries.
+function mergeContextual(config: RTDConfig, targetORTB2: ORTB2, response: ContextualSegmentsResponse): void {
+  const { site } = ContextualPrebidORTB2(response);
+  const ours = site.content.keywords ? site.content.keywords.split(",") : [];
+  const hasStaleData = (targetORTB2.site?.content?.data ?? []).some((d) => d?.name === CONTEXTUAL_DATA_NAME);
+  if (!site.content.data.length && !ours.length && !hasStaleData) {
+    return;
+  }
+
+  targetORTB2.site = targetORTB2.site ?? {};
+  const content = (targetORTB2.site.content = targetORTB2.site.content ?? {});
+  if (site.content.data.length || hasStaleData) {
+    content.data = [...(content.data ?? []).filter((d) => d?.name !== CONTEXTUAL_DATA_NAME), ...site.content.data];
+  }
+  let added = 0;
+  if (ours.length) {
+    // Drop trailing separators so the join leaves no empty keyword; the rest stays as the publisher set it.
+    const theirs = typeof content.keywords === "string" ? content.keywords.replace(/(^|,)[\s,]*$/, "") : "";
+    const missing = missingKeywords(theirs.split(","), ours);
+    added = missing.length;
+    content.keywords = [...(theirs.trim() ? [theirs] : []), ...missing].join(",");
+    // Also join the publisher's kwarray, so adapters reading either field see our keywords.
+    if (Array.isArray(content.kwarray)) {
+      content.kwarray = [...content.kwarray, ...missingKeywords(content.kwarray, ours)];
+    }
+  }
+
+  config.log("info", `Merged contextual data: ${site.content.data.length} segment set(s), ${added} keyword(s)`);
 }
 
 function mergeStrategy(config: RTDConfig, eidSource: string): MergeStrategy {
@@ -406,13 +485,28 @@ function buildRTD(options: RTDOptions = {}): RTDConfig {
     instance: options.instance ?? "instance",
     prebidGlobal: options.prebidGlobal ?? "pbjs",
     waitForTargeting: options.waitForTargeting ?? false,
+    enableContextual: options.enableContextual ?? (() => false),
     isControlGroup: options.isControlGroup ?? (() => false),
     async handleRtd(reqBidsConfigObj: ReqBidsConfigObj, optableExtraData?: any, mergeFn?: any): Promise<void | null> {
+      const applyContextual = () => {
+        try {
+          const contextualData = this.enableContextual() ? readContextualData(this) : null;
+          if (contextualData) {
+            mergeContextual(this, reqBidsConfigObj.ortb2Fragments.global, contextualData);
+          }
+        } catch (error) {
+          this.log("error", "Failed to merge contextual data:", error);
+        }
+      };
+
       if (this.isControlGroup()) {
+        applyContextual();
         this.log("info", "Control group - serving no EIDs");
         return null;
       }
       const targetingData = options.targetingData ?? (await readTargetingData(this));
+      // Read after the targeting wait so a ctxSegments() response that lands during it is used.
+      applyContextual();
       try {
         return handleRtd(this, reqBidsConfigObj, targetingData, optableExtraData, mergeFn);
       } catch (error) {
@@ -435,6 +529,7 @@ export {
   type EIDSource,
   type ORTB2,
   type ORTB2User,
+  type ORTB2Site,
   type TargetingData,
   type ReqBidsConfigObj,
   type RTDConfig,

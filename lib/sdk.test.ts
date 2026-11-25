@@ -521,6 +521,43 @@ describe("behavior testing of", () => {
     });
   });
 
+  test("ctxSegmentsFromCache returns null before ctxSegments has been called", () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+
+    expect(sdk.ctxSegmentsFromCache()).toBeNull();
+  });
+
+  test("ctxSegmentsFromCache returns the response cached by ctxSegments", async () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxSegmentsFromCache()).toBe(result);
+  });
+
+  test("resetContext clears the cached ctxSegments response", async () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+    await sdk.ctxSegments("https://example.com/article");
+
+    sdk.resetContext();
+
+    expect(sdk.ctxSegmentsFromCache()).toBeNull();
+  });
+
+  test("ctxSegmentsFromCache returns null for a url other than the one ctxSegments classified", async () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments("https://example.com/article");
+
+    expect(sdk.ctxSegmentsFromCache("https://example.com/other")).toBeNull();
+    expect(sdk.ctxSegmentsFromCache("https://example.com/article")).toBe(result);
+  });
+
+  test("ctxSegmentsFromCache matches the page url when ctxSegments ran without one", async () => {
+    const sdk = new OptableSDK({ ...defaultConfig });
+    const result = await sdk.ctxSegments();
+
+    expect(sdk.ctxSegmentsFromCache(window.location.href)).toBe(result);
+  });
+
   test("ctxSegments returns an empty categories array when the server returns one", async () => {
     server.use(
       http.post(`${TEST_BASE_URL}/v1beta1/contextual`, async () => {

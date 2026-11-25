@@ -3,6 +3,7 @@ import {
   ContextualEmotionsOf,
   ContextualEntitiesOf,
   ContextualMaxRiskLevel,
+  ContextualPrebidORTB2,
   ContextualSentimentOf,
   ContextualTargetingKeyValues,
 } from "./contextual_segments";
@@ -586,5 +587,163 @@ describe("ContextualTargetingKeyValues entity emission", () => {
     expect(ContextualTargetingKeyValues(resp, undefined, { ...options, entityKey: "" })).toEqual({
       iab_ct_3_1: ["53"],
     });
+  });
+});
+
+describe("ContextualPrebidORTB2", () => {
+  test("emits categories as site.content.data segments under the IAB segtax of their taxonomy", () => {
+    const resp = response({
+      categories: [
+        { id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" },
+        { id: "52", name: "Business and Finance", score: 0.9, taxonomy: "iab_ct_3_1" },
+        { id: "483", name: "Sports", score: 0.8, taxonomy: "iab_ct_2_2" },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.data).toEqual([
+      { name: "optable.co", ext: { segtax: 9 }, segment: [{ id: "53" }, { id: "52" }] },
+      { name: "optable.co", ext: { segtax: 6 }, segment: [{ id: "483" }] },
+    ]);
+  });
+
+  // A segment id is only meaningful under a segtax, so a taxonomy without one
+  // cannot be served at all.
+  test("drops categories of a taxonomy with no IAB segtax", () => {
+    const resp = response({
+      categories: [
+        { id: "1", name: "Custom", score: 0.9, taxonomy: "custom_taxonomy" },
+        { id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.data).toEqual([
+      { name: "optable.co", ext: { segtax: 9 }, segment: [{ id: "53" }] },
+    ]);
+  });
+
+  test("does not mistake an Object prototype member for a taxonomy", () => {
+    const resp = response({
+      categories: [{ id: "1", name: "Odd", score: 0.9, taxonomy: "constructor" }],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.data).toEqual([]);
+  });
+
+  test("dedupes segment ids within a taxonomy", () => {
+    const resp = response({
+      categories: [
+        { id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" },
+        { id: "53", name: "Business", score: 0.4, taxonomy: "iab_ct_3_1" },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.data).toEqual([
+      { name: "optable.co", ext: { segtax: 9 }, segment: [{ id: "53" }] },
+    ]);
+  });
+
+  test("drops categories with an empty id", () => {
+    const resp = response({
+      categories: [
+        { id: "", name: "Unknown", score: 0.9, taxonomy: "iab_ct_3_1" },
+        { id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.data).toEqual([
+      { name: "optable.co", ext: { segtax: 9 }, segment: [{ id: "53" }] },
+    ]);
+  });
+
+  test("emits keywords as comma-separated site.content.keywords, by prominence, keeping case and GAM-reserved characters", () => {
+    const resp = response({
+      keywords: [
+        { keyword: "Startup", prominence: 2 },
+        { keyword: "earnings", prominence: 1 },
+        { keyword: "AT&T (Q3)", prominence: 3 },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.keywords).toBe("earnings,Startup,AT&T (Q3)");
+  });
+
+  test("replaces commas inside a keyword, collapses whitespace, and drops empty and duplicate keywords", () => {
+    const resp = response({
+      keywords: [
+        { keyword: " New  York,\tNY ", prominence: 1 },
+        { keyword: " , ", prominence: 2 },
+        { keyword: "New York NY", prominence: 3 },
+        { keyword: 42 as unknown as string, prominence: 4 },
+        { keyword: "earnings", prominence: 5 },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.keywords).toBe("New York NY,earnings");
+  });
+
+  test("dedupes keywords case-insensitively, keeping the most prominent spelling", () => {
+    const resp = response({
+      keywords: [
+        { keyword: "news", prominence: 2 },
+        { keyword: "News", prominence: 1 },
+        { keyword: "NEWS ", prominence: 3 },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.keywords).toBe("News");
+  });
+
+  test("orders keywords with a NaN prominence last", () => {
+    const resp = response({
+      keywords: [
+        { keyword: "second", prominence: 2 },
+        { keyword: "bad", prominence: NaN },
+        { keyword: "first", prominence: 1 },
+      ],
+    });
+
+    expect(ContextualPrebidORTB2(resp).site.content.keywords).toBe("first,second,bad");
+  });
+
+  test("emits every keyword, uncapped and untruncated", () => {
+    const long = "a keyword well past the forty characters of a GAM value";
+    const resp = response({
+      keywords: [
+        { keyword: long, prominence: 1 },
+        ...Array.from({ length: 14 }, (_, i) => ({ keyword: `kw${i}`, prominence: i + 2 })),
+      ],
+    });
+
+    const keywords = ContextualPrebidORTB2(resp).site.content.keywords!.split(",");
+    expect(keywords).toHaveLength(15);
+    expect(keywords[0]).toBe(long);
+  });
+
+  test("omits keywords when the page has no keyword", () => {
+    expect(ContextualPrebidORTB2(response({ keywords: [] })).site.content).not.toHaveProperty("keywords");
+  });
+
+  test("serves categories and keywords only, leaving the other classifications out", () => {
+    const resp = response({
+      categories: [{ id: "53", name: "Business", score: 0.9, taxonomy: "iab_ct_3_1" }],
+      keywords: [{ keyword: "earnings", prominence: 1 }],
+      brandSafety: { assessed: true, categories: [{ name: "Terrorism", riskLevel: "high" }] },
+      sentiment: { scored: true, id: "negative", name: "Negative", score: -0.6 },
+      emotions: [{ id: "fear", name: "Fear", score: 0.7 }],
+      entities: [{ name: "Acme Corp", kind: "organization", score: 0.9 }],
+    });
+
+    expect(ContextualPrebidORTB2(resp)).toEqual({
+      site: {
+        content: {
+          data: [{ name: "optable.co", ext: { segtax: 9 }, segment: [{ id: "53" }] }],
+          keywords: "earnings",
+        },
+      },
+    });
+  });
+
+  test("emits an empty site.content.data on an empty response", () => {
+    expect(ContextualPrebidORTB2(response({}))).toEqual({ site: { content: { data: [] } } });
   });
 });
