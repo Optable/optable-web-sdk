@@ -26,6 +26,8 @@ type TargetingSignals = {
   ref?: boolean;
   // Store the ID5 signature from targeting responses and send it back as id5_signature
   id5Signature?: boolean;
+  // Send environment=web, so Edge runs its ID5 web resolver instead of the mobile app one
+  webEnvironment?: boolean;
 };
 
 type InitConsent = {
