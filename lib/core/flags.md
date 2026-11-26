@@ -71,6 +71,8 @@ if (controlGroup === "1") {
 
 "Wrapper code" means the flag is recognised and persisted by the SDK, but acted on by the bundle built around it. Unknown query parameters are ignored — only the keys above are parsed.
 
+`optableResolve1P` and `optableResolve3P` reach the targeting call through `TargetingOncePerSession`, which skips the call once targeting has already run in the session. When you turn either flag on mid-session, also set `optableForceTargeting`, or start a new session, or the cached targeting from the real visitor is kept.
+
 ## Resolution order
 
 `parseFlags()` runs once per page load and the result is memoized:
