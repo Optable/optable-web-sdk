@@ -80,7 +80,10 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   return request;
 }
 
-async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
+// A response body, and the passport that came on it.
+type Answer<T> = { data: T; passport?: string };
+
+async function send<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<Answer<T>> {
   const request = buildRequest(path, config, init);
   const response = await globalThis.fetch(request);
 
@@ -96,10 +99,8 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     throw new Error(data.error);
   }
 
-  if (data.passport) {
-    const ls = new LocalStorage(config);
-    ls.setPassport(data.passport);
-
+  const passport: string | undefined = data.passport;
+  if (passport) {
     // We delete the passport attribute from the returned payload. This is because
     // the targeting edge handler was initially made to return targeting data directly
     // in the form of 'key values' on the returned JSON payload -- if we don't delete
@@ -108,6 +109,95 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
     delete data.passport;
   }
 
+  return { data, passport };
+}
+
+// How long a mint holds the others back before the next request takes it over.
+const MINT_WAIT_MS = 2000;
+
+// The edge answers these without a passport, so they never lead a mint.
+const NON_MINTING_PATHS = new Set(["/v1beta1/contextual", "/v1/resolve"]);
+
+type Mint = { settled: Promise<void>; expires: number };
+
+// The edge mints a visitor for every request that arrives without a passport.
+// While none is stored, one request per passport storage key goes out alone
+// and the rest wait to send the passport it stores.
+const minting = new Map<string, Mint>();
+// Mints answered without a passport, as "<storage key> <pathname>": the same
+// request leading again would hold the others back for nothing.
+const unminted = new Set<string>();
+
+// The storage key a request sent now would be minted a passport under, if any.
+function mintKey(config: ResolvedConfig): string | undefined {
+  // Cookie mode sends no passport, and without device access none is stored.
+  if (config.cookies || !config.consent.deviceAccess) {
+    return undefined;
+  }
+
+  const ls = new LocalStorage(config);
+  return ls.getPassport() ? undefined : ls.passportKey();
+}
+
+function canMint(key: string, pathname: string): boolean {
+  return !NON_MINTING_PATHS.has(pathname) && !unminted.has(`${key} ${pathname}`);
+}
+
+async function leadMint<T>(
+  key: string,
+  pathname: string,
+  config: ResolvedConfig,
+  request: () => Promise<Answer<T>>
+): Promise<T> {
+  let release!: () => void;
+  const mint: Mint = {
+    settled: new Promise((resolve) => (release = resolve)),
+    expires: Date.now() + MINT_WAIT_MS,
+  };
+  minting.set(key, mint);
+
+  try {
+    const { data, passport } = await request();
+    const ls = new LocalStorage(config);
+    const current = minting.get(key);
+    if (!passport) {
+      unminted.add(`${key} ${pathname}`);
+    } else if (current === mint || (!current && !ls.getPassport())) {
+      // Once taken over, a mint leaves storing the passport to its successor.
+      ls.setPassport(passport);
+    }
+    return data;
+  } finally {
+    if (minting.get(key) === mint) {
+      minting.delete(key);
+    }
+    release();
+  }
+}
+
+async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
+  const pathname = path.split("?")[0];
+
+  for (let key = mintKey(config); key; key = mintKey(config)) {
+    const mint = minting.get(key);
+    const remaining = mint ? mint.expires - Date.now() : 0;
+    if (!mint || remaining <= 0) {
+      if (!canMint(key, pathname)) {
+        break;
+      }
+      return leadMint(key, pathname, config, () => send<T>(path, config, init));
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([mint.settled, new Promise((resolve) => (timer = setTimeout(resolve, remaining)))]);
+    clearTimeout(timer);
+  }
+
+  // Built only now, so a request that waited sends the passport just stored.
+  const { data, passport } = await send<T>(path, config, init);
+  if (passport) {
+    new LocalStorage(config).setPassport(passport);
+  }
   return data;
 }
 

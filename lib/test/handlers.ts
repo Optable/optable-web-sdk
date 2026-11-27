@@ -54,14 +54,14 @@ const handlers = [
     const data: ContextualSegmentsResponse = {
       classifications: { categories: [], keywords: [], brandSafety: { assessed: false, categories: [] } },
     };
-    return HttpResponse.json({ ...data, ...passport }, ok200);
+    return HttpResponse.json(data, ok200);
   }),
 
   http.get(`${TEST_BASE_URL}/v1/resolve`, async ({}) => {
     const data: ResolveResponse = {
       clusters: [],
     };
-    return HttpResponse.json({ ...data, ...passport }, ok200);
+    return HttpResponse.json(data, ok200);
   }),
 
   http.post(`${TEST_BASE_URL}/v2/tokenize`, async ({}) => {
@@ -86,7 +86,7 @@ const handlers = [
     const data: ResolveResponse = {
       clusters: [],
     };
-    return HttpResponse.json({ ...data, ...passport }, ok200);
+    return HttpResponse.json(data, ok200);
   }),
 ];
 
