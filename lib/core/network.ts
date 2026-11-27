@@ -80,7 +80,7 @@ function buildRequest(path: string, config: ResolvedConfig, init?: RequestInit):
   return request;
 }
 
-async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
+async function send<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
   const request = buildRequest(path, config, init);
   const response = await globalThis.fetch(request);
 
@@ -109,6 +109,66 @@ async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit
   }
 
   return data;
+}
+
+// Longest a request waits on the mint ahead of it before going out without a passport.
+const MINT_WAIT_MS = 2000;
+
+// The edge mints a visitor for every request that arrives without a passport.
+// While none is stored, one request per passport storage key goes out alone
+// and the rest wait to send the passport it stores.
+const minting = new Map<string, Promise<void>>();
+// Keys whose mint was answered without a passport: waiting there gains nothing.
+const unminted = new Set<string>();
+
+// The storage key a request sent now would be minted a passport under, if any.
+function mintKey(config: ResolvedConfig): string | undefined {
+  // Cookie mode sends no passport, and without device access none is stored.
+  if (config.cookies || !config.consent.deviceAccess) {
+    return undefined;
+  }
+
+  const ls = new LocalStorage(config);
+  const key = ls.passportKey();
+  return ls.getPassport() || unminted.has(key) ? undefined : key;
+}
+
+async function leadMint<T>(key: string, config: ResolvedConfig, request: () => Promise<T>): Promise<T> {
+  let release!: () => void;
+  minting.set(key, new Promise((resolve) => (release = resolve)));
+
+  try {
+    const data = await request();
+    if (!new LocalStorage(config).getPassport()) {
+      unminted.add(key);
+    }
+    return data;
+  } finally {
+    minting.delete(key);
+    release();
+  }
+}
+
+async function fetch<T>(path: string, config: ResolvedConfig, init?: RequestInit): Promise<T> {
+  const deadline = Date.now() + MINT_WAIT_MS;
+
+  for (let key = mintKey(config); key; key = mintKey(config)) {
+    const leader = minting.get(key);
+    if (!leader) {
+      return leadMint(key, config, () => send<T>(path, config, init));
+    }
+
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([leader, new Promise((resolve) => (timer = setTimeout(resolve, remaining)))]);
+    clearTimeout(timer);
+  }
+
+  // Built only now, so a request that waited sends the passport just stored.
+  return send(path, config, init);
 }
 
 export { fetch, buildRequest };

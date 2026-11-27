@@ -69,6 +69,10 @@ class LocalStorage {
     this.writeToStorageKeys(this.passportKeys, passport);
   }
 
+  passportKey(): string {
+    return this.passportKeys.write[0];
+  }
+
   getVisitorId(): string | null {
     const passport = this.getPassport();
     if (!passport) return null;
