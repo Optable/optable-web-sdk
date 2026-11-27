@@ -1,7 +1,10 @@
+import { http, HttpResponse } from "msw";
 import { identifyAndTokenize } from "./identify-tokenize";
 import { resetFlags } from "./flags";
 import OptableSDK from "../sdk";
-import { TEST_HOST, TEST_SITE } from "../test/mocks";
+import { TEST_BASE_URL, TEST_HOST, TEST_SITE } from "../test/mocks";
+import { server } from "../test/server";
+import { waitFor } from "../test/utils";
 
 const TOKENIZE_RESPONSE = { user: { eids: [{ source: "uidapi.com", uids: [{ id: "tokenized" }] }] } };
 
@@ -268,6 +271,32 @@ describe("identifyAndTokenize - guard keying", () => {
     await identifyAndTokenize(sdk, "xutiq:abc");
 
     expect(identify).toHaveBeenCalledWith("e:xutiq:abc");
+  });
+});
+
+describe("identifyAndTokenize - cold passport cache", () => {
+  it("identifies and tokenizes under the visitor targeting was minted", async () => {
+    const visitors: Record<string, string> = {};
+    let minted = 0;
+    server.use(
+      http.all(`${TEST_BASE_URL}/*`, ({ request }) => {
+        const url = new URL(request.url);
+        const passport = url.searchParams.get("passport") || `visitor-${++minted}`;
+        visitors[url.pathname] = passport;
+        return HttpResponse.json({ passport });
+      })
+    );
+    const sdk = new OptableSDK({ host: TEST_HOST, site: TEST_SITE, cookies: false, initPassport: false });
+
+    await Promise.all([sdk.targeting(), identifyAndTokenize(sdk, "abc123")]);
+
+    // identify is not awaited by the helper.
+    await waitFor(() => expect(Object.keys(visitors)).toHaveLength(3));
+    expect(visitors).toEqual({
+      "/v2/targeting": "visitor-1",
+      "/identify": "visitor-1",
+      "/v2/tokenize": "visitor-1",
+    });
   });
 });
 
