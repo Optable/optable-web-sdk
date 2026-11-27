@@ -275,28 +275,31 @@ describe("identifyAndTokenize - guard keying", () => {
 });
 
 describe("identifyAndTokenize - cold passport cache", () => {
-  it("identifies and tokenizes under the visitor targeting was minted", async () => {
+  it.each([
+    ["a targeting build", {}, ["/v2/targeting", "/identify", "/v2/tokenize"]],
+    ["a contextual build", { initContextual: true }, ["/witness", "/v2/targeting", "/identify", "/v2/tokenize"]],
+  ])("identifies and tokenizes under one visitor on %s", async (_, init, paths) => {
     const visitors: Record<string, string> = {};
     let minted = 0;
     server.use(
       http.all(`${TEST_BASE_URL}/*`, ({ request }) => {
         const url = new URL(request.url);
+        // The edge answers contextual without a passport.
+        if (url.pathname === "/v1beta1/contextual") {
+          return HttpResponse.json({});
+        }
         const passport = url.searchParams.get("passport") || `visitor-${++minted}`;
         visitors[url.pathname] = passport;
         return HttpResponse.json({ passport });
       })
     );
-    const sdk = new OptableSDK({ host: TEST_HOST, site: TEST_SITE, cookies: false, initPassport: false });
+    const sdk = new OptableSDK({ host: TEST_HOST, site: TEST_SITE, cookies: false, initPassport: false, ...init });
 
     await Promise.all([sdk.targeting(), identifyAndTokenize(sdk, "abc123")]);
 
     // identify is not awaited by the helper.
-    await waitFor(() => expect(Object.keys(visitors)).toHaveLength(3));
-    expect(visitors).toEqual({
-      "/v2/targeting": "visitor-1",
-      "/identify": "visitor-1",
-      "/v2/tokenize": "visitor-1",
-    });
+    await waitFor(() => expect(Object.keys(visitors)).toHaveLength(paths.length));
+    expect(visitors).toEqual(Object.fromEntries(paths.map((path) => [path, "visitor-1"])));
   });
 });
 
